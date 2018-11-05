@@ -15,12 +15,13 @@ plugins {
 }
 
 // Define the main class for the application
-mainClassName = 'App'
+mainClassName = 'net.jackw.olep.verifier.VerifierApp'
 
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     compile 'com.google.guava:guava:23.0'
     compile group: 'org.apache.kafka', name: 'kafka_2.12', version: '2.0.0'
+    compile group: 'org.apache.kafka', name: 'kafka-streams', version: '2.0.0'
 
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
