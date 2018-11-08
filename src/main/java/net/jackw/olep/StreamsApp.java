@@ -3,7 +3,6 @@ package net.jackw.olep;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
-import com.sun.istack.internal.NotNull;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
@@ -33,10 +32,8 @@ public abstract class StreamsApp {
         return new KafkaStreams(topology, props);
     }
 
-    @NotNull
     protected abstract Topology getTopology();
 
-    @NotNull
     public abstract String getApplicationID();
 
     /**

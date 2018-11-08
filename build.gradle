@@ -12,19 +12,36 @@ plugins {
 
     // Apply the application plugin to add support for building an application
     id 'application'
+
+    // Add the errorprone Gradle plugin so the checks are run during compile
+    id("net.ltgt.errorprone") version "0.6"
 }
 
+// Targeting Java 11
+sourceCompatibility = 11
+targetCompatibility = 11
+
 // Define the main class for the application
-mainClassName = 'net.jackw.olep.verifier.VerifierApp'
+mainClassName = 'net.jackw.olep.application.TestApplication'
 
 dependencies {
-    // This dependency is found on compile classpath of this component and consumers.
-    compile 'com.google.guava:guava:23.0'
+    // Guava for lots of utilities
+    compile 'com.google.guava:guava:27.0-jre'
+    // Kafka is split into several parts
     compile group: 'org.apache.kafka', name: 'kafka_2.12', version: '2.0.0'
     compile group: 'org.apache.kafka', name: 'kafka-streams', version: '2.0.0'
+    compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.0.0'
+    // JSON/etc library
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
+    // Akka for scheduling within the application
+    compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.17'
 
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
+
+    // Expose the errorprone client library to the application
+    compile group: 'com.google.errorprone', name: 'error_prone_core', version: '2.3.2'
+    errorprone("com.google.errorprone:error_prone_core:2.3.2")
 }
 
 // In this section you declare where to find the dependencies of your project
