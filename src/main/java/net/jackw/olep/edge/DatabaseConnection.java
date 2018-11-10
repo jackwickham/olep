@@ -19,16 +19,14 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Future;
 
+import static net.jackw.olep.common.KafkaConfig.TRANSACTION_EVENT_TOPIC;
+
 /**
  * A connection to the OLEP database
  */
 public class DatabaseConnection implements Closeable {
     private final Producer<String, String> transactionEventProducer;
     private final Consumer<String, String> transactionResultConsumer;
-
-    // TODO: Move these to a separate shared class
-    private final String TRANSACTION_EVENT_TOPIC = "transaction-input";
-    private final String TRANSACTION_RESULT_TOPIC = "transaction-result";
 
     @MustBeClosed
     public DatabaseConnection(String bootstrapServers) {
