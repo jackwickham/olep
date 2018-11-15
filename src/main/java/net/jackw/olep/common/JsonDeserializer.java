@@ -1,6 +1,7 @@
 package net.jackw.olep.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 
@@ -9,14 +10,14 @@ import java.util.Map;
 
 public class JsonDeserializer<T> implements Deserializer<T> {
     private Class<T> destinationClass;
-    private ObjectMapper objectMapper;
+    protected final ObjectMapper objectMapper;
 
     /**
      * Construct a new deserializer. After constructing with this, and before using it,
      * {@link #configure(Map, boolean)} should be called with destinationClass populated
      */
     public JsonDeserializer() {
-        objectMapper = new ObjectMapper();
+        objectMapper = new ObjectMapper().registerModule(new GuavaModule());
     }
 
     /**

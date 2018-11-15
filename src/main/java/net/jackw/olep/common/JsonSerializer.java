@@ -2,6 +2,7 @@ package net.jackw.olep.common;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
 
@@ -14,7 +15,7 @@ public class JsonSerializer<T> implements Serializer<T> {
      * Construct a new serializer
      */
     public JsonSerializer() {
-        objectMapper = new ObjectMapper();
+        objectMapper = new ObjectMapper().registerModule(new GuavaModule());
     }
 
     /**
