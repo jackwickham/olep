@@ -3,7 +3,6 @@ package net.jackw.olep;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -21,13 +20,9 @@ public abstract class StreamsApp {
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, getApplicationID());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-
-        // Serdes for the keys and values if not otherwise specified (to be removed later I think)
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
 
-        final Topology topology = getTopology();
+        Topology topology = getTopology();
         System.out.println(topology.describe());
 
         return new KafkaStreams(topology, props);

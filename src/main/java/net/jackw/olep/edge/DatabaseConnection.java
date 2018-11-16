@@ -18,6 +18,8 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.InterruptException;
+import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
@@ -45,17 +47,22 @@ public class DatabaseConnection implements Closeable {
 
     private final Map<Long, PendingTransaction<?, ?>> pendingTransactions;
 
+    private final Thread resultThread;
+
 
     @MustBeClosed
     public DatabaseConnection(String bootstrapServers) {
+        // Initialise regular fields
         pendingTransactions = new ConcurrentHashMap<>();
 
+        // Set up the producer, which is used to send requests from the application to the DB
         transactionRequestSerializer = new JsonSerializer<>(TransactionRequestMessage.class);
         Properties transactionRequestProducerProps = new Properties();
         transactionRequestProducerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         transactionRequestProducerProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 1);
         transactionRequestProducer = new KafkaProducer<>(transactionRequestProducerProps, Serdes.String().serializer(), transactionRequestSerializer);
 
+        // Set up the consumer, which is used to receive transaction result messages from the DB
         transactionResultDeserializer = new TransactionResultDeserializer(pendingTransactions);
         Properties transactionResultConsumerProps = new Properties();
         transactionResultConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -63,12 +70,29 @@ public class DatabaseConnection implements Closeable {
         transactionResultConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         transactionResultConsumer = new KafkaConsumer<>(transactionResultConsumerProps, Serdes.String().deserializer(), transactionResultDeserializer);
         transactionResultConsumer.subscribe(List.of(TRANSACTION_RESULT_TOPIC));
+
+        // Start a thread that listens to the result log and processes the results
+        resultThread = new Thread(this::processRecords);
+        resultThread.start();
     }
 
     @Override
     public void close() {
-        transactionRequestProducer.close();
-        transactionResultConsumer.close();
+        System.out.println("Closing");
+        try {
+            // Stop the listener if possible
+            if (resultThread.isAlive()) {
+                transactionResultConsumer.wakeup();
+                resultThread.join(10000);
+            }
+        } catch (InterruptedException e) {
+            // Convert to an unchecked exception
+            throw new InterruptException(e);
+        } finally {
+            // Then close the producer and consumer
+            transactionRequestProducer.close();
+            transactionResultConsumer.close();
+        }
     }
 
     /**
@@ -99,13 +123,22 @@ public class DatabaseConnection implements Closeable {
         return pendingTransaction;
     }
 
-    public void awaitRecord() {
-        ConsumerRecords<String, PendingTransaction> records = transactionResultConsumer.poll(Duration.ofSeconds(3));
-        if (records.isEmpty()) {
-            System.err.println("Failed to get records");
-        } else {
-            for (ConsumerRecord<String, PendingTransaction> record: records) {
-                System.out.printf("%s: txid=%d\n", record.key(), record.value().transactionId);
+    /**
+     * Run until the thread is interrupted, processing records from the result log
+     */
+    private void processRecords() {
+        while (true) {
+            try {
+                ConsumerRecords<String, PendingTransaction> records = transactionResultConsumer.poll(Duration.ofHours(12));
+                if (records.isEmpty()) {
+                    System.err.println("Failed to get records");
+                } else {
+                    for (ConsumerRecord<String, PendingTransaction> record : records) {
+                        System.out.printf("%s: txid=%d\n", record.key(), record.value().transactionId);
+                    }
+                }
+            } catch (InterruptException | WakeupException e) {
+                break;
             }
         }
     }

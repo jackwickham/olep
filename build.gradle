@@ -55,3 +55,13 @@ repositories {
     jcenter()
     mavenCentral()
 }
+
+task runVerifier(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.verifier.VerifierApp"
+}
+
+task runApplication(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.application.TestApplication"
+}
