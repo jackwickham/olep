@@ -102,7 +102,7 @@ public class DatabaseConnection implements Closeable {
      */
     public TransactionStatus<TestResult> test(String body) {
         TestMessage msgBody = new TestMessage(body);
-        return send(msgBody, TestResult.Builder.class).transactionStatus;
+        return send(msgBody, new TestResult.Builder()).getTransactionStatus();
     }
 
     /**
@@ -110,15 +110,15 @@ public class DatabaseConnection implements Closeable {
      *
      * @param msgBody The message to send
      */
-    private <T extends TransactionResult, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(TransactionRequestBody msgBody, Class<B> resultBuilder) {
+    @SuppressWarnings("FutureReturnValueIgnored")
+    private <T extends TransactionResult, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(TransactionRequestBody msgBody, B resultBuilder) {
         long transactionId = nextTransactionId();
 
         PendingTransaction<T, B> pendingTransaction = new PendingTransaction<>(transactionId, resultBuilder);
         pendingTransactions.put(transactionId, pendingTransaction);
 
         TransactionRequestMessage msg = new TransactionRequestMessage(transactionId, msgBody);
-        transactionRequestProducer.send(new ProducerRecord<>(TRANSACTION_REQUEST_TOPIC, "test message", msg), pendingTransaction.writtenToLogCallback);
-        //transactionRequestProducer.flush();
+        transactionRequestProducer.send(new ProducerRecord<>(TRANSACTION_REQUEST_TOPIC, "test message", msg), pendingTransaction.getWrittenToLogCallback());
 
         return pendingTransaction;
     }
@@ -129,14 +129,7 @@ public class DatabaseConnection implements Closeable {
     private void processRecords() {
         while (true) {
             try {
-                ConsumerRecords<String, PendingTransaction> records = transactionResultConsumer.poll(Duration.ofHours(12));
-                if (records.isEmpty()) {
-                    System.err.println("Failed to get records");
-                } else {
-                    for (ConsumerRecord<String, PendingTransaction> record : records) {
-                        System.out.printf("%s: txid=%d\n", record.key(), record.value().transactionId);
-                    }
-                }
+                transactionResultConsumer.poll(Duration.ofHours(12));
             } catch (InterruptException | WakeupException e) {
                 break;
             }

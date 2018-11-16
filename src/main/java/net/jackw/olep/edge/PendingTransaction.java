@@ -3,48 +3,112 @@ package net.jackw.olep.edge;
 import net.jackw.olep.edge.transaction_result.TransactionResult;
 import net.jackw.olep.edge.transaction_result.TransactionResultBuilder;
 import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * An internal representation of a pending transaction
+ * @param <T> The class that will hold the result of this transaction
+ * @param <B> A class for building T
+ */
 public class PendingTransaction<T extends TransactionResult, B extends TransactionResultBuilder<T>> {
-    public final long transactionId;
-    public final TransactionStatus<T> transactionStatus;
-    private final CompletableFuture<Void> writtenToLog;
-    private final CompletableFuture<Void> accepted;
-    private final CompletableFuture<T> complete;
+    private final long transactionId;
     private final B transactionResultBuilder;
 
-    public final Callback writtenToLogCallback;
+    /**
+     * The public transaction status object
+     *
+     * The CompletableFutures that represent the transaction's progress, {@link #writtenToLog}, {@link #accepted} and
+     * {@link #complete}, are shared by this TransactionStatus, to allow changes to the state to be signalled to it.
+     * These changes are then communicated to the consuming application through TransactionStatus's public API
+     */
+    private final TransactionStatus<T> transactionStatus;
 
-    public PendingTransaction(long transactionId, Class<B> resultBuilderClass) {
+    /**
+     * A future that is completed successfully when the transaction has been successfully written to Kafka, and
+     * completed exceptionally if the write to Kafka fails
+     */
+    private final CompletableFuture<RecordMetadata> writtenToLog;
+
+    /**
+     * A future that is completed successfully when the transaction is accepted by the database, and therefore
+     * guaranteed to be durable and to eventually succeed, and completed exceptionally if the transaction is rejected.
+     *
+     * If the transaction is not written to Kafka successfully, this future will never be completed, either successfully
+     * or exceptionally.
+     */
+    private final CompletableFuture<Void> accepted;
+
+    /**
+     * A future that is completed successfully with the result of this transaction if the transaction succeeds. It will
+     * never complete exceptionally.
+     *
+     * If the transaction is not written to Kafka successfully, or the transaction is rejected by the database, this
+     * future will never be completed (successfully or exceptionally)
+     */
+    private final CompletableFuture<T> complete;
+
+    /**
+     * Construct a new pending transaction. The transaction will usually be about to be written to Kafka
+     *
+     * @param transactionId The unique identifier for this transaction
+     * @param transactionResultBuilder The object to store incomplete results in
+     */
+    public PendingTransaction(long transactionId, B transactionResultBuilder) {
         this.transactionId = transactionId;
-        try {
-            this.transactionResultBuilder = resultBuilderClass.getDeclaredConstructor().newInstance();
-        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException("TransactionResultBuilder must have a public constructor with no arguments", e);
-        }
+        this.transactionResultBuilder = transactionResultBuilder;
 
+        // Create the futures to keep track of the transaction status
         this.writtenToLog = new CompletableFuture<>();
         this.accepted = new CompletableFuture<>();
         this.complete = new CompletableFuture<>();
-        this.transactionStatus = new TransactionStatus<>(writtenToLog, accepted, complete);
 
-        writtenToLogCallback = ((metadata, exception) -> {
-            if (metadata != null) {
-                this.writtenToLog.complete(null);
-            } else {
-                this.writtenToLog.completeExceptionally(exception);
-            }
-        });
+        this.transactionStatus = new TransactionStatus<>(writtenToLog, accepted, complete);
     }
 
+    /**
+     * Get the object that partial results should be stored to
+     */
     public B getTransactionResultBuilder() {
         return transactionResultBuilder;
     }
 
+    /**
+     * Get the ID of this transaction
+     */
+    public long getTransactionId() {
+        return transactionId;
+    }
+
+    /**
+     * Get the public transaction status object associated with this transaction
+     */
+    public TransactionStatus<T> getTransactionStatus() {
+        return transactionStatus;
+    }
+
+    /**
+     * Get the method that should be used as the callback when the transaction has been written to the log
+     */
+    public Callback getWrittenToLogCallback() {
+        return (metadata, exception) -> {
+            if (metadata != null) {
+                this.writtenToLog.complete(metadata);
+            } else {
+                this.writtenToLog.completeExceptionally(exception);
+            }
+        };
+    }
+
+    /**
+     * Notify this object that the associated transaction builder has been updated
+     *
+     * This method should be called after each TransactionResult message which contains results for this transaction
+     * has been processed.
+     */
     public void builderUpdated() {
         if (transactionResultBuilder.canBuild()) {
             T result = transactionResultBuilder.build();
@@ -52,14 +116,15 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
                 // We had already built this
                 log.warn("Builder shouldn't be updated after it has already been build");
             }
-            System.out.println("completed");
+            log.debug("completed");
         } else {
-            System.out.println("updated but not buildable");
+            log.debug("updated but not buildable");
         }
     }
 
     /**
      * Mark this transaction as accepted or rejected
+     *
      * @param isAccepted Whether the transaction was accepted or rejected
      */
     public void setAccepted(boolean isAccepted) {
@@ -67,9 +132,9 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
             if (!accepted.complete(null)) {
                 log.warn("Shouldn't set accepted after it has already been marked as accepted");
             }
-            System.out.println("Marked accepted");
+            log.debug("Marked accepted");
         } else {
-            if (!accepted.completeExceptionally(new Exception())) {
+            if (!accepted.completeExceptionally(new TransactionRejectedException())) {
                 log.warn("Shouldn't set accepted after it has already been marked as accepted");
             }
         }
