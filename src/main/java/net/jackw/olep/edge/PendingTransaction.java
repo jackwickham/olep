@@ -1,5 +1,6 @@
 package net.jackw.olep.edge;
 
+import com.google.common.annotations.VisibleForTesting;
 import net.jackw.olep.edge.transaction_result.TransactionResult;
 import net.jackw.olep.edge.transaction_result.TransactionResultBuilder;
 import org.apache.kafka.clients.producer.Callback;
@@ -138,6 +139,19 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
                 log.warn("Shouldn't set accepted after it has already been marked as accepted");
             }
         }
+    }
+
+    @VisibleForTesting
+    CompletableFuture<RecordMetadata> getWrittenToLogFuture() {
+        return this.writtenToLog;
+    }
+    @VisibleForTesting
+    CompletableFuture<Void> getAcceptedFuture() {
+        return this.accepted;
+    }
+    @VisibleForTesting
+    CompletableFuture<T> getCompleteFuture() {
+        return complete;
     }
 
     @Override

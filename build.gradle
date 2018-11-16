@@ -40,12 +40,14 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.1'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.1'
 
-    // Use JUnit test framework
-    testCompile 'junit:junit:4.12'
-
     // Expose the errorprone client library to the application
     compile group: 'com.google.errorprone', name: 'error_prone_core', version: '2.3.2'
     errorprone("com.google.errorprone:error_prone_core:2.3.2")
+
+    // Use JUnit test framework
+    testCompile 'junit:junit:4.12'
+    // And mockito for mocking and spying on stuff
+    testCompile "org.mockito:mockito-core:2.+"
 }
 
 // In this section you declare where to find the dependencies of your project
