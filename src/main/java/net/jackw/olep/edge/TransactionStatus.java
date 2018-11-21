@@ -6,13 +6,35 @@ import org.apache.logging.log4j.Logger;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+/**
+ * The result of a transaction, which may potentially still be pending.
+ *
+ * To receive the result of the transaction, handlers should be passed to the relevant attachment method. These handlers
+ * will be called in the order that they become applicable, then in the order that they were attached within that.
+ *
+ * If the result is available or the property has already been satisfied when the handler is attached, it will be called
+ * synchronously, before the attachment method returns (from the same thread). Otherwise, it will be called once the
+ * result becomes available or the property is satisfied, potentially from a different thread.
+ *
+ * @param <T> The type of the transaction result
+ */
 @SuppressWarnings("FutureReturnValueIgnored")
 public class TransactionStatus<T> {
     private CompletableFuture<Void> writtenToLog;
     private CompletableFuture<Void> accepted;
     private CompletableFuture<T> complete;
 
-    public TransactionStatus(
+    /**
+     * Create the status for a new transaction
+     *
+     * @param writtenToLog A future that will complete successfully when the transaction has been written to the event
+     *                     log, and exceptionally if the transaction is unable to be written to the event log
+     * @param accepted A future that will complete successfully when the transaction is accepted by the database system,
+     *                 and exceptionally if the transaction is rejected by the database system
+     * @param complete A future that will complete successfully when the results of the transaction have been retrieved
+     *                 from the database system, and will never complete exceptionally.
+     */
+    TransactionStatus(
         CompletableFuture<?> writtenToLog,
         CompletableFuture<Void> accepted,
         CompletableFuture<T> complete
@@ -20,15 +42,15 @@ public class TransactionStatus<T> {
         // Convert writtenToLog to a CompletableFuture<Void>
         this.writtenToLog = writtenToLog.thenApply(_a -> null);
         // Convert accepted to a future that only completes once writtenToLog and accepted have completed
-        this.accepted = this.writtenToLog.thenCombine(accepted, (_a, _b) -> null);
+        // Using .thenCompose so if writtenToLog fails, the resulting future will immediately fail too - .thenCombine
+        // waits for both futures to complete before failing
+        this.accepted = this.writtenToLog.thenCompose(_a -> accepted);
         // Convert complete to a future that only completes once the new accepted, and complete, have completed
-        this.complete = this.accepted.thenCombine(complete, (_a, completionResult) -> completionResult);
+        this.complete = this.accepted.thenCompose(_a -> complete);
     }
 
     /**
      * Add a handler that will be called when the transaction has been delivered to the server.
-     *
-     * Handlers will be called in the order that they are added.
      *
      * @param handler The handler to be called when the transaction has been delivered
      */
@@ -57,8 +79,6 @@ public class TransactionStatus<T> {
      *
      * When this callback is invoked, the effects may not have been applied to all of the views, but it is guaranteed
      * that they will be successfully applied at some point in the future.
-     *
-     * Handlers will be called in the order that they are registered.
      *
      * @param handler The callback to be invoked when the transaction is accepted
      */
@@ -96,6 +116,14 @@ public class TransactionStatus<T> {
         complete.thenAccept(v -> handleExceptions(() -> handler.accept(v)));
     }
 
+    /**
+     * Handle any exceptions thrown by a handler, by logging them to the error log
+     *
+     * This allows the return values of the futures created by consuming the results to be ignored, because any errors
+     * that were generated when executing the handler is managed here instead.
+     *
+     * @param method A void->void function to run and handle exceptions from
+     */
     private void handleExceptions(Runnable method) {
         try {
             method.run();
