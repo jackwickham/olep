@@ -58,7 +58,7 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
      * @param transactionId The unique identifier for this transaction
      * @param transactionResultBuilder The object to store incomplete results in
      */
-    public PendingTransaction(long transactionId, B transactionResultBuilder) {
+    PendingTransaction(long transactionId, B transactionResultBuilder) {
         this.transactionId = transactionId;
         this.transactionResultBuilder = transactionResultBuilder;
 

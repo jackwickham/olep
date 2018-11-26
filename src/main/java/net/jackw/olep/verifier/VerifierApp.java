@@ -1,60 +1,79 @@
 package net.jackw.olep.verifier;
 
-import com.google.common.collect.ImmutableMap;
 import net.jackw.olep.StreamsApp;
-import net.jackw.olep.common.JsonSerde;
+import net.jackw.olep.common.JsonDeserializer;
+import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.TransactionRequestMessage;
 import net.jackw.olep.message.TransactionResultMessage;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Produced;
 
-import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class VerifierApp extends StreamsApp {
+    private ConcurrentMap<Integer, Item> itemMap;
+    private ItemConsumer itemConsumer;
+
+    private VerifierApp(String bootstrapServers) {
+        super(bootstrapServers);
+        itemMap = new ConcurrentHashMap<>(100_000);
+    }
+
     @Override
     public String getApplicationID() {
         return "verifier";
     }
 
     @Override
+    protected void setup() {
+        // Consume from items so we can check the transactions
+        itemConsumer = new ItemConsumer(getBootstrapServers(), getApplicationID(), itemMap);
+    }
+
+    @Override
+    protected void shutdown() throws InterruptedException {
+        super.shutdown();
+        itemConsumer.close();
+    }
+
+    @Override
     protected Topology getTopology() {
-        StreamsBuilder builder = new StreamsBuilder();
+        Topology topology = new Topology();
 
-        // Ingest messages from the transaction request topic
-        KStream<String, TransactionRequestMessage> source = builder.stream(
-            KafkaConfig.TRANSACTION_REQUEST_TOPIC,
-            Consumed.with(Serdes.String(), new JsonSerde<>(TransactionRequestMessage.class))
-        );
-        // Approve them
-        source
-            .mapValues(value -> new TransactionResultMessage(value.transactionId, true, null))
-            .to(
+        topology
+            .addSource(
+                "transaction-requests",
+                Serdes.Long().deserializer(),
+                new JsonDeserializer<>(TransactionRequestMessage.class),
+                KafkaConfig.TRANSACTION_REQUEST_TOPIC
+            )
+            // Process takes candidate transactions, and decides whether they are acceptable
+            .addProcessor("process", TransactionProcessor::new, "transaction-requests")
+            // Send accept/reject messages to the transaction status log
+            .addProcessor("results", ResultProcessor::new, "process")
+            .addSink(
+                "accepted-transactions",
+                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
+                Serdes.Long().serializer(),
+                new JsonSerializer<>(TransactionRequestMessage.class),
+                "process"
+            )
+            .addSink(
+                "transaction-results",
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
-                Produced.with(Serdes.String(), new JsonSerde<>(TransactionResultMessage.class))
+                Serdes.Long().serializer(),
+                new JsonSerializer<>(TransactionResultMessage.class),
+                "results"
             );
 
-        // Add results
-        source
-            .mapValues(value -> {
-                Random rand = new Random();
-                ImmutableMap<String, Object> m = ImmutableMap.of("rnd", rand.nextInt(), "hello", "world");
-                return new TransactionResultMessage(value.transactionId, m);
-            })
-            .to(
-                KafkaConfig.TRANSACTION_RESULT_TOPIC,
-                Produced.with(Serdes.String(), new JsonSerde<>(TransactionResultMessage.class))
-            );
-
-        return builder.build();
+        return topology;
     }
 
     public static void main(String[] args) {
-        StreamsApp instance = new VerifierApp();
+        StreamsApp instance = new VerifierApp("localhost:9092");
         instance.run();
     }
 }

@@ -39,8 +39,8 @@ import static net.jackw.olep.common.KafkaConfig.TRANSACTION_RESULT_TOPIC;
  * A connection to the OLEP database
  */
 public class DatabaseConnection implements Closeable {
-    private final Producer<String, TransactionRequestMessage> transactionRequestProducer;
-    private final Consumer<String, PendingTransaction> transactionResultConsumer;
+    private final Producer<Long, TransactionRequestMessage> transactionRequestProducer;
+    private final Consumer<Long, PendingTransaction> transactionResultConsumer;
 
     private final Serializer<TransactionRequestMessage> transactionRequestSerializer;
     private final Deserializer<PendingTransaction> transactionResultDeserializer;
@@ -60,7 +60,7 @@ public class DatabaseConnection implements Closeable {
         Properties transactionRequestProducerProps = new Properties();
         transactionRequestProducerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         transactionRequestProducerProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 1);
-        transactionRequestProducer = new KafkaProducer<>(transactionRequestProducerProps, Serdes.String().serializer(), transactionRequestSerializer);
+        transactionRequestProducer = new KafkaProducer<>(transactionRequestProducerProps, Serdes.Long().serializer(), transactionRequestSerializer);
 
         // Set up the consumer, which is used to receive transaction result messages from the DB
         transactionResultDeserializer = new TransactionResultDeserializer(pendingTransactions);
@@ -68,7 +68,7 @@ public class DatabaseConnection implements Closeable {
         transactionResultConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         transactionResultConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "result-consumer" + rand.nextInt()); // TODO: this probably needs to be unique per app instance
         transactionResultConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-        transactionResultConsumer = new KafkaConsumer<>(transactionResultConsumerProps, Serdes.String().deserializer(), transactionResultDeserializer);
+        transactionResultConsumer = new KafkaConsumer<>(transactionResultConsumerProps, Serdes.Long().deserializer(), transactionResultDeserializer);
         transactionResultConsumer.subscribe(List.of(TRANSACTION_RESULT_TOPIC));
 
         // Start a thread that listens to the result log and processes the results
@@ -118,7 +118,7 @@ public class DatabaseConnection implements Closeable {
         pendingTransactions.put(transactionId, pendingTransaction);
 
         TransactionRequestMessage msg = new TransactionRequestMessage(transactionId, msgBody);
-        transactionRequestProducer.send(new ProducerRecord<>(TRANSACTION_REQUEST_TOPIC, "test message", msg), pendingTransaction.getWrittenToLogCallback());
+        transactionRequestProducer.send(new ProducerRecord<>(TRANSACTION_REQUEST_TOPIC, transactionId, msg), pendingTransaction.getWrittenToLogCallback());
 
         return pendingTransaction;
     }
