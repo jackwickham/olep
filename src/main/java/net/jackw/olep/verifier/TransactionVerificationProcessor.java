@@ -1,5 +1,7 @@
 package net.jackw.olep.verifier;
 
+import net.jackw.olep.common.SharedKeyValueStore;
+import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.TestMessage;
 import net.jackw.olep.message.TransactionRequestMessage;
 import net.jackw.olep.message.TransactionResultMessage;
@@ -7,8 +9,13 @@ import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
 
-public class TransactionProcessor implements Processor<Long, TransactionRequestMessage> {
+public class TransactionVerificationProcessor implements Processor<Long, TransactionRequestMessage> {
     private ProcessorContext context;
+    private final SharedKeyValueStore<Integer, Item> itemStore;
+
+    public TransactionVerificationProcessor(SharedKeyValueStore<Integer, Item> itemStore) {
+        this.itemStore = itemStore;
+    }
 
     @Override
     public void init(ProcessorContext context) {
@@ -26,7 +33,11 @@ public class TransactionProcessor implements Processor<Long, TransactionRequestM
         System.out.printf("Processing transaction %d\n", key);
         if (value.body instanceof TestMessage) {
             TestMessage body = (TestMessage) value.body;
-            acceptTransaction(key, value);
+            if (itemStore.contains(body.item)) {
+                acceptTransaction(key, value);
+            } else {
+                rejectTransaction(key, value);
+            }
         } else {
             rejectTransaction(key, value);
         }

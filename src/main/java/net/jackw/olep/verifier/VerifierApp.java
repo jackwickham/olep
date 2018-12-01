@@ -1,6 +1,7 @@
 package net.jackw.olep.verifier;
 
 import net.jackw.olep.StreamsApp;
+import net.jackw.olep.common.ItemConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.JsonSerializer;
@@ -14,16 +15,13 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 public class VerifierApp extends StreamsApp {
-    private ConcurrentMap<Integer, Item> itemMap;
     private ItemConsumer itemConsumer;
 
     private VerifierApp(String bootstrapServers) {
         super(bootstrapServers);
-        itemMap = new ConcurrentHashMap<>(100_000);
+        // Consume from items so we can check the transactions
+        itemConsumer = new ItemConsumer(getBootstrapServers(), getApplicationID());
     }
 
     @Override
@@ -33,8 +31,7 @@ public class VerifierApp extends StreamsApp {
 
     @Override
     protected void setup() {
-        // Consume from items so we can check the transactions
-        itemConsumer = new ItemConsumer(getBootstrapServers(), getApplicationID(), itemMap);
+        itemConsumer.start();
     }
 
     @Override
@@ -55,7 +52,7 @@ public class VerifierApp extends StreamsApp {
                 KafkaConfig.TRANSACTION_REQUEST_TOPIC
             )
             // Process takes candidate transactions, and decides whether they are acceptable
-            .addProcessor("process", TransactionProcessor::new, "transaction-requests")
+            .addProcessor("process", () -> new TransactionVerificationProcessor(itemConsumer.getItems()), "transaction-requests")
             .addSink(
                 "accepted-transactions",
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
@@ -72,6 +69,14 @@ public class VerifierApp extends StreamsApp {
             );
 
         return topology;
+    }
+
+    private StoreBuilder<KeyValueStore<Long, Item>> getItemStoreBuilder() {
+        return Stores.keyValueStoreBuilder(
+            Stores.persistentKeyValueStore("items"),
+            Serdes.Long(),
+            new JsonSerde<>(Item.class)
+        );
     }
 
     public static void main(String[] args) {
