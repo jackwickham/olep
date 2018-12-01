@@ -101,7 +101,7 @@ public class DatabaseConnection implements Closeable {
      * @param body The message to send in the transaction
      */
     public TransactionStatus<TestResult> test(String body) {
-        TestMessage msgBody = new TestMessage(body);
+        TestMessage msgBody = new TestMessage(body, 3);
         return send(msgBody, new TestResult.Builder()).getTransactionStatus();
     }
 

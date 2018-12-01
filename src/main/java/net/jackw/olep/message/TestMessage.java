@@ -6,8 +6,10 @@ import com.google.errorprone.annotations.Immutable;
 @Immutable
 public class TestMessage extends TransactionRequestBody {
     public final String body;
+    public final long item;
 
-    public TestMessage(@JsonProperty("body") String body) {
+    public TestMessage(@JsonProperty("body") String body, @JsonProperty("item") int item) {
         this.body = body;
+        this.item = item;
     }
 }

@@ -2,6 +2,7 @@ package net.jackw.olep.verifier;
 
 import net.jackw.olep.StreamsApp;
 import net.jackw.olep.common.JsonDeserializer;
+import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.Item;
@@ -9,6 +10,9 @@ import net.jackw.olep.message.TransactionRequestMessage;
 import net.jackw.olep.message.TransactionResultMessage;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -52,8 +56,6 @@ public class VerifierApp extends StreamsApp {
             )
             // Process takes candidate transactions, and decides whether they are acceptable
             .addProcessor("process", TransactionProcessor::new, "transaction-requests")
-            // Send accept/reject messages to the transaction status log
-            .addProcessor("results", ResultProcessor::new, "process")
             .addSink(
                 "accepted-transactions",
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
@@ -66,7 +68,7 @@ public class VerifierApp extends StreamsApp {
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
                 Serdes.Long().serializer(),
                 new JsonSerializer<>(TransactionResultMessage.class),
-                "results"
+                "process"
             );
 
         return topology;

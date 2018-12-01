@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.Immutable;
 
+import java.util.Map;
+
 @Immutable
 @JsonPropertyOrder({"transactionId", "approved", "results"})
 public class TransactionResultMessage {
@@ -16,16 +18,16 @@ public class TransactionResultMessage {
     public TransactionResultMessage(
         @JsonProperty("transactionId") long transactionId,
         @JsonProperty("approved") Boolean approved,
-        @JsonProperty("results") ImmutableMap<String, ?> results
+        @JsonProperty("results") Map<String, ?> results
     ) {
         this.transactionId = transactionId;
         this.approved = approved;
-        this.results = results;
+        this.results = results == null ? null : ImmutableMap.copyOf(results);
     }
 
     public TransactionResultMessage(
         long transactionId,
-        ImmutableMap<String, ?> results
+        Map<String, ?> results
     ) {
         this(transactionId, null, results);
     }

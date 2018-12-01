@@ -2,6 +2,7 @@ package net.jackw.olep.verifier;
 
 import net.jackw.olep.message.TestMessage;
 import net.jackw.olep.message.TransactionRequestMessage;
+import net.jackw.olep.message.TransactionResultMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
@@ -24,13 +25,27 @@ public class TransactionProcessor implements Processor<Long, TransactionRequestM
     public void process(Long key, TransactionRequestMessage value) {
         System.out.printf("Processing transaction %d\n", key);
         if (value.body instanceof TestMessage) {
-            context.forward(key, value, To.child("accepted-transactions"));
-            context.forward(key, true, To.child("results"));
-            System.out.println("Accepted a test message");
+            TestMessage body = (TestMessage) value.body;
+            acceptTransaction(key, value);
         } else {
-            context.forward(key, false, To.child("return-status"));
-            System.out.println("Rejected a messaged of type " + value.body.getClass().getName());
+            rejectTransaction(key, value);
         }
+    }
+
+    private void acceptTransaction(long id, TransactionRequestMessage transaction) {
+        context.forward(id, transaction, To.child("accepted-transactions"));
+        sendAcceptanceMessage(id, true);
+        System.out.println("Accepted a test message");
+    }
+
+    private void rejectTransaction(long id, TransactionRequestMessage transaction) {
+        sendAcceptanceMessage(id, false);
+        System.out.println("Rejected a messaged of type " + transaction.body.getClass().getName());
+    }
+
+    private void sendAcceptanceMessage(long id, boolean accepted) {
+        TransactionResultMessage result = new TransactionResultMessage(id, accepted);
+        context.forward(id, result);
     }
 
     @Override
