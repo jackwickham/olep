@@ -39,7 +39,7 @@ public class ItemConsumer extends Thread implements AutoCloseable {
         Properties itemConsumerProps = new Properties();
         itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         itemConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, nodeID);
-        itemConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        itemConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         itemConsumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
         consumer = new KafkaConsumer<>(itemConsumerProps, Serdes.Integer().deserializer(), new JsonDeserializer<>(Item.class));
@@ -47,7 +47,7 @@ public class ItemConsumer extends Thread implements AutoCloseable {
         // We only subscribe to one partition here, because items should only ever have one partition
         TopicPartition partition = new TopicPartition(ITEM_IMMUTABLE_TOPIC, 0);
         consumer.assign(List.of(partition));
-        consumer.seekToEnd(List.of(partition));
+        consumer.seekToBeginning(List.of(partition));
     }
 
     /**

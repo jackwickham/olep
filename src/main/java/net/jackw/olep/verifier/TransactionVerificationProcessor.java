@@ -46,7 +46,7 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
     private void acceptTransaction(long id, TransactionRequestMessage transaction) {
         context.forward(id, transaction, To.child("accepted-transactions"));
         sendAcceptanceMessage(id, true);
-        System.out.println("Accepted a test message");
+        System.out.println("Accepted a transaction of type " + transaction.body.getClass().getName());
     }
 
     private void rejectTransaction(long id, TransactionRequestMessage transaction) {
