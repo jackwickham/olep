@@ -34,7 +34,7 @@ public class ItemFactory {
         // I_NAME random a-string [14 .. 24]
         String name = rand.aString(14, 24);
         // I_PRICE random within [1.00 .. 100.00]
-        BigDecimal price = rand.uniform(1, 100, 2);
+        BigDecimal price = rand.uniform(1, 100_00, 2);
         // I_DATA random a-string [26 .. 50]. For 10% of the rows, selected at random, the string ORIGINAL must be held
         // by 8 consecutive characters starting at a random position within I_DATA
         String data = rand.aString(26, 50);

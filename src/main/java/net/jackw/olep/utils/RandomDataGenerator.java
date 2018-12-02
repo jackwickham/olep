@@ -26,6 +26,15 @@ public class RandomDataGenerator extends Random {
     }
 
     /**
+     * Create a new RandomDataGenerator with the specified random seed
+     *
+     * @param seed The seed to initialise the {@link Random} with
+     */
+    public RandomDataGenerator(long seed) {
+        super(seed);
+    }
+
+    /**
      * Generate a new random integer, uniformly distributed between lowerBound (inclusive) and upperBound (inclusive)
      *
      * @param lowerBound The inclusive lower bound
@@ -56,7 +65,12 @@ public class RandomDataGenerator extends Random {
         long maxUniformValue = (Long.MAX_VALUE / range) * range;
         long result;
         do {
-            result = this.nextLong();
+            result = Math.abs(this.nextLong());
+            if (result < 0) {
+                // Long.MIN_VALUE doesn't abs, because there is no equivalent positive integer
+                // There's only a positive 0 so far though, so count this as negative 0
+                result = 0;
+            }
         } while (result > maxUniformValue);
         return (result % range) + lowerBound;
     }
@@ -64,10 +78,10 @@ public class RandomDataGenerator extends Random {
     /**
      * Generate a new random BigInteger, uniformly distributed between lowerBound (inclusive) and upperBound (inclusive)
      *
-     * TODO: Called with non-integer bounds
+     * The bounds provided are fixed point numbers, with `decimals` specifying the position of the point.
      *
-     * @param lowerBound The inclusive lower bound
-     * @param upperBound The inclusive upper bound
+     * @param lowerBound Lower bound * 10^decimals (inclusive)
+     * @param upperBound Upper bound * 10^decimals (inclusive)
      * @param decimals The number of decimal places to include in the generated random
      * @return The next random number between the lower and upper bounds (inclusive)
      */
@@ -76,14 +90,13 @@ public class RandomDataGenerator extends Random {
         checkArgument(decimals >= 0, "Negative decimals aren't supported");
         checkArgument(decimals < 10, "Too many decimals");
 
-        long effectiveRange = (upperBound - lowerBound + 1) * ((long) Math.pow(10, decimals));
-        return new BigDecimal(uniform(0L, effectiveRange) + lowerBound).movePointLeft(decimals);
+        return new BigDecimal(uniform(lowerBound, upperBound)).movePointLeft(decimals);
     }
 
     /**
      * Generate a non-uniform random value, distributed according to §2.1.6 of the TPC-C spec
      *
-     * NURand(A, x, y) = (((random(0, A) | random(x, y)) + C) % (y - x + 1)) +  x
+     * NURand(A, x, y) = (((random(0, A) | random(x, y)) + C) % (y - x + 1)) + x
      *
      * @param a The per-field constant
      * @param lowerBound The inclusive lower bound
