@@ -56,6 +56,7 @@ public class RandomDataGenerator extends Random {
      * @param upperBound The inclusive upper bound
      * @return The next random long between the lower and upper bounds (inclusive)
      */
+    @SuppressWarnings("MathAbsoluteRandom")
     public long uniform(long lowerBound, long upperBound) {
         checkArgument(lowerBound <= upperBound, "Lower bound must be <= upper bound");
         if (lowerBound == upperBound) {
