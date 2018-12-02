@@ -12,6 +12,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 import java.util.Properties;
 
+@SuppressWarnings("FutureReturnValueIgnored")
 public class PopulateStores {
     private String bootstrapServers = "localhost:9092";
 

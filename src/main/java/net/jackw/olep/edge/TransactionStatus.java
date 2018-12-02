@@ -1,5 +1,6 @@
 package net.jackw.olep.edge;
 
+import net.jackw.olep.edge.transaction_result.TransactionResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,7 +20,7 @@ import java.util.function.Consumer;
  * @param <T> The type of the transaction result
  */
 @SuppressWarnings("FutureReturnValueIgnored")
-public class TransactionStatus<T> {
+public class TransactionStatus<T extends TransactionResult> {
     private CompletableFuture<Void> writtenToLog;
     private CompletableFuture<Void> accepted;
     private CompletableFuture<T> complete;
@@ -47,6 +48,19 @@ public class TransactionStatus<T> {
         this.accepted = this.writtenToLog.thenCompose(_a -> accepted);
         // Convert complete to a future that only completes once the new accepted, and complete, have completed
         this.complete = this.accepted.thenCompose(_a -> complete);
+    }
+
+    /**
+     * Register a {@link TransactionStatusListener} to handle all of the potential events
+     *
+     * @param handlers The TransactionStatusListener that contains all of the handlers
+     */
+    public void register(TransactionStatusListener<? super T> handlers) {
+        addDeliveredHandler(handlers::deliveredHandler);
+        addDeliveryFailedHandler(handlers::deliveryFailedHandler);
+        addAcceptedHandler(handlers::acceptedHandler);
+        addRejectedHandler(handlers::rejectedHandler);
+        addCompleteHandler(handlers::completeHandler);
     }
 
     /**

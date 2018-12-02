@@ -67,3 +67,8 @@ task runApplication(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.jackw.olep.application.TestApplication"
 }
+
+task runPopulateStores(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.utils.immutable_data.PopulateStores"
+}
