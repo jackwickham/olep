@@ -70,5 +70,10 @@ task runApplication(type: JavaExec, dependsOn: 'classes') {
 
 task runPopulateStores(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
-    main = "net.jackw.olep.utils.immutable_data.PopulateStores"
+    main = "net.jackw.olep.utils.immutable_stores.PopulateStores"
+}
+
+task createTopics(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.utils.ClusterCreator"
 }
