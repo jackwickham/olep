@@ -11,8 +11,6 @@ import net.jackw.olep.message.TransactionRequestBody;
 import net.jackw.olep.message.TransactionRequestMessage;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -100,8 +98,8 @@ public class DatabaseConnection implements Closeable {
      *
      * @param body The message to send in the transaction
      */
-    public TransactionStatus<TestResult> test(String body) {
-        TestMessage msgBody = new TestMessage(body, 3);
+    public TransactionStatus<TestResult> test(String body, int item) {
+        TestMessage msgBody = new TestMessage(body, item);
         return send(msgBody, new TestResult.Builder()).getTransactionStatus();
     }
 

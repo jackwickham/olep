@@ -68,7 +68,7 @@ public class RandomDataGenerator extends Random {
         checkArgument(decimals >= 0, "Negative decimals aren't supported");
         checkArgument(decimals < 10, "Too many decimals");
 
-        long effectiveRange = (lowerBound - upperBound + 1) * ((long) Math.pow(10, decimals));
+        long effectiveRange = (upperBound - lowerBound + 1) * ((long) Math.pow(10, decimals));
         return new BigDecimal(uniform(0L, effectiveRange) + lowerBound).movePointLeft(decimals);
     }
 

@@ -1,5 +1,6 @@
-package net.jackw.olep.application.data_generator;
+package net.jackw.olep.utils.immutable_data;
 
+import net.jackw.olep.application.data_generator.RandomDataGenerator;
 import net.jackw.olep.common.records.Item;
 
 import java.math.BigDecimal;
