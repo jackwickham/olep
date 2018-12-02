@@ -1,7 +1,6 @@
 package net.jackw.olep.common;
 
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import net.jackw.olep.common.records.Item;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -9,17 +8,21 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
-import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.serialization.Deserializer;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
-import static net.jackw.olep.common.KafkaConfig.ITEM_IMMUTABLE_TOPIC;
-
-public class ItemConsumer extends Thread implements AutoCloseable {
-    private Consumer<Integer, Item> consumer;
-    private SharedMapStore<Integer, Item> items;
+/**
+ * Consumer for a shared key-value store, manually implemented with a Kafka changelog topic
+ *
+ * @param <K> The store key
+ * @param <V> The store value
+ */
+public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
+    private Consumer<K, V> consumer;
+    private SharedMapStore<K, V> items;
 
     // I'm not sure if this flag really needs to be behind the lock, but it seems like the easiest way to make sure that
     // it will definitely be read correctly by the other thread, and the cost is very small because it is only used in
@@ -28,12 +31,12 @@ public class ItemConsumer extends Thread implements AutoCloseable {
     private boolean done = false;
 
     /**
-     * Construct a new item consumer, and subscribe to the items log
+     * Construct a new shared store consumer, and subscribe to the corresponding log
      *
      * @param bootstrapServers The Kafka cluster's bootstrap servers
      * @param nodeID The ID of this node. It should be unique between all consumers of this log.
      */
-    public ItemConsumer(String bootstrapServers, String nodeID) {
+    public SharedStoreConsumer(String bootstrapServers, String nodeID, Class<V> valueClass, String log, Deserializer<K> keyDeserializer) {
         items = new SharedMapStore<>(100_000);
 
         Properties itemConsumerProps = new Properties();
@@ -42,18 +45,18 @@ public class ItemConsumer extends Thread implements AutoCloseable {
         itemConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         itemConsumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
-        consumer = new KafkaConsumer<>(itemConsumerProps, Serdes.Integer().deserializer(), new JsonDeserializer<>(Item.class));
+        consumer = new KafkaConsumer<>(itemConsumerProps, keyDeserializer, new JsonDeserializer<>(valueClass));
 
         // We only subscribe to one partition here, because items should only ever have one partition
-        TopicPartition partition = new TopicPartition(ITEM_IMMUTABLE_TOPIC, 0);
+        TopicPartition partition = new TopicPartition(log, 0);
         consumer.assign(List.of(partition));
         consumer.seekToBeginning(List.of(partition));
     }
 
     /**
-     * Get the item store that is populated by this consumer
+     * Get the store that is populated by this consumer
      */
-    public SharedKeyValueStore<Integer, Item> getItems() {
+    public SharedKeyValueStore<K, V> getItems() {
         return items;
     }
 
@@ -61,8 +64,8 @@ public class ItemConsumer extends Thread implements AutoCloseable {
     public void run() {
         while (true) {
             try {
-                ConsumerRecords<Integer, Item> receivedRecords = consumer.poll(Duration.ofHours(12));
-                for (ConsumerRecord<Integer, Item> record : receivedRecords) {
+                ConsumerRecords<K, V> receivedRecords = consumer.poll(Duration.ofHours(12));
+                for (ConsumerRecord<K, V> record : receivedRecords) {
                     if (record.value() == null) {
                         items.remove(record.key());
                     } else {
