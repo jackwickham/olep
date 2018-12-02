@@ -1,4 +1,4 @@
-package net.jackw.olep.application.data_generator;
+package net.jackw.olep.utils;
 
 import java.math.BigDecimal;
 import java.util.Random;
@@ -34,6 +34,9 @@ public class RandomDataGenerator extends Random {
      */
     public int uniform(int lowerBound, int upperBound) {
         checkArgument(lowerBound <= upperBound, "Lower bound must be <= upper bound");
+        if (lowerBound == upperBound) {
+            return lowerBound;
+        }
         return this.nextInt(upperBound - lowerBound + 1) + lowerBound;
     }
 
@@ -46,6 +49,9 @@ public class RandomDataGenerator extends Random {
      */
     public long uniform(long lowerBound, long upperBound) {
         checkArgument(lowerBound <= upperBound, "Lower bound must be <= upper bound");
+        if (lowerBound == upperBound) {
+            return lowerBound;
+        }
         long range = upperBound - lowerBound + 1;
         long maxUniformValue = (Long.MAX_VALUE / range) * range;
         long result;
@@ -57,6 +63,8 @@ public class RandomDataGenerator extends Random {
 
     /**
      * Generate a new random BigInteger, uniformly distributed between lowerBound (inclusive) and upperBound (inclusive)
+     *
+     * TODO: Called with non-integer bounds
      *
      * @param lowerBound The inclusive lower bound
      * @param upperBound The inclusive upper bound
@@ -123,5 +131,15 @@ public class RandomDataGenerator extends Random {
             sb.append(uniform(0, 9));
         }
         return sb.toString();
+    }
+
+    /**
+     * Returns `true` with probability `percentChance`%, and `false` otherwise
+     *
+     * @param percentChance The percentage probability of returning `true`
+     * @return The random choice
+     */
+    public boolean choice(int percentChance) {
+        return this.nextInt(100) < percentChance;
     }
 }

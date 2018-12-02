@@ -22,7 +22,7 @@ import java.util.Properties;
  */
 public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
     private Consumer<K, V> consumer;
-    private SharedMapStore<K, V> items;
+    private SharedMapStore<K, V> store;
 
     // I'm not sure if this flag really needs to be behind the lock, but it seems like the easiest way to make sure that
     // it will definitely be read correctly by the other thread, and the cost is very small because it is only used in
@@ -31,13 +31,16 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
     private boolean done = false;
 
     /**
-     * Construct a new shared store consumer, and subscribe to the corresponding log
+     * Construct a new shared store consumer, and subscribe to the corresponding topic
      *
      * @param bootstrapServers The Kafka cluster's bootstrap servers
      * @param nodeID The ID of this node. It should be unique between all consumers of this log.
+     * @param topic The changelog topic corresponding to this store
+     * @param keyDeserializer The deserializer for the store key
+     * @param valueDeserializer The deserializer for the store values
      */
-    public SharedStoreConsumer(String bootstrapServers, String nodeID, Class<V> valueClass, String log, Deserializer<K> keyDeserializer) {
-        items = new SharedMapStore<>(100_000);
+    public SharedStoreConsumer(String bootstrapServers, String nodeID, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
+        store = new SharedMapStore<>(100_000);
 
         Properties itemConsumerProps = new Properties();
         itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -45,19 +48,37 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
         itemConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         itemConsumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
-        consumer = new KafkaConsumer<>(itemConsumerProps, keyDeserializer, new JsonDeserializer<>(valueClass));
+        consumer = new KafkaConsumer<>(itemConsumerProps, keyDeserializer, valueDeserializer);
 
-        // We only subscribe to one partition here, because items should only ever have one partition
-        TopicPartition partition = new TopicPartition(log, 0);
+        // We only subscribe to one partition here, because shared store topics should only ever have one partition
+        TopicPartition partition = new TopicPartition(topic, 0);
         consumer.assign(List.of(partition));
         consumer.seekToBeginning(List.of(partition));
     }
 
     /**
+     * Helper constructor for when they key is a value with provided deserializer and the value is a class
+     *
+     * @see SharedStoreConsumer(String, String, String, Deserializer, Deserializer)
+     */
+    public SharedStoreConsumer(String bootstrapServers, String nodeID, String log, Deserializer<K> keyDeserializer, Class<V> valueClass) {
+        this(bootstrapServers, nodeID, log, keyDeserializer, new JsonDeserializer<>(valueClass));
+    }
+
+    /**
+     * Helper constructor for when they key and value are both classes
+     *
+     * @see SharedStoreConsumer(String, String, String, Deserializer, Deserializer)
+     */
+    public SharedStoreConsumer(String bootstrapServers, String nodeID, String log, Class<K> keyClass, Class<V> valueClass) {
+        this(bootstrapServers, nodeID, log, new JsonDeserializer<>(keyClass), new JsonDeserializer<>(valueClass));
+    }
+
+    /**
      * Get the store that is populated by this consumer
      */
-    public SharedKeyValueStore<K, V> getItems() {
-        return items;
+    public SharedKeyValueStore<K, V> getStore() {
+        return store;
     }
 
     @Override
@@ -67,9 +88,9 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
                 ConsumerRecords<K, V> receivedRecords = consumer.poll(Duration.ofHours(12));
                 for (ConsumerRecord<K, V> record : receivedRecords) {
                     if (record.value() == null) {
-                        items.remove(record.key());
+                        store.remove(record.key());
                     } else {
-                        items.put(record.key(), record.value());
+                        store.put(record.key(), record.value());
                     }
                 }
             } catch (WakeupException e) {

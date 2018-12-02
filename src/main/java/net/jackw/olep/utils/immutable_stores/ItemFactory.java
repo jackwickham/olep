@@ -1,6 +1,6 @@
 package net.jackw.olep.utils.immutable_stores;
 
-import net.jackw.olep.application.data_generator.RandomDataGenerator;
+import net.jackw.olep.utils.RandomDataGenerator;
 import net.jackw.olep.common.records.Item;
 
 import java.math.BigDecimal;
@@ -38,7 +38,7 @@ public class ItemFactory {
         // I_DATA random a-string [26 .. 50]. For 10% of the rows, selected at random, the string ORIGINAL must be held
         // by 8 consecutive characters starting at a random position within I_DATA
         String data = rand.aString(26, 50);
-        if (rand.nextInt(10) == 0) {
+        if (rand.choice(10)) {
             int startIndex = rand.nextInt(data.length() - 8);
             data = data.subSequence(0, startIndex) + "ORIGINAL" + data.subSequence(startIndex + 8, data.length());
         }

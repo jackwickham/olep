@@ -25,8 +25,13 @@ public class ClusterCreator {
         short sharedStoreReplicationFactor = 1;
 
         Set<String> dbTopics = Set.of(
-            KafkaConfig.ITEM_IMMUTABLE_TOPIC, KafkaConfig.TRANSACTION_REQUEST_TOPIC,
-            KafkaConfig.TRANSACTION_RESULT_TOPIC, KafkaConfig.ACCEPTED_TRANSACTION_TOPIC
+            // Transaction topics
+            KafkaConfig.TRANSACTION_REQUEST_TOPIC, KafkaConfig.TRANSACTION_RESULT_TOPIC,
+            KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
+            // Shared store topics
+            KafkaConfig.ITEM_IMMUTABLE_TOPIC, KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC,
+            KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC,
+            KafkaConfig.STOCK_IMMUTABLE_TOPIC
         );
 
         Properties adminClientConfig = new Properties();
@@ -51,6 +56,10 @@ public class ClusterCreator {
 
             // Shared stores only have one partition, but should be replicated to allow for broker failures
             topicsToCreate.add(new NewTopic(KafkaConfig.ITEM_IMMUTABLE_TOPIC, 1, sharedStoreReplicationFactor));
+            topicsToCreate.add(new NewTopic(KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC, 1, sharedStoreReplicationFactor));
+            topicsToCreate.add(new NewTopic(KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, 1, sharedStoreReplicationFactor));
+            topicsToCreate.add(new NewTopic(KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, 1, sharedStoreReplicationFactor));
+            topicsToCreate.add(new NewTopic(KafkaConfig.STOCK_IMMUTABLE_TOPIC, 1, sharedStoreReplicationFactor));
             // Topics involved with transactions are partitioned based on the warehouse they are associated with
             // To allow for scaling if needed, have twice as many partitions as verifiers/workers
             topicsToCreate.add(new NewTopic(KafkaConfig.TRANSACTION_REQUEST_TOPIC, numVerifiers * 2, transactionReplicationFactor));

@@ -23,9 +23,9 @@ public class VerifierApp extends StreamsApp {
         itemConsumer = new SharedStoreConsumer<>(
             getBootstrapServers(),
             getApplicationID() + "-" + new Random().nextInt(),
-            Item.class,
             KafkaConfig.ITEM_IMMUTABLE_TOPIC,
-            Serdes.Integer().deserializer()
+            Serdes.Integer().deserializer(),
+            Item.class
         );
     }
 
@@ -57,7 +57,7 @@ public class VerifierApp extends StreamsApp {
                 KafkaConfig.TRANSACTION_REQUEST_TOPIC
             )
             // Process takes candidate transactions, and decides whether they are acceptable
-            .addProcessor("process", () -> new TransactionVerificationProcessor(itemConsumer.getItems()), "transaction-requests")
+            .addProcessor("process", () -> new TransactionVerificationProcessor(itemConsumer.getStore()), "transaction-requests")
             .addSink(
                 "accepted-transactions",
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
