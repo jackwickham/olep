@@ -1,5 +1,6 @@
 package net.jackw.olep.utils.immutable_stores;
 
+import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -64,7 +65,7 @@ public class CustomerFactory {
         // C_SINCE date/time given by the operating system when the CUSTOMER table was populated
         long since = new Date().getTime();
         // C_CREDIT = "GC". For 10% of the rows, selected at random, C_CREDIT = "BC"
-        CustomerShared.Credit credit = rand.choice(90) ? CustomerShared.Credit.GC : CustomerShared.Credit.BC;
+        Credit credit = rand.choice(90) ? Credit.GC : Credit.BC;
         // C_CREDIT_LIM = 50,000.00
         BigDecimal creditLim = new BigDecimal("50000.00");
         // C_DISCOUNT random within [0.0000 .. 0.5000]

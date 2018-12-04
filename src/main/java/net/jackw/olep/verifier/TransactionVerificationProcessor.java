@@ -2,6 +2,7 @@ package net.jackw.olep.verifier;
 
 import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.common.records.Item;
+import net.jackw.olep.message.NewOrderMessage;
 import net.jackw.olep.message.TestMessage;
 import net.jackw.olep.message.TransactionRequestMessage;
 import net.jackw.olep.message.TransactionResultMessage;
@@ -38,6 +39,14 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
             } else {
                 rejectTransaction(key, value);
             }
+        } else if (value.body instanceof NewOrderMessage) {
+            NewOrderMessage body = (NewOrderMessage) value.body;
+            if (body.lines.stream().allMatch(line -> itemStore.contains(line.itemId))) {
+                acceptTransaction(key, value);
+            } else {
+                rejectTransaction(key, value);
+            }
+
         } else {
             rejectTransaction(key, value);
         }

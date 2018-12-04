@@ -67,10 +67,6 @@ public class CustomerShared {
         return new Key(id, dId, wId);
     }
 
-    public enum Credit {
-        GC, BC
-    }
-
     public static class Key {
         public final int id;
         public final int dId;

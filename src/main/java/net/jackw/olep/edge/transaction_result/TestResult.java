@@ -1,5 +1,8 @@
 package net.jackw.olep.edge.transaction_result;
 
+import com.google.errorprone.annotations.Immutable;
+
+@Immutable
 public class TestResult extends TransactionResult {
     public static class Builder extends TransactionResultBuilder<TestResult> {
         @Override
@@ -16,8 +19,8 @@ public class TestResult extends TransactionResult {
         public String hello;
     }
 
-    public int rnd;
-    public String hello;
+    public final int rnd;
+    public final String hello;
 
     private TestResult(int rnd, String hello) {
         this.rnd = rnd;
