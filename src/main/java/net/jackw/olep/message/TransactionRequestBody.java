@@ -9,8 +9,9 @@ import com.google.errorprone.annotations.Immutable;
     include = JsonTypeInfo.As.PROPERTY,
     property = "type"
 )
-@JsonSubTypes(
-    @JsonSubTypes.Type(value = TestMessage.class, name = "test")
-)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = TestMessage.class, name = "test"),
+    @JsonSubTypes.Type(value = NewOrderMessage.class, name = "neworder")
+})
 @Immutable
 public abstract class TransactionRequestBody {}

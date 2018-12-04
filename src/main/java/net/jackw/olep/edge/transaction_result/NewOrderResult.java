@@ -2,12 +2,14 @@ package net.jackw.olep.edge.transaction_result;
 
 import com.fasterxml.jackson.annotation.JsonMerge;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.Credit;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Immutable
@@ -100,5 +102,35 @@ public class NewOrderResult extends TransactionResult {
             this.itemPrice = itemPrice;
             this.lineAmount = lineAmount;
         }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("supplyWarehouseId", supplyWarehouseId)
+                .add("itemId", itemId)
+                .add("itemName", itemName)
+                .add("quantity", quantity)
+                .add("stockQuantity", stockQuantity)
+                .add("itemPrice", itemPrice)
+                .add("lineAmount", lineAmount)
+                .toString();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("warehouseId", this.warehouseId)
+            .add("districtId", this.districtId)
+            .add("customerId", this.customerId)
+            .add("orderDate", new Date(this.orderDate))
+            .add("orderId", this.orderId)
+            .add("customerSurname", this.customerSurname)
+            .add("credit", this.credit)
+            .add("discount", this.discount)
+            .add("warehouseTax", this.warehouseTax)
+            .add("districtTax", this.districtTax)
+            .add("lines", this.lines)
+            .toString();
     }
 }

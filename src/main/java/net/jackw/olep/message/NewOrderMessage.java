@@ -35,7 +35,7 @@ public class NewOrderMessage extends TransactionRequestBody {
         public OrderLine(
             @JsonProperty("itemId") int itemId,
             @JsonProperty("supplyingWarehouseId") int supplyingWarehouseId,
-            @JsonProperty int quantity
+            @JsonProperty("quantity") int quantity
         ) {
             this.itemId = itemId;
             this.supplyingWarehouseId = supplyingWarehouseId;

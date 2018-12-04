@@ -1,11 +1,14 @@
 package net.jackw.olep.edge;
 
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonSerializer;
+import net.jackw.olep.edge.transaction_result.NewOrderResult;
 import net.jackw.olep.edge.transaction_result.TestResult;
 import net.jackw.olep.edge.transaction_result.TransactionResult;
 import net.jackw.olep.edge.transaction_result.TransactionResultBuilder;
 import net.jackw.olep.edge.transaction_result.TransactionResultDeserializer;
+import net.jackw.olep.message.NewOrderMessage;
 import net.jackw.olep.message.TestMessage;
 import net.jackw.olep.message.TransactionRequestBody;
 import net.jackw.olep.message.TransactionRequestMessage;
@@ -24,6 +27,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 import java.io.Closeable;
 import java.time.Duration;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -101,6 +105,11 @@ public class DatabaseConnection implements Closeable {
     public TransactionStatus<TestResult> test(String body, int item) {
         TestMessage msgBody = new TestMessage(body, item);
         return send(msgBody, new TestResult.Builder()).getTransactionStatus();
+    }
+
+    public TransactionStatus<NewOrderResult> newOrder(int customerId, int warehouseId, int districtId, List<NewOrderMessage.OrderLine> lines) {
+        NewOrderMessage msgBody = new NewOrderMessage(customerId, warehouseId, districtId, ImmutableList.copyOf(lines), new Date().getTime());
+        return send(msgBody, new NewOrderResult.Builder()).getTransactionStatus();
     }
 
     /**
