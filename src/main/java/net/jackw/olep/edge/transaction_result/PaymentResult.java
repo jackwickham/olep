@@ -1,6 +1,5 @@
 package net.jackw.olep.edge.transaction_result;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
@@ -15,8 +14,8 @@ public class PaymentResult extends TransactionResult {
             return warehouseId != null && warehouseAddress != null && districtId != null && districtAddress != null &&
                 customerWarehouseId != null && customerDistrictId != null && customerId != null &&
                 customerAddress != null && customerPhone != null && customerSince != null && customerCredit != null &&
-                customerCreditLimit != null && customerDiscount != null && customerBalance != null &&
-                customerData != null;
+                customerCreditLimit != null && customerDiscount != null && customerBalance != null;
+            // Customer data is allowed to be null
         }
 
         @Override

@@ -14,11 +14,7 @@ public class CustomerShared {
     public final String first;
     public final String middle;
     public final String last;
-    public final String street1;
-    public final String street2;
-    public final String city;
-    public final String state;
-    public final String zip;
+    public final Address address;
     public final String phone;
     // Java's Date class isn't immutable, which is bad, so just use long with the number of ms since 01 Jan 1970
     public final long since;
@@ -33,11 +29,7 @@ public class CustomerShared {
         @JsonProperty("first") String first,
         @JsonProperty("middle") String middle,
         @JsonProperty("last") String last,
-        @JsonProperty("street1") String street1,
-        @JsonProperty("street2") String street2,
-        @JsonProperty("city") String city,
-        @JsonProperty("state") String state,
-        @JsonProperty("zip") String zip,
+        @JsonProperty("address") Address address,
         @JsonProperty("phone") String phone,
         @JsonProperty("since") long since,
         @JsonProperty("credit") Credit credit,
@@ -50,11 +42,7 @@ public class CustomerShared {
         this.first = first;
         this.middle = middle;
         this.last = last;
-        this.street1 = street1;
-        this.street2 = street2;
-        this.city = city;
-        this.state = state;
-        this.zip = zip;
+        this.address = address;
         this.phone = phone;
         this.since = since;
         this.credit = credit;
