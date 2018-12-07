@@ -3,12 +3,16 @@ package net.jackw.olep.edge;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonSerializer;
+import net.jackw.olep.edge.transaction_result.DeliveryResult;
 import net.jackw.olep.edge.transaction_result.NewOrderResult;
+import net.jackw.olep.edge.transaction_result.PaymentResult;
 import net.jackw.olep.edge.transaction_result.TestResult;
 import net.jackw.olep.edge.transaction_result.TransactionResult;
 import net.jackw.olep.edge.transaction_result.TransactionResultBuilder;
 import net.jackw.olep.edge.transaction_result.TransactionResultDeserializer;
+import net.jackw.olep.message.DeliveryMessage;
 import net.jackw.olep.message.NewOrderMessage;
+import net.jackw.olep.message.PaymentMessage;
 import net.jackw.olep.message.TestMessage;
 import net.jackw.olep.message.TransactionRequestBody;
 import net.jackw.olep.message.TransactionRequestMessage;
@@ -26,6 +30,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.io.Closeable;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
@@ -107,9 +112,47 @@ public class DatabaseConnection implements Closeable {
         return send(msgBody, new TestResult.Builder()).getTransactionStatus();
     }
 
-    public TransactionStatus<NewOrderResult> newOrder(int customerId, int warehouseId, int districtId, List<NewOrderMessage.OrderLine> lines) {
-        NewOrderMessage msgBody = new NewOrderMessage(customerId, warehouseId, districtId, ImmutableList.copyOf(lines), new Date().getTime());
+    /**
+     * Send a New-Order transaction
+     */
+    public TransactionStatus<NewOrderResult> newOrder(
+        int customerId, int warehouseId, int districtId, List<NewOrderMessage.OrderLine> lines
+    ) {
+        NewOrderMessage msgBody = new NewOrderMessage(
+            customerId, warehouseId, districtId, ImmutableList.copyOf(lines), new Date().getTime()
+        );
         return send(msgBody, new NewOrderResult.Builder()).getTransactionStatus();
+    }
+
+    /**
+     * Send a Payment transaction by customer ID
+     */
+    public TransactionStatus<PaymentResult> payment(
+        int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, int customerId,
+        BigDecimal amount
+    ) {
+        PaymentMessage msgBody = new PaymentMessage(
+            warehouseId, districtId, customerId, customerWarehouseId, customerDistrictId, amount
+        );
+        return send(msgBody, new PaymentResult.Builder()).getTransactionStatus();
+    }
+
+    /**
+     * Send a Payment transaction by customer last name
+     */
+    public TransactionStatus<PaymentResult> payment(
+        int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, String customerSurname,
+        BigDecimal amount
+    ) {
+        PaymentMessage msgBody = new PaymentMessage(
+            warehouseId, districtId, customerSurname, customerWarehouseId, customerDistrictId, amount
+        );
+        return send(msgBody, new PaymentResult.Builder()).getTransactionStatus();
+    }
+
+    public TransactionStatus<DeliveryResult> delivery(int warehouseId, int carrierId) {
+        DeliveryMessage msgBody = new DeliveryMessage(warehouseId, carrierId, new Date().getTime());
+        return send(msgBody, new DeliveryResult.Builder()).getTransactionStatus();
     }
 
     /**
