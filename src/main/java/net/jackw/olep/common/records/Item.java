@@ -1,5 +1,6 @@
 package net.jackw.olep.common.records;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
@@ -7,12 +8,15 @@ import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 
 @Immutable
-public class Item {
+public class Item extends Record<Integer> {
     public final int id;
     public final int imageId;
-    @Nonnull public final String name;
-    @Nonnull public final BigDecimal price;
-    @Nonnull public final String data;
+    @Nonnull
+    public final String name;
+    @Nonnull
+    public final BigDecimal price;
+    @Nonnull
+    public final String data;
 
     public Item(
         @JsonProperty("id") int id,
@@ -28,17 +32,8 @@ public class Item {
         this.data = data;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Item) {
-            return id == ((Item)obj).id;
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return Integer.hashCode(id);
+    @Override @JsonIgnore
+    public Integer getKey() {
+        return id;
     }
 }

@@ -7,7 +7,7 @@ import com.google.errorprone.annotations.Immutable;
 import java.math.BigDecimal;
 
 @Immutable
-public class DistrictShared {
+public class DistrictShared extends Record<DistrictShared.Key> {
     public final int id;
     public final int wId;
     public final String name;
@@ -28,7 +28,7 @@ public class DistrictShared {
         this.tax = tax;
     }
 
-    @JsonIgnore
+    @Override @JsonIgnore
     public Key getKey() {
         return new Key(id, wId);
     }

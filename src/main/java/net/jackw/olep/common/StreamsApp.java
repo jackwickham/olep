@@ -1,6 +1,7 @@
-package net.jackw.olep;
+package net.jackw.olep.common;
 
 import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
@@ -61,6 +62,22 @@ public abstract class StreamsApp {
      * Get this processor's application ID
      */
     public abstract String getApplicationID();
+
+    /**
+     * Cache for the generated node ID
+     */
+    private Integer nodeId = null;
+
+    /**
+     * Get a unique identifier for this node
+     */
+    public final int getNodeID() {
+        if (nodeId == null) {
+            Random rand = new Random();
+            nodeId = rand.nextInt();
+        }
+        return nodeId;
+    }
 
     /**
      * Run the Kafka application

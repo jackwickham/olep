@@ -1,5 +1,6 @@
 package net.jackw.olep.common.records;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
@@ -7,7 +8,7 @@ import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 
 @Immutable
-public class WarehouseShared {
+public class WarehouseShared extends Record<Integer> {
     public final int id;
     @Nonnull public final String name;
     @Nonnull public final Address address;
@@ -24,5 +25,10 @@ public class WarehouseShared {
         this.name = name;
         this.address = address;
         this.tax = tax;
+    }
+
+    @Override @JsonIgnore
+    public Integer getKey() {
+        return id;
     }
 }

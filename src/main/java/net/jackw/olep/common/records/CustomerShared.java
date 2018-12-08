@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 @Immutable
-public class CustomerShared {
+public class CustomerShared extends Record<CustomerShared.Key> {
     public final int id;
     public final int districtId;
     public final int warehouseId;
@@ -59,7 +59,7 @@ public class CustomerShared {
         this.discount = discount;
     }
 
-    @JsonIgnore
+    @Override @JsonIgnore
     public Key getKey() {
         return new Key(id, districtId, warehouseId);
     }

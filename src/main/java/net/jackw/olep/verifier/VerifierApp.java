@@ -1,6 +1,6 @@
 package net.jackw.olep.verifier;
 
-import net.jackw.olep.StreamsApp;
+import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.SharedStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerializer;
@@ -11,8 +11,6 @@ import net.jackw.olep.message.TransactionResultMessage;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
 
-import java.util.Random;
-
 public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
 
@@ -22,7 +20,7 @@ public class VerifierApp extends StreamsApp {
         // Consume from items so we can check the transactions
         itemConsumer = new SharedStoreConsumer<>(
             getBootstrapServers(),
-            getApplicationID() + "-" + new Random().nextInt(),
+            getApplicationID() + "-" + getNodeID(),
             KafkaConfig.ITEM_IMMUTABLE_TOPIC,
             Serdes.Integer().deserializer(),
             Item.class

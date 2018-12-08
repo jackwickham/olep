@@ -8,7 +8,7 @@ import javax.annotation.Nonnull;
 import java.util.Objects;
 
 @Immutable
-public class StockShared {
+public class StockShared extends Record<StockShared.Key> {
     public final int itemId;
     public final int warehouseId;
     @Nonnull public final String dist01;
@@ -53,7 +53,29 @@ public class StockShared {
         this.data = data;
     }
 
-    @JsonIgnore
+    /**
+     * Get the S_DIST_XX field for this district
+     *
+     * @param district The district ID to use in the field key
+     * @return The value of S_DIST_{district}
+     */
+    public String getDistrictInfo(int district) {
+        switch (district) {
+            case 1: return dist01;
+            case 2: return dist02;
+            case 3: return dist03;
+            case 4: return dist04;
+            case 5: return dist05;
+            case 6: return dist06;
+            case 7: return dist07;
+            case 8: return dist08;
+            case 9: return dist09;
+            case 10: return dist10;
+            default: throw new IllegalArgumentException("District must be between 1 and 10 inclusive");
+        }
+    }
+
+    @Override @JsonIgnore
     public Key getKey() {
         return new Key(itemId, warehouseId);
     }
@@ -80,19 +102,5 @@ public class StockShared {
         public int hashCode() {
             return Objects.hash(itemId, warehouseId);
         }
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof StockShared) {
-            return getKey().equals(((StockShared)obj).getKey());
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return getKey().hashCode();
     }
 }
