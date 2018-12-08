@@ -16,13 +16,10 @@ public class OrderLine {
     public final int lineNumber;
     public final int itemId;
     public final int supplyWarehouseId;
-    @Nullable
-    public final Long deliveryDate;
+    @Nullable public final Long deliveryDate;
     public final int quantity;
-    @Nonnull
-    public final BigDecimal amount;
-    @Nonnull
-    public final String distInfo;
+    @Nonnull public final BigDecimal amount;
+    @Nonnull public final String distInfo;
 
     public OrderLine(
         @JsonProperty("orderId") int orderId,

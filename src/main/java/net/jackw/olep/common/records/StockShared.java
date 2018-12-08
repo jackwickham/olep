@@ -4,39 +4,42 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
+import javax.annotation.Nonnull;
+import java.util.Objects;
+
 @Immutable
 public class StockShared {
-    public final int iId;
-    public final int wId;
-    public final String dist01;
-    public final String dist02;
-    public final String dist03;
-    public final String dist04;
-    public final String dist05;
-    public final String dist06;
-    public final String dist07;
-    public final String dist08;
-    public final String dist09;
-    public final String dist10;
-    public final String data;
+    public final int itemId;
+    public final int warehouseId;
+    @Nonnull public final String dist01;
+    @Nonnull public final String dist02;
+    @Nonnull public final String dist03;
+    @Nonnull public final String dist04;
+    @Nonnull public final String dist05;
+    @Nonnull public final String dist06;
+    @Nonnull public final String dist07;
+    @Nonnull public final String dist08;
+    @Nonnull public final String dist09;
+    @Nonnull public final String dist10;
+    @Nonnull public final String data;
 
     public StockShared(
-        @JsonProperty("iId") int iId,
-        @JsonProperty("wId") int wId,
-        @JsonProperty("dist01") String dist01,
-        @JsonProperty("dist02") String dist02,
-        @JsonProperty("dist03") String dist03,
-        @JsonProperty("dist04") String dist04,
-        @JsonProperty("dist05") String dist05,
-        @JsonProperty("dist06") String dist06,
-        @JsonProperty("dist07") String dist07,
-        @JsonProperty("dist08") String dist08,
-        @JsonProperty("dist09") String dist09,
-        @JsonProperty("dist10") String dist10,
-        @JsonProperty("data") String data
+        @JsonProperty("itemId") int itemId,
+        @JsonProperty("warehouseId") int warehouseId,
+        @JsonProperty("dist01") @Nonnull String dist01,
+        @JsonProperty("dist02") @Nonnull String dist02,
+        @JsonProperty("dist03") @Nonnull String dist03,
+        @JsonProperty("dist04") @Nonnull String dist04,
+        @JsonProperty("dist05") @Nonnull String dist05,
+        @JsonProperty("dist06") @Nonnull String dist06,
+        @JsonProperty("dist07") @Nonnull String dist07,
+        @JsonProperty("dist08") @Nonnull String dist08,
+        @JsonProperty("dist09") @Nonnull String dist09,
+        @JsonProperty("dist10") @Nonnull String dist10,
+        @JsonProperty("data") @Nonnull String data
     ) {
-        this.iId = iId;
-        this.wId = wId;
+        this.itemId = itemId;
+        this.warehouseId = warehouseId;
         this.dist01 = dist01;
         this.dist02 = dist02;
         this.dist03 = dist03;
@@ -52,30 +55,44 @@ public class StockShared {
 
     @JsonIgnore
     public Key getKey() {
-        return new Key(iId, wId);
+        return new Key(itemId, warehouseId);
     }
 
     public static class Key {
-        public final int iId;
-        public final int wId;
+        public final int itemId;
+        public final int warehouseId;
 
-        public Key(@JsonProperty("iId") int iId, @JsonProperty("wId") int wId) {
-            this.iId = iId;
-            this.wId = wId;
+        public Key(@JsonProperty("itemId") int itemId, @JsonProperty("warehouseId") int warehouseId) {
+            this.itemId = itemId;
+            this.warehouseId = warehouseId;
         }
 
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof Key) {
                 Key other = (Key) obj;
-                return iId == other.iId && wId == other.wId;
+                return itemId == other.itemId && warehouseId == other.warehouseId;
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return Integer.hashCode(iId) ^ Integer.hashCode(wId);
+            return Objects.hash(itemId, warehouseId);
         }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof StockShared) {
+            return getKey().equals(((StockShared)obj).getKey());
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return getKey().hashCode();
     }
 }

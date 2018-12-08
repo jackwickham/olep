@@ -13,10 +13,8 @@ public class Order {
     public final int warehouseId;
     public final int customerId;
     public final long entryDate;
-    @Nullable
-    public final Integer carrierId;
-    @Nonnull
-    public final List<OrderLine> orderLines;
+    @Nullable public final Integer carrierId;
+    @Nonnull public final List<OrderLine> orderLines;
     public final boolean allLocal;
 
     public Order(

@@ -3,21 +3,22 @@ package net.jackw.olep.common.records;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
+import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 
 @Immutable
 public class WarehouseShared {
     public final int id;
-    public final String name;
-    public final Address address;
-    public final BigDecimal tax;
+    @Nonnull public final String name;
+    @Nonnull public final Address address;
+    @Nonnull public final BigDecimal tax;
     // ytd is worker-local
 
     public WarehouseShared(
         @JsonProperty("id") int id,
-        @JsonProperty("name") String name,
-        @JsonProperty("address") Address address,
-        @JsonProperty("tax") BigDecimal tax
+        @JsonProperty("name") @Nonnull String name,
+        @JsonProperty("address") @Nonnull Address address,
+        @JsonProperty("tax") @Nonnull BigDecimal tax
     ) {
         this.id = id;
         this.name = name;

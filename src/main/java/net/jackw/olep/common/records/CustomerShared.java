@@ -4,80 +4,107 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
+import javax.annotation.Nonnull;
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @Immutable
 public class CustomerShared {
     public final int id;
-    public final int dId;
-    public final int wId;
-    public final String first;
-    public final String middle;
-    public final String last;
+    public final int districtId;
+    public final int warehouseId;
+    @Nonnull
+    public final String firstName;
+    @Nonnull
+    public final String middleName;
+    @Nonnull
+    public final String lastName;
+    @Nonnull
     public final Address address;
+    @Nonnull
     public final String phone;
-    // Java's Date class isn't immutable, which is bad, so just use long with the number of ms since 01 Jan 1970
     public final long since;
+    @Nonnull
     public final Credit credit;
-    public final BigDecimal creditLim;
+    @Nonnull
+    public final BigDecimal creditLimit;
+    @Nonnull
     public final BigDecimal discount;
 
     public CustomerShared(
         @JsonProperty("id") int id,
-        @JsonProperty("dId") int dId,
-        @JsonProperty("wId") int wId,
-        @JsonProperty("first") String first,
-        @JsonProperty("middle") String middle,
-        @JsonProperty("last") String last,
-        @JsonProperty("address") Address address,
-        @JsonProperty("phone") String phone,
+        @JsonProperty("districtId") int districtId,
+        @JsonProperty("warehouseId") int warehouseId,
+        @JsonProperty("firstName") @Nonnull String firstName,
+        @JsonProperty("middleName") @Nonnull String middleName,
+        @JsonProperty("lastName") @Nonnull String lastName,
+        @JsonProperty("address") @Nonnull Address address,
+        @JsonProperty("phone") @Nonnull String phone,
         @JsonProperty("since") long since,
-        @JsonProperty("credit") Credit credit,
-        @JsonProperty("creditLim") BigDecimal creditLim,
-        @JsonProperty("discount") BigDecimal discount
+        @JsonProperty("credit") @Nonnull Credit credit,
+        @JsonProperty("creditLimit") @Nonnull BigDecimal creditLimit,
+        @JsonProperty("discount") @Nonnull BigDecimal discount
     ) {
         this.id = id;
-        this.dId = dId;
-        this.wId = wId;
-        this.first = first;
-        this.middle = middle;
-        this.last = last;
+        this.districtId = districtId;
+        this.warehouseId = warehouseId;
+        this.firstName = firstName;
+        this.middleName = middleName;
+        this.lastName = lastName;
         this.address = address;
         this.phone = phone;
         this.since = since;
         this.credit = credit;
-        this.creditLim = creditLim;
+        this.creditLimit = creditLimit;
         this.discount = discount;
     }
 
     @JsonIgnore
     public Key getKey() {
-        return new Key(id, dId, wId);
+        return new Key(id, districtId, warehouseId);
     }
 
     public static class Key {
         public final int id;
-        public final int dId;
-        public final int wId;
+        public final int districtId;
+        public final int warehouseId;
 
-        public Key(@JsonProperty("id") int id, @JsonProperty("dId") int dId, @JsonProperty("wId") int wId) {
+        public Key(
+            @JsonProperty("id") int id,
+            @JsonProperty("districtId") int districtId,
+            @JsonProperty("warehouseId") int warehouseId
+        ) {
             this.id = id;
-            this.dId = dId;
-            this.wId = wId;
+            this.districtId = districtId;
+            this.warehouseId = warehouseId;
         }
 
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof Key) {
                 Key other = (Key) obj;
-                return id == other.id && dId == other.dId && wId == other.wId;
+                return id == other.id && districtId == other.districtId && warehouseId == other.warehouseId;
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return Integer.hashCode(id) ^ Integer.hashCode(dId) ^ Integer.hashCode(wId);
+            return Objects.hash(id, districtId, warehouseId);
         }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof CustomerShared) {
+            return getKey().equals(((CustomerShared)obj).getKey());
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return getKey().hashCode();
     }
 }

@@ -16,7 +16,7 @@ public class DistrictShared {
 
     public DistrictShared(
         @JsonProperty("id") int id,
-        @JsonProperty("wId") int wId,
+        @JsonProperty("warehouseId") int wId,
         @JsonProperty("name") String name,
         @JsonProperty("address") Address address,
         @JsonProperty("tax") BigDecimal tax
@@ -38,7 +38,7 @@ public class DistrictShared {
         public final int id;
         public final int wId;
 
-        public Key(@JsonProperty("id") int id, @JsonProperty("wId") int wId) {
+        public Key(@JsonProperty("id") int id, @JsonProperty("warehouseId") int wId) {
             this.id = id;
             this.wId = wId;
         }

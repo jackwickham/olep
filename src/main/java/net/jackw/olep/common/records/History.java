@@ -15,10 +15,8 @@ public class History {
     public final int districtId;
     public final int warehouseId;
     public final long date;
-    @Nonnull
-    public final BigDecimal amount;
-    @Nonnull
-    public final String data;
+    @Nonnull public final BigDecimal amount;
+    @Nonnull public final String data;
 
     public History(
         @JsonProperty("customerId") int customerId,
