@@ -1,4 +1,4 @@
-package net.jackw.olep.edge.transaction_result;
+package net.jackw.olep.message.transaction_result;
 
 import com.fasterxml.jackson.annotation.JsonMerge;
 import com.fasterxml.jackson.annotation.JsonProperty;

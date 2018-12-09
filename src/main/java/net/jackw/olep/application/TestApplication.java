@@ -1,13 +1,11 @@
 package net.jackw.olep.application;
 
-import com.google.common.base.MoreObjects;
 import net.jackw.olep.edge.DatabaseConnection;
 import net.jackw.olep.edge.TransactionStatusListener;
-import net.jackw.olep.edge.transaction_result.NewOrderResult;
-import net.jackw.olep.edge.transaction_result.TestResult;
-import net.jackw.olep.message.NewOrderMessage;
+import net.jackw.olep.message.transaction_result.NewOrderResult;
+import net.jackw.olep.message.transaction_result.TestResult;
+import net.jackw.olep.message.transaction_request.NewOrderMessage;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Random;
 

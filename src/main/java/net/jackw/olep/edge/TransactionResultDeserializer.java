@@ -1,8 +1,7 @@
-package net.jackw.olep.edge.transaction_result;
+package net.jackw.olep.edge;
 
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import net.jackw.olep.common.JsonDeserializer;
-import net.jackw.olep.edge.PendingTransaction;
 
 import java.util.Map;
 

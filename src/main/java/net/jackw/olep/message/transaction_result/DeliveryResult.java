@@ -1,4 +1,4 @@
-package net.jackw.olep.edge.transaction_result;
+package net.jackw.olep.message.transaction_result;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.Immutable;

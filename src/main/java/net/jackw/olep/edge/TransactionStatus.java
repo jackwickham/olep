@@ -1,6 +1,6 @@
 package net.jackw.olep.edge;
 
-import net.jackw.olep.edge.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

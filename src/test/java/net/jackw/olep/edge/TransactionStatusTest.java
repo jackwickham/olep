@@ -1,6 +1,6 @@
 package net.jackw.olep.edge;
 
-import net.jackw.olep.edge.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResult;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;

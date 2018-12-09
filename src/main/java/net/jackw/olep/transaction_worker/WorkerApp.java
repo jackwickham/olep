@@ -10,8 +10,8 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
-import net.jackw.olep.message.TransactionRequestMessage;
-import net.jackw.olep.message.TransactionResultMessage;
+import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
 

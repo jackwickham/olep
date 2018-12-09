@@ -1,4 +1,4 @@
-package net.jackw.olep.edge.transaction_result;
+package net.jackw.olep.edge;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import net.jackw.olep.edge.PendingTransaction;
+import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 
 import java.io.IOException;
 import java.util.Map;

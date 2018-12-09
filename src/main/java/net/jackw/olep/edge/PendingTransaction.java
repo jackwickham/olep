@@ -1,8 +1,8 @@
 package net.jackw.olep.edge;
 
 import com.google.common.annotations.VisibleForTesting;
-import net.jackw.olep.edge.transaction_result.TransactionResult;
-import net.jackw.olep.edge.transaction_result.TransactionResultBuilder;
+import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;

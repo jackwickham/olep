@@ -1,7 +1,7 @@
 package net.jackw.olep.transaction_worker;
 
-import net.jackw.olep.message.NewOrderMessage;
-import net.jackw.olep.message.TransactionRequestMessage;
+import net.jackw.olep.message.transaction_request.NewOrderMessage;
+import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 

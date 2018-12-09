@@ -1,6 +1,6 @@
 package net.jackw.olep.edge;
 
-import net.jackw.olep.edge.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResult;
 
 public interface TransactionStatusListener<T extends TransactionResult> {
     /**

@@ -1,9 +1,7 @@
-package net.jackw.olep.message;
+package net.jackw.olep.message.transaction_request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
-
-import java.util.Random;
 
 @Immutable
 public class TransactionRequestMessage {

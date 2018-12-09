@@ -1,4 +1,4 @@
-package net.jackw.olep.message;
+package net.jackw.olep.message.transaction_result;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;

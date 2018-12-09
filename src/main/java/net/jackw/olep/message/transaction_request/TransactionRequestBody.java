@@ -1,4 +1,4 @@
-package net.jackw.olep.message;
+package net.jackw.olep.message.transaction_request;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
