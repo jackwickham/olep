@@ -4,15 +4,34 @@ import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 
 @Immutable
 public class PaymentResult extends TransactionResult {
-    public static class Builder extends TransactionResultBuilder<PaymentResult> {
+    public static class Builder extends PartialResult implements TransactionResultBuilder<PaymentResult> {
+        private final int warehouseId;
+        private final int districtId;
+        private final int customerWarehouseId;
+        private final int customerDistrictId;
+
+        public Builder(
+            int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, int customerId
+        ) {
+            this(warehouseId, districtId, customerWarehouseId, customerDistrictId);
+            this.customerId = customerId;
+        }
+
+        public Builder(int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId) {
+            this.warehouseId = warehouseId;
+            this.districtId = districtId;
+            this.customerWarehouseId = customerWarehouseId;
+            this.customerDistrictId = customerDistrictId;
+        }
+
         @Override
         public boolean canBuild() {
-            return warehouseId != null && warehouseAddress != null && districtId != null && districtAddress != null &&
-                customerWarehouseId != null && customerDistrictId != null && customerId != null &&
+            return warehouseAddress != null && districtAddress != null && customerId != null &&
                 customerAddress != null && customerPhone != null && customerSince != null && customerCredit != null &&
                 customerCreditLimit != null && customerDiscount != null && customerBalance != null;
             // Customer data is allowed to be null
@@ -26,13 +45,11 @@ public class PaymentResult extends TransactionResult {
                 customerDiscount, customerBalance, customerData
             );
         }
+    }
 
-        public Integer warehouseId;
+    public static class PartialResult implements PartialTransactionResult {
         public Address warehouseAddress;
-        public Integer districtId;
         public Address districtAddress;
-        public Integer customerWarehouseId;
-        public Integer customerDistrictId;
         public Integer customerId;
         public Address customerAddress;
         public String customerPhone;
@@ -58,9 +75,9 @@ public class PaymentResult extends TransactionResult {
     public final BigDecimal customerCreditLimit;
     public final BigDecimal customerDiscount;
     public final BigDecimal customerBalance;
-    public final String customerData;
+    @Nullable public final String customerData;
 
-    public PaymentResult(
+    private PaymentResult(
         int warehouseId,
         Address warehouseAddress,
         int districtId,
@@ -75,7 +92,7 @@ public class PaymentResult extends TransactionResult {
         BigDecimal customerCreditLimit,
         BigDecimal customerDiscount,
         BigDecimal customerBalance,
-        String customerData
+        @Nullable String customerData
     ) {
         this.warehouseId = warehouseId;
         this.warehouseAddress = warehouseAddress;

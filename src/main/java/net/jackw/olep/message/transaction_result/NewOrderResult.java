@@ -14,12 +14,25 @@ import java.util.List;
 
 @Immutable
 public class NewOrderResult extends TransactionResult {
-    public static class Builder extends TransactionResultBuilder<NewOrderResult> {
+    public static class Builder extends PartialResult implements TransactionResultBuilder<NewOrderResult> {
+        private final int warehouseId;
+        private final int districtId;
+        private final int customerId;
+        private final int lineCount;
+        private final long orderDate;
+
+        public Builder(int warehouseId, int districtId, int customerId, int lineCount, long orderDate) {
+            this.warehouseId = warehouseId;
+            this.districtId = districtId;
+            this.customerId = customerId;
+            this.lineCount = lineCount;
+            this.orderDate = orderDate;
+        }
+
         @Override
         public boolean canBuild() {
-            return warehouseId != null && districtId != null && customerId != null && orderDate != null &&
-                orderId != null && customerSurname != null && credit != null && discount != null &&
-                warehouseTax != null && districtTax != null && lineCount != null && lines.size() == lineCount;
+            return orderId != null && customerSurname != null && credit != null && discount != null &&
+                warehouseTax != null && districtTax != null && lines.size() == lineCount;
         }
 
         @Override
@@ -29,11 +42,9 @@ public class NewOrderResult extends TransactionResult {
                 warehouseTax, districtTax, ImmutableList.copyOf(lines)
             );
         }
+    }
 
-        public Integer warehouseId;
-        public Integer districtId;
-        public Integer customerId;
-        public Long orderDate;
+    public static class PartialResult implements PartialTransactionResult {
         public Integer orderId;
         public String customerSurname;
         public Credit credit;
@@ -42,7 +53,6 @@ public class NewOrderResult extends TransactionResult {
         public BigDecimal districtTax;
         @JsonMerge
         public List<OrderLineResult> lines = new ArrayList<>();
-        public Integer lineCount;
     }
 
     public final int warehouseId;

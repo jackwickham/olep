@@ -7,27 +7,25 @@ import com.google.errorprone.annotations.Immutable;
 
 import java.util.Map;
 
-@Immutable
 @JsonPropertyOrder({"transactionId", "approved", "results"})
 public class TransactionResultMessage {
     public final long transactionId;
     public final Boolean approved;
-    @SuppressWarnings("Immutable")
-    public final ImmutableMap<String, ?> results;
+    public final PartialTransactionResult results;
 
     public TransactionResultMessage(
         @JsonProperty("transactionId") long transactionId,
         @JsonProperty("approved") Boolean approved,
-        @JsonProperty("results") Map<String, ?> results
+        @JsonProperty("results") PartialTransactionResult results
     ) {
         this.transactionId = transactionId;
         this.approved = approved;
-        this.results = results == null ? null : ImmutableMap.copyOf(results);
+        this.results = results;
     }
 
     public TransactionResultMessage(
         long transactionId,
-        Map<String, ?> results
+        PartialTransactionResult results
     ) {
         this(transactionId, null, results);
     }

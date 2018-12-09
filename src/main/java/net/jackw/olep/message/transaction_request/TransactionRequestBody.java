@@ -10,8 +10,9 @@ import com.google.errorprone.annotations.Immutable;
     property = "type"
 )
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = TestMessage.class, name = "test"),
-    @JsonSubTypes.Type(value = NewOrderMessage.class, name = "neworder")
+    @JsonSubTypes.Type(value = NewOrderMessage.class, name = "neworder"),
+    @JsonSubTypes.Type(value = PaymentMessage.class, name = "payment"),
+    @JsonSubTypes.Type(value = DeliveryMessage.class, name = "delivery")
 })
 @Immutable
 public abstract class TransactionRequestBody {}

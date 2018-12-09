@@ -1,21 +1,15 @@
 package net.jackw.olep.verifier;
 
 import net.jackw.olep.common.SharedKeyValueStore;
-import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.Item;
-import net.jackw.olep.message.transaction_result.NewOrderResult;
+import net.jackw.olep.message.transaction_request.DeliveryMessage;
+import net.jackw.olep.message.transaction_request.PaymentMessage;
 import net.jackw.olep.message.transaction_request.NewOrderMessage;
-import net.jackw.olep.message.transaction_request.TestMessage;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
-
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
 
 public class TransactionVerificationProcessor implements Processor<Long, TransactionRequestMessage> {
     private ProcessorContext context;
@@ -39,38 +33,18 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
     @Override
     public void process(Long key, TransactionRequestMessage value) {
         System.out.printf("Processing transaction %d\n", key);
-        if (value.body instanceof TestMessage) {
-            TestMessage body = (TestMessage) value.body;
-            if (itemStore.contains(body.item)) {
-                acceptTransaction(key, value);
-            } else {
-                rejectTransaction(key, value);
-            }
-        } else if (value.body instanceof NewOrderMessage) {
+        if (value.body instanceof NewOrderMessage) {
             NewOrderMessage body = (NewOrderMessage) value.body;
             if (body.lines.stream().allMatch(line -> itemStore.contains(line.itemId))) {
                 acceptTransaction(key, value);
-                context.forward(key, new TransactionResultMessage(key, Map.of(
-                    "warehouseId", body.warehouseId,
-                    "districtId", body.districtId,
-                    "customerId", body.customerId,
-                    "orderDate", new Date().getTime(),
-                    "orderId", 500,
-                    "customerSurname", "FOOBAR",
-                    "credit", Credit.GC,
-                    "lineCount", 1
-                )), To.child("transaction-results"));
-                context.forward(key, new TransactionResultMessage(key, Map.of(
-                    "discount", new BigDecimal("0.02"),
-                    "warehouseTax", new BigDecimal("0.3"),
-                    "districtTax", new BigDecimal("0.14"),
-                    "lines", List.of(new NewOrderResult.OrderLineResult(1, 2, "foobaritem", 1, 54, new BigDecimal("10.54"), new BigDecimal("10.54")))
-                )), To.child("transaction-results"));
             } else {
                 rejectTransaction(key, value);
             }
-
+        } else if (value.body instanceof PaymentMessage || value.body instanceof DeliveryMessage) {
+            // These transactions can never fail (in theory)
+            acceptTransaction(key, value);
         } else {
+            // ???
             rejectTransaction(key, value);
         }
     }

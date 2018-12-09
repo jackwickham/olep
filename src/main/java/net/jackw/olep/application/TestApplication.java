@@ -3,7 +3,6 @@ package net.jackw.olep.application;
 import net.jackw.olep.edge.DatabaseConnection;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
-import net.jackw.olep.message.transaction_result.TestResult;
 import net.jackw.olep.message.transaction_request.NewOrderMessage;
 
 import java.util.List;
@@ -16,26 +15,6 @@ public class TestApplication {
 
             for (int i = 0; i < 3; i++) {
                 final int itemId = rand.nextInt(200);
-                connection.test(
-                    "Message " + i,
-                    itemId
-                ).register(new TransactionStatusListener<TestResult>() {
-                    @Override
-                    public void acceptedHandler() {
-                        System.out.printf("Transaction with item %d accepted\n", itemId);
-                    }
-
-                    @Override
-                    public void rejectedHandler(Throwable t) {
-                        System.out.printf("Transaction with item %d rejected\n", itemId);
-                    }
-
-                    @Override
-                    public void completeHandler(TestResult result) {
-                        System.out.printf("Test result received with rand=%d and hello=%s\n", result.rnd, result.hello);
-                    }
-                });
-
                 connection.newOrder(
                     10,
                     1,

@@ -9,6 +9,7 @@ import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.message.transaction_request.NewOrderMessage;
+import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.processor.Processor;
@@ -16,6 +17,7 @@ import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -54,6 +56,8 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
 
     @Override
     public void process(Long key, NewOrderMessage value) {
+        NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
+
         boolean remote = true;
         if (getWarehouses().contains(value.warehouseId)) {
             // This worker is responsible for the home warehouse
@@ -95,25 +99,39 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
             // TODO: Load next order ID from worker's key-value store
             int orderId = -1;
 
+            // Send the client the results general results
+            results.orderId = orderId;
+            results.customerSurname = customer.lastName;
+            results.credit = customer.credit;
+            results.discount = customer.discount;
+            results.warehouseTax = warehouse.tax;
+            results.districtTax = district.tax;
+
+            // Create the order builder, so we can put the line items into it
             OrderBuilder orderBuilder = new OrderBuilder(
                 orderId, value.districtId, value.warehouseId, value.customerId, value.date
             );
 
             int lineNumber = 0;
             for (NewOrderMessage.OrderLine line : value.lines) {
-                Item item = itemStore.get(line.itemId);
+                Item item = itemStore.get(line.itemId); // TODO: failure checks
                 StockShared stockShared = stockImmutableStore.get(
                     new StockShared.Key(line.itemId, line.supplyingWarehouseId)
                 );
+
+                BigDecimal lineAmount = item.price.multiply(new BigDecimal(line.quantity));
                 OrderLine orderLine = new OrderLine(
                     orderId, value.districtId, value.warehouseId, ++lineNumber, line.itemId, line.supplyingWarehouseId,
-                    line.quantity, item.price.multiply(new BigDecimal(line.quantity)),
-                    stockShared.getDistrictInfo(value.districtId)
+                    line.quantity, lineAmount, stockShared.getDistrictInfo(value.districtId)
                 );
 
                 orderBuilder.addOrderLine(orderLine);
 
-                // TODO: Some item fields need to be returned to the user
+                results.lines.add(new NewOrderResult.OrderLineResult(
+                    // TODO: stock quantity has to be done by the dispatching warehouse
+                    line.supplyingWarehouseId, line.itemId, item.name, line.quantity, -1, item.price,
+                    lineAmount
+                ));
             }
 
             // TODO: Add New-Order (= Order.Key) to the new order queue
@@ -125,13 +143,21 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
         value.lines.stream().filter(line -> getWarehouses().contains(line.supplyingWarehouseId)).forEach(line -> {
             // This worker is responsible for the warehouse where this item is dispatched from
 
+            Item item;
+            do {
+                item = itemStore.get(line.itemId);
+            } while (item == null); // TODO: backoff
+
             // TODO: Load stock quantity from worker kv store
             // TODO: Update stock ytd, order_cnt, quantity and possibly remoteCnt
+
+            // TODO: figure out stock quantity
         });
 
-        // TODO: Handle sending results to the user
-        TransactionResultMessage result = new TransactionResultMessage(key, new HashMap<>());
-        context.forward(key, result, To.child("transaction-results"));
+        // TODO: Send one transaction to the modification log with all the changes
+
+        TransactionResultMessage resultMessage = new TransactionResultMessage(key, results);
+        context.forward(key, resultMessage, To.child("transaction-results"));
     }
 
     @Override
