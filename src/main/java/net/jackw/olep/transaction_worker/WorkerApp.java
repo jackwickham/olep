@@ -1,6 +1,7 @@
 package net.jackw.olep.transaction_worker;
 
 import net.jackw.olep.common.JsonDeserializer;
+import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.SharedStoreConsumer;
@@ -14,6 +15,9 @@ import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
 
 public class WorkerApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -89,6 +93,22 @@ public class WorkerApp extends StreamsApp {
 
     @Override
     protected Topology getTopology() {
+        StoreBuilder<KeyValueStore<DistrictShared.Key, Integer>> nextOrderIdStoreBuilder = Stores.keyValueStoreBuilder(
+            Stores.persistentKeyValueStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE),
+            new JsonSerde<>(DistrictShared.Key.class),
+            Serdes.Integer()
+        );
+
+        //StoreBuilder<KeyValueStore<CustomerShared.Key, CustomerMutable>> customerMutableStoreBuilder
+
+        // customer_id_immutable probably doesn't belong here, and new_orders doesn't either
+
+        StoreBuilder<KeyValueStore<StockShared.Key, Integer>> stockQuantityStoreBuilder = Stores.keyValueStoreBuilder(
+            Stores.persistentKeyValueStore(KafkaConfig.STOCK_QUANTITY_STORE),
+            new JsonSerde<>(StockShared.Key.class),
+            Serdes.Integer()
+        );
+
         Topology topology = new Topology();
 
         topology
@@ -105,6 +125,9 @@ public class WorkerApp extends StreamsApp {
                 itemConsumer.getStore(), warehouseConsumer.getStore(), districtConsumer.getStore(),
                 customerConsumer.getStore(), stockConsumer.getStore()
             ), "router")
+            // State stores for worker-local state
+            .addStateStore(nextOrderIdStoreBuilder, "new-order-processor")
+            .addStateStore(stockQuantityStoreBuilder, "new-order-processor")
             // The processors will write to the result and modification logs
             .addSink(
                 "modification-log",

@@ -35,7 +35,7 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
         System.out.printf("Processing transaction %d\n", key);
         if (value.body instanceof NewOrderMessage) {
             NewOrderMessage body = (NewOrderMessage) value.body;
-            if (body.lines.stream().allMatch(line -> itemStore.contains(line.itemId))) {
+            if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {
                 acceptTransaction(key, value);
             } else {
                 rejectTransaction(key, value);

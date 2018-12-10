@@ -14,5 +14,9 @@ public class KafkaConfig {
     public static final String CUSTOMER_IMMUTABLE_TOPIC = "customer-immutable";
     public static final String STOCK_IMMUTABLE_TOPIC = "stock-immutable";
 
+    // Worker-local stores
+    public static final String DISTRICT_NEXT_ORDER_ID_STORE = "district-next-order-id";
+    public static final String STOCK_QUANTITY_STORE = "stock-quantity";
+
     private KafkaConfig() { }
 }

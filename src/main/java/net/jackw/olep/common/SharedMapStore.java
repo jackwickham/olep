@@ -2,23 +2,42 @@ package net.jackw.olep.common;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SharedMapStore<K, V> implements SharedKeyValueStore<K, V> {
     private ConcurrentHashMap<K, V> map;
+    private final int BACKOFF_ATTEMPTS = 10;
 
     public SharedMapStore(int initialCapacity) {
         map = new ConcurrentHashMap<>(initialCapacity);
     }
 
     @Override
-    public boolean contains(K key) {
+    public boolean containsKey(K key) {
         return map.containsKey(key);
     }
 
+    @Nullable
     @Override
     public V get(K key) {
         return map.get(key);
+    }
+
+    @Override
+    public V getBlocking(K key) throws InterruptedException {
+        int attempts = 0;
+        V result;
+        do {
+            while (!map.containsKey(key)) {
+                if (attempts >= BACKOFF_ATTEMPTS) {
+                    throw new StoreKeyMissingException(key);
+                }
+                Thread.sleep(100 + attempts++);
+            }
+            result = map.get(key);
+        } while (result == null);
+        return result;
     }
 
     @CanIgnoreReturnValue
