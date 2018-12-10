@@ -32,8 +32,8 @@ import java.util.Set;
 // TODO: Is this the right key?
 public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
     private ProcessorContext context;
-    private KeyValueStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
-    private KeyValueStore<WarehouseSpecificKey, Integer> stockQuantityStore;
+    private LocalStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
+    private LocalStore<WarehouseSpecificKey, Integer> stockQuantityStore;
 
     private final SharedKeyValueStore<Integer, Item> itemStore;
     private final SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore;
@@ -59,8 +59,16 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         this.context = context;
-        this.nextOrderIdStore = (KeyValueStore) context.getStateStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE);
-        this.stockQuantityStore = (KeyValueStore) context.getStateStore(KafkaConfig.STOCK_QUANTITY_STORE);
+        final RandomDataGenerator rand = new RandomDataGenerator();
+
+        this.nextOrderIdStore = new LocalStore(
+            (KeyValueStore) context.getStateStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE), 1
+        );
+        this.stockQuantityStore = new LocalStore<WarehouseSpecificKey, Integer>(
+            (KeyValueStore) context.getStateStore(KafkaConfig.STOCK_QUANTITY_STORE),
+            // Default value is S_QUANTITY random within [10 .. 100]
+            () -> rand.uniform(10, 100)
+        );
     }
 
     @Override
@@ -82,11 +90,7 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                     new DistrictSpecificKey(value.customerId, value.districtId, value.warehouseId)
                 );
 
-                Integer orderId = nextOrderIdStore.get(districtKey);
-                if (orderId == null) {
-                    // If we've not had an order from this warehouse/district combo before, this is order #1
-                    orderId = 1;
-                }
+                int orderId = nextOrderIdStore.get(districtKey);
                 nextOrderIdStore.put(districtKey, orderId + 1);
 
                 // Send the client the results general results
@@ -147,12 +151,7 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
 
                 WarehouseSpecificKey stockKey = new WarehouseSpecificKey(item.id, line.supplyingWarehouseId);
 
-                Integer stockQuantity = stockQuantityStore.get(stockKey);
-                if (stockQuantity == null) {
-                    // If we've not seen this item/warehouse combo before, choose the value according to the spec
-                    // S_QUANTITY random within [10 .. 100]
-                    stockQuantity = new RandomDataGenerator().uniform(10, 100);
-                }
+                int stockQuantity = stockQuantityStore.get(stockKey);
                 int excessStock = stockQuantity - line.quantity;
                 if (excessStock < 10) {
                     stockQuantity += 91;
