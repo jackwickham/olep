@@ -7,6 +7,8 @@ import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.SharedStoreConsumer;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
@@ -22,9 +24,9 @@ import org.apache.kafka.streams.state.Stores;
 public class WorkerApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
     private SharedStoreConsumer<Integer, WarehouseShared> warehouseConsumer;
-    private SharedStoreConsumer<DistrictShared.Key, DistrictShared> districtConsumer;
-    private SharedStoreConsumer<CustomerShared.Key, CustomerShared> customerConsumer;
-    private SharedStoreConsumer<StockShared.Key, StockShared> stockConsumer;
+    private SharedStoreConsumer<WarehouseSpecificKey, DistrictShared> districtConsumer;
+    private SharedStoreConsumer<DistrictSpecificKey, CustomerShared> customerConsumer;
+    private SharedStoreConsumer<WarehouseSpecificKey, StockShared> stockConsumer;
 
     private WorkerApp(String bootstrapServers) {
         super(bootstrapServers);
@@ -48,21 +50,21 @@ public class WorkerApp extends StreamsApp {
             getBootstrapServers(),
             getApplicationID() + "-" + getNodeID(),
             KafkaConfig.DISTRICT_IMMUTABLE_TOPIC,
-            DistrictShared.Key.class,
+            WarehouseSpecificKey.class,
             DistrictShared.class
         );
         customerConsumer = new SharedStoreConsumer<>(
             getBootstrapServers(),
             getApplicationID() + "-" + getNodeID(),
             KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC,
-            CustomerShared.Key.class,
+            DistrictSpecificKey.class,
             CustomerShared.class
         );
         stockConsumer = new SharedStoreConsumer<>(
             getBootstrapServers(),
             getApplicationID() + "-" + getNodeID(),
             KafkaConfig.STOCK_IMMUTABLE_TOPIC,
-            StockShared.Key.class,
+            WarehouseSpecificKey.class,
             StockShared.class
         );
     }
@@ -93,9 +95,9 @@ public class WorkerApp extends StreamsApp {
 
     @Override
     protected Topology getTopology() {
-        StoreBuilder<KeyValueStore<DistrictShared.Key, Integer>> nextOrderIdStoreBuilder = Stores.keyValueStoreBuilder(
+        StoreBuilder<KeyValueStore<WarehouseSpecificKey, Integer>> nextOrderIdStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE),
-            new JsonSerde<>(DistrictShared.Key.class),
+            new JsonSerde<>(WarehouseSpecificKey.class),
             Serdes.Integer()
         );
 
@@ -103,9 +105,9 @@ public class WorkerApp extends StreamsApp {
 
         // customer_id_immutable probably doesn't belong here, and new_orders doesn't either
 
-        StoreBuilder<KeyValueStore<StockShared.Key, Integer>> stockQuantityStoreBuilder = Stores.keyValueStoreBuilder(
+        StoreBuilder<KeyValueStore<WarehouseSpecificKey, Integer>> stockQuantityStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.STOCK_QUANTITY_STORE),
-            new JsonSerde<>(StockShared.Key.class),
+            new JsonSerde<>(WarehouseSpecificKey.class),
             Serdes.Integer()
         );
 

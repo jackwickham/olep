@@ -7,7 +7,7 @@ import com.google.errorprone.annotations.Immutable;
 import java.math.BigDecimal;
 
 @Immutable
-public class DistrictShared extends Record<DistrictShared.Key> {
+public class DistrictShared extends Record<WarehouseSpecificKey> {
     public final int id;
     public final int wId;
     public final String name;
@@ -29,32 +29,7 @@ public class DistrictShared extends Record<DistrictShared.Key> {
     }
 
     @Override @JsonIgnore
-    public Key getKey() {
-        return new Key(id, wId);
-    }
-
-    @Immutable
-    public static class Key {
-        public final int id;
-        public final int wId;
-
-        public Key(@JsonProperty("id") int id, @JsonProperty("warehouseId") int wId) {
-            this.id = id;
-            this.wId = wId;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof Key) {
-                Key other = (Key) obj;
-                return id == other.id && wId == other.wId;
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return Integer.hashCode(id) ^ Integer.hashCode(wId);
-        }
+    public WarehouseSpecificKey getKey() {
+        return new WarehouseSpecificKey(id, wId);
     }
 }

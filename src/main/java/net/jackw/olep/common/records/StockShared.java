@@ -8,7 +8,7 @@ import javax.annotation.Nonnull;
 import java.util.Objects;
 
 @Immutable
-public class StockShared extends Record<StockShared.Key> {
+public class StockShared extends Record<WarehouseSpecificKey> {
     public final int itemId;
     public final int warehouseId;
     @Nonnull public final String dist01;
@@ -76,31 +76,7 @@ public class StockShared extends Record<StockShared.Key> {
     }
 
     @Override @JsonIgnore
-    public Key getKey() {
-        return new Key(itemId, warehouseId);
-    }
-
-    public static class Key {
-        public final int itemId;
-        public final int warehouseId;
-
-        public Key(@JsonProperty("itemId") int itemId, @JsonProperty("warehouseId") int warehouseId) {
-            this.itemId = itemId;
-            this.warehouseId = warehouseId;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof Key) {
-                Key other = (Key) obj;
-                return itemId == other.itemId && warehouseId == other.warehouseId;
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(itemId, warehouseId);
-        }
+    public WarehouseSpecificKey getKey() {
+        return new WarehouseSpecificKey(itemId, warehouseId);
     }
 }

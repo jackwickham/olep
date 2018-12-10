@@ -3,6 +3,7 @@ package net.jackw.olep.utils.immutable_stores;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -18,7 +19,7 @@ public class CustomerFactory {
     private int warehouseId;
     private int districtId;
 
-    private static Map<DistrictShared.Key, CustomerFactory> instances = new HashMap<>();
+    private static Map<WarehouseSpecificKey, CustomerFactory> instances = new HashMap<>();
 
     private CustomerFactory(DistrictShared district) {
         nextId = 1;

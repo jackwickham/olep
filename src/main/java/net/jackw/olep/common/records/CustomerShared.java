@@ -6,10 +6,9 @@ import com.google.errorprone.annotations.Immutable;
 
 import javax.annotation.Nonnull;
 import java.math.BigDecimal;
-import java.util.Objects;
 
 @Immutable
-public class CustomerShared extends Record<CustomerShared.Key> {
+public class CustomerShared extends Record<DistrictSpecificKey> {
     public final int id;
     public final int districtId;
     public final int warehouseId;
@@ -60,51 +59,7 @@ public class CustomerShared extends Record<CustomerShared.Key> {
     }
 
     @Override @JsonIgnore
-    public Key getKey() {
-        return new Key(id, districtId, warehouseId);
-    }
-
-    public static class Key {
-        public final int id;
-        public final int districtId;
-        public final int warehouseId;
-
-        public Key(
-            @JsonProperty("id") int id,
-            @JsonProperty("districtId") int districtId,
-            @JsonProperty("warehouseId") int warehouseId
-        ) {
-            this.id = id;
-            this.districtId = districtId;
-            this.warehouseId = warehouseId;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof Key) {
-                Key other = (Key) obj;
-                return id == other.id && districtId == other.districtId && warehouseId == other.warehouseId;
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(id, districtId, warehouseId);
-        }
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof CustomerShared) {
-            return getKey().equals(((CustomerShared)obj).getKey());
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return getKey().hashCode();
+    public DistrictSpecificKey getKey() {
+        return new DistrictSpecificKey(id, districtId, warehouseId);
     }
 }

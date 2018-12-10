@@ -6,10 +6,9 @@ import com.google.errorprone.annotations.Immutable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 @Immutable
-public class Order extends Record<Order.Key> {
+public class Order extends Record<DistrictSpecificKey> {
     public final int orderId;
     public final int districtId;
     public final int warehouseId;
@@ -50,38 +49,7 @@ public class Order extends Record<Order.Key> {
     }
 
     @Override
-    public Key getKey() {
-        return new Key(orderId, districtId, warehouseId);
-    }
-
-    public static class Key {
-        public final int orderId;
-        public final int districtId;
-        public final int warehouseId;
-
-        public Key(
-            @JsonProperty("orderId") int orderId,
-            @JsonProperty("districtId") int districtId,
-            @JsonProperty("warehouseId") int warehouseId
-        ) {
-            this.orderId = orderId;
-            this.districtId = districtId;
-            this.warehouseId = warehouseId;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof Order) {
-                Order other = (Order) obj;
-                return orderId == other.orderId && districtId == other.districtId && warehouseId == other.warehouseId;
-            } else {
-                return false;
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(orderId, districtId, warehouseId);
-        }
+    public DistrictSpecificKey getKey() {
+        return new DistrictSpecificKey(orderId, districtId, warehouseId);
     }
 }

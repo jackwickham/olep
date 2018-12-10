@@ -3,7 +3,9 @@ package net.jackw.olep.transaction_worker;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
+import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.Order;
 import net.jackw.olep.common.records.OrderLine;
@@ -28,21 +30,21 @@ import java.util.Set;
 // TODO: Is this the right key?
 public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
     private ProcessorContext context;
-    private KeyValueStore<DistrictShared.Key, Integer> nextOrderIdStore;
-    private KeyValueStore<StockShared.Key, Integer> stockQuantityStore;
+    private KeyValueStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
+    private KeyValueStore<WarehouseSpecificKey, Integer> stockQuantityStore;
 
     private final SharedKeyValueStore<Integer, Item> itemStore;
     private final SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore;
-    private final SharedKeyValueStore<DistrictShared.Key, DistrictShared> districtImmutableStore;
-    private final SharedKeyValueStore<CustomerShared.Key, CustomerShared> customerImmutableStore;
-    private final SharedKeyValueStore<StockShared.Key, StockShared> stockImmutableStore;
+    private final SharedKeyValueStore<WarehouseSpecificKey, DistrictShared> districtImmutableStore;
+    private final SharedKeyValueStore<DistrictSpecificKey, CustomerShared> customerImmutableStore;
+    private final SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore;
 
     public NewOrderProcessor(
         SharedKeyValueStore<Integer, Item> itemStore,
         SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore,
-        SharedKeyValueStore<DistrictShared.Key, DistrictShared> districtImmutableStore,
-        SharedKeyValueStore<CustomerShared.Key, CustomerShared> customerImmutableStore,
-        SharedKeyValueStore<StockShared.Key, StockShared> stockImmutableStore
+        SharedKeyValueStore<WarehouseSpecificKey, DistrictShared> districtImmutableStore,
+        SharedKeyValueStore<DistrictSpecificKey, CustomerShared> customerImmutableStore,
+        SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore
     ) {
        this.itemStore = itemStore;
        this.warehouseImmutableStore = warehouseImmutableStore;
@@ -69,13 +71,13 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                 // This worker is responsible for the home warehouse
                 remote = false;
 
-                DistrictShared.Key districtKey = new DistrictShared.Key(value.districtId, value.warehouseId);
+                WarehouseSpecificKey districtKey = new WarehouseSpecificKey(value.districtId, value.warehouseId);
 
                 // Load values from the immutable stores
                 WarehouseShared warehouse = warehouseImmutableStore.getBlocking(value.warehouseId);
                 DistrictShared district = districtImmutableStore.getBlocking(districtKey);
                 CustomerShared customer = customerImmutableStore.getBlocking(
-                    new CustomerShared.Key(value.customerId, value.districtId, value.warehouseId)
+                    new DistrictSpecificKey(value.customerId, value.districtId, value.warehouseId)
                 );
 
                 int orderId = nextOrderIdStore.get(districtKey);
@@ -96,7 +98,7 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
 
                 int lineNumber = 0;
                 for (NewOrderMessage.OrderLine line : value.lines) {
-                    StockShared.Key stockKey = new StockShared.Key(line.itemId, line.supplyingWarehouseId);
+                    WarehouseSpecificKey stockKey = new WarehouseSpecificKey(line.itemId, line.supplyingWarehouseId);
 
                     // Load the item and stock data for this line
                     Item item = itemStore.getBlocking(line.itemId);
@@ -133,7 +135,7 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
 
                 Item item = itemStore.getBlocking(line.itemId);
 
-                StockShared.Key stockKey = new StockShared.Key(item.id, line.supplyingWarehouseId);
+                WarehouseSpecificKey stockKey = new WarehouseSpecificKey(item.id, line.supplyingWarehouseId);
 
                 int stockQuantity = stockQuantityStore.get(stockKey);
                 int excessStock = stockQuantity - line.quantity;

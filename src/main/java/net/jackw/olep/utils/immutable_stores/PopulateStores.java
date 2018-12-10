@@ -3,6 +3,8 @@ package net.jackw.olep.utils.immutable_stores;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
@@ -56,10 +58,18 @@ public class PopulateStores {
         WarehouseFactory factory = WarehouseFactory.getInstance();
 
         try (
-            Producer<Integer, WarehouseShared> warehouseProducer = new KafkaProducer<>(props, Serdes.Integer().serializer(), new JsonSerializer<>(WarehouseShared.class));
-            Producer<DistrictShared.Key, DistrictShared> districtProducer = new KafkaProducer<>(props, new JsonSerializer<>(DistrictShared.Key.class), new JsonSerializer<>(DistrictShared.class));
-            Producer<CustomerShared.Key, CustomerShared> customerProducer = new KafkaProducer<>(props, new JsonSerializer<>(CustomerShared.Key.class), new JsonSerializer<>(CustomerShared.class));
-            Producer<StockShared.Key, StockShared> stockProducer = new KafkaProducer<>(props, new JsonSerializer<>(StockShared.Key.class), new JsonSerializer<>(StockShared.class));
+            Producer<Integer, WarehouseShared> warehouseProducer = new KafkaProducer<>(
+                props, Serdes.Integer().serializer(), new JsonSerializer<>(WarehouseShared.class)
+            );
+            Producer<WarehouseSpecificKey, DistrictShared> districtProducer = new KafkaProducer<>(
+                props, new JsonSerializer<>(WarehouseSpecificKey.class), new JsonSerializer<>(DistrictShared.class)
+            );
+            Producer<DistrictSpecificKey, CustomerShared> customerProducer = new KafkaProducer<>(
+                props, new JsonSerializer<>(DistrictSpecificKey.class), new JsonSerializer<>(CustomerShared.class)
+            );
+            Producer<WarehouseSpecificKey, StockShared> stockProducer = new KafkaProducer<>(
+                props, new JsonSerializer<>(WarehouseSpecificKey.class), new JsonSerializer<>(StockShared.class)
+            );
         ) {
             for (int wh = 0; wh < warehouseCount; wh++) {
                 WarehouseShared warehouse = factory.makeWarehouseShared();
