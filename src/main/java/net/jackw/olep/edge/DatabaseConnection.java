@@ -110,7 +110,7 @@ public class DatabaseConnection implements Closeable {
             customerId, warehouseId, districtId, ImmutableList.copyOf(lines), orderDate
         );
         return send(msgBody, new NewOrderResult.Builder(
-            warehouseId, districtId, customerId, lines.size(), orderDate
+            warehouseId, districtId, customerId, orderDate, lines
         )).getTransactionStatus();
     }
 

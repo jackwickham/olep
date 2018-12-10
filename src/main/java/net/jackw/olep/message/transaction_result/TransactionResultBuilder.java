@@ -14,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * @param <T> The type that is built by this class
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public interface TransactionResultBuilder<T extends TransactionResult> extends PartialTransactionResult {
+public interface TransactionResultBuilder<T> extends PartialTransactionResult {
     boolean canBuild();
     T build();
 }

@@ -13,6 +13,7 @@ import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.message.transaction_request.NewOrderMessage;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
+import net.jackw.olep.message.transaction_result.OrderLineResult;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.processor.Processor;
@@ -96,8 +97,9 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                     orderId, value.districtId, value.warehouseId, value.customerId, value.date
                 );
 
-                int lineNumber = 0;
+                int nextLineNumber = 0;
                 for (NewOrderMessage.OrderLine line : value.lines) {
+                    int lineNumber = nextLineNumber++;
                     WarehouseSpecificKey stockKey = new WarehouseSpecificKey(line.itemId, line.supplyingWarehouseId);
 
                     // Load the item and stock data for this line
@@ -107,17 +109,15 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                     // Add the order line to the generated order
                     BigDecimal lineAmount = item.price.multiply(new BigDecimal(line.quantity));
                     OrderLine orderLine = new OrderLine(
-                        orderId, value.districtId, value.warehouseId, ++lineNumber, line.itemId,
+                        orderId, value.districtId, value.warehouseId, lineNumber, line.itemId,
                         line.supplyingWarehouseId, line.quantity, lineAmount,
                         stockShared.getDistrictInfo(value.districtId)
                     );
 
                     orderBuilder.addOrderLine(orderLine);
 
-                    results.lines.add(new NewOrderResult.OrderLineResult(
-                        // TODO: stock quantity has to be done by the dispatching warehouse
-                        line.supplyingWarehouseId, line.itemId, item.name, line.quantity, -1, item.price,
-                        lineAmount
+                    results.addLine(lineNumber, new OrderLineResult.PartialResult(
+                        item.name, item.price, lineAmount
                     ));
                 }
 
@@ -127,7 +127,10 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                 // TODO: Add this order to the modification log (transactionally)
             }
 
+            int nextLineNumber = 0;
             for (NewOrderMessage.OrderLine line : value.lines) {
+                int lineNumber = nextLineNumber++;
+
                 if (!getWarehouses().contains(line.supplyingWarehouseId)) {
                     // Not responsible for this warehouse
                     continue;
@@ -147,7 +150,7 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
 
                 // TODO: Update stock ytd, order_cnt, quantity and possibly remoteCnt in the modification log
 
-                // TODO: Put stock quantity in modification log somehow
+                results.addLine(lineNumber, new OrderLineResult.PartialResult(stockQuantity));
             }
 
             // TODO: Send one transaction to the modification log with all the changes
