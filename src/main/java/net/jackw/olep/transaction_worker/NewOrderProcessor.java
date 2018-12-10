@@ -15,6 +15,7 @@ import net.jackw.olep.message.transaction_request.NewOrderMessage;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
+import net.jackw.olep.utils.RandomDataGenerator;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -81,7 +82,11 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                     new DistrictSpecificKey(value.customerId, value.districtId, value.warehouseId)
                 );
 
-                int orderId = nextOrderIdStore.get(districtKey);
+                Integer orderId = nextOrderIdStore.get(districtKey);
+                if (orderId == null) {
+                    // If we've not had an order from this warehouse/district combo before, this is order #1
+                    orderId = 1;
+                }
                 nextOrderIdStore.put(districtKey, orderId + 1);
 
                 // Send the client the results general results
@@ -127,6 +132,8 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                 // TODO: Add this order to the modification log (transactionally)
             }
 
+            results = new NewOrderResult.PartialResult();
+
             int nextLineNumber = 0;
             for (NewOrderMessage.OrderLine line : value.lines) {
                 int lineNumber = nextLineNumber++;
@@ -140,7 +147,12 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
 
                 WarehouseSpecificKey stockKey = new WarehouseSpecificKey(item.id, line.supplyingWarehouseId);
 
-                int stockQuantity = stockQuantityStore.get(stockKey);
+                Integer stockQuantity = stockQuantityStore.get(stockKey);
+                if (stockQuantity == null) {
+                    // If we've not seen this item/warehouse combo before, choose the value according to the spec
+                    // S_QUANTITY random within [10 .. 100]
+                    stockQuantity = new RandomDataGenerator().uniform(10, 100);
+                }
                 int excessStock = stockQuantity - line.quantity;
                 if (excessStock < 10) {
                     stockQuantity += 91;
