@@ -2,9 +2,9 @@ package net.jackw.olep.verifier;
 
 import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.common.records.Item;
-import net.jackw.olep.message.transaction_request.DeliveryMessage;
-import net.jackw.olep.message.transaction_request.PaymentMessage;
-import net.jackw.olep.message.transaction_request.NewOrderMessage;
+import net.jackw.olep.message.transaction_request.DeliveryRequest;
+import net.jackw.olep.message.transaction_request.PaymentRequest;
+import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.streams.processor.Processor;
@@ -27,37 +27,37 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
     /**
      * Process the record with the given key and value.
      *
-     * @param key   the key for the record
-     * @param value the value for the record
+     * @param key     the key for the record
+     * @param message the value for the record
      */
     @Override
-    public void process(Long key, TransactionRequestMessage value) {
+    public void process(Long key, TransactionRequestMessage message) {
         System.out.printf("Processing transaction %d\n", key);
-        if (value.body instanceof NewOrderMessage) {
-            NewOrderMessage body = (NewOrderMessage) value.body;
+        if (message instanceof NewOrderRequest) {
+            NewOrderRequest body = (NewOrderRequest) message;
             if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {
-                acceptTransaction(key, value);
+                acceptTransaction(key, message);
             } else {
-                rejectTransaction(key, value);
+                rejectTransaction(key, message);
             }
-        } else if (value.body instanceof PaymentMessage || value.body instanceof DeliveryMessage) {
+        } else if (message instanceof PaymentRequest || message instanceof DeliveryRequest) {
             // These transactions can never fail (in theory)
-            acceptTransaction(key, value);
+            acceptTransaction(key, message);
         } else {
-            // ???
-            rejectTransaction(key, value);
+            // ??? Don't recognise this transaction, so reject it
+            rejectTransaction(key, message);
         }
     }
 
     private void acceptTransaction(long id, TransactionRequestMessage transaction) {
         context.forward(id, transaction, To.child("accepted-transactions"));
         context.forward(id, new TransactionResultMessage(id, true), To.child("transaction-results"));
-        System.out.println("Accepted a transaction of type " + transaction.body.getClass().getName());
+        System.out.println("Accepted a transaction of type " + transaction.getClass().getName());
     }
 
     private void rejectTransaction(long id, TransactionRequestMessage transaction) {
         context.forward(id, new TransactionResultMessage(id, false), To.child("transaction-results"));
-        System.out.println("Rejected a messaged of type " + transaction.body.getClass().getName());
+        System.out.println("Rejected a messaged of type " + transaction.getClass().getName());
     }
 
     @Override

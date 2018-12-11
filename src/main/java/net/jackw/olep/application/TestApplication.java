@@ -3,7 +3,7 @@ package net.jackw.olep.application;
 import net.jackw.olep.edge.DatabaseConnection;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
-import net.jackw.olep.message.transaction_request.NewOrderMessage;
+import net.jackw.olep.message.transaction_request.NewOrderRequest;
 
 import java.util.List;
 import java.util.Random;
@@ -19,7 +19,7 @@ public class TestApplication {
                     10,
                     1,
                     1,
-                    List.of(new NewOrderMessage.OrderLine(itemId, 1, 3))
+                    List.of(new NewOrderRequest.OrderLine(itemId, 1, 3))
                 ).register(new TransactionStatusListener<NewOrderResult>() {
                     @Override
                     public void acceptedHandler() {

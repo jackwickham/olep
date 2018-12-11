@@ -8,10 +8,9 @@ import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.message.transaction_result.TransactionResult;
 import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
-import net.jackw.olep.message.transaction_request.DeliveryMessage;
-import net.jackw.olep.message.transaction_request.NewOrderMessage;
-import net.jackw.olep.message.transaction_request.PaymentMessage;
-import net.jackw.olep.message.transaction_request.TransactionRequestBody;
+import net.jackw.olep.message.transaction_request.DeliveryRequest;
+import net.jackw.olep.message.transaction_request.NewOrderRequest;
+import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -28,6 +27,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 import java.io.Closeable;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
@@ -46,31 +46,34 @@ public class DatabaseConnection implements Closeable {
     private final Producer<Long, TransactionRequestMessage> transactionRequestProducer;
     private final Consumer<Long, PendingTransaction> transactionResultConsumer;
 
-    private final Serializer<TransactionRequestMessage> transactionRequestSerializer;
-    private final Deserializer<PendingTransaction> transactionResultDeserializer;
-
     private final Map<Long, PendingTransaction<?, ?>> pendingTransactions;
 
     private final Thread resultThread;
 
+    // Use a CSPRNG to generate connection IDs to avoid collisions
+    private static final Random rand = new SecureRandom();
+    private final int connectionId;
+
 
     @MustBeClosed
     public DatabaseConnection(String bootstrapServers) {
+        connectionId = rand.nextInt();
+
         // Initialise regular fields
         pendingTransactions = new ConcurrentHashMap<>();
 
         // Set up the producer, which is used to send requests from the application to the DB
-        transactionRequestSerializer = new JsonSerializer<>(TransactionRequestMessage.class);
+        Serializer<TransactionRequestMessage> transactionRequestSerializer = new JsonSerializer<>(TransactionRequestMessage.class);
         Properties transactionRequestProducerProps = new Properties();
         transactionRequestProducerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         transactionRequestProducerProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 1);
         transactionRequestProducer = new KafkaProducer<>(transactionRequestProducerProps, Serdes.Long().serializer(), transactionRequestSerializer);
 
         // Set up the consumer, which is used to receive transaction result messages from the DB
-        transactionResultDeserializer = new TransactionResultDeserializer(pendingTransactions);
+        Deserializer<PendingTransaction> transactionResultDeserializer = new TransactionResultDeserializer(pendingTransactions);
         Properties transactionResultConsumerProps = new Properties();
         transactionResultConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        transactionResultConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "result-consumer" + rand.nextInt()); // TODO: this probably needs to be unique per app instance
+        transactionResultConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "result-consumer" + connectionId);
         transactionResultConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         transactionResultConsumer = new KafkaConsumer<>(transactionResultConsumerProps, Serdes.Long().deserializer(), transactionResultDeserializer);
         transactionResultConsumer.subscribe(List.of(TRANSACTION_RESULT_TOPIC));
@@ -103,15 +106,14 @@ public class DatabaseConnection implements Closeable {
      * Send a New-Order transaction
      */
     public TransactionStatus<NewOrderResult> newOrder(
-        int customerId, int warehouseId, int districtId, List<NewOrderMessage.OrderLine> lines
+        int customerId, int warehouseId, int districtId, List<NewOrderRequest.OrderLine> lines
     ) {
         long orderDate = new Date().getTime();
-        NewOrderMessage msgBody = new NewOrderMessage(
+        NewOrderRequest msgBody = new NewOrderRequest(
             customerId, warehouseId, districtId, ImmutableList.copyOf(lines), orderDate
         );
-        return send(msgBody, new NewOrderResult.Builder(
-            warehouseId, districtId, customerId, orderDate, lines
-        )).getTransactionStatus();
+        return send(msgBody, new NewOrderResult.Builder(warehouseId, districtId, customerId, orderDate, lines))
+            .getTransactionStatus();
     }
 
     /**
@@ -121,7 +123,7 @@ public class DatabaseConnection implements Closeable {
         int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, int customerId,
         BigDecimal amount
     ) {
-        PaymentMessage msgBody = new PaymentMessage(
+        PaymentRequest msgBody = new PaymentRequest(
             warehouseId, districtId, customerId, customerWarehouseId, customerDistrictId, amount
         );
         return send(msgBody, new PaymentResult.Builder(
@@ -136,7 +138,7 @@ public class DatabaseConnection implements Closeable {
         int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, String customerSurname,
         BigDecimal amount
     ) {
-        PaymentMessage msgBody = new PaymentMessage(
+        PaymentRequest msgBody = new PaymentRequest(
             warehouseId, districtId, customerSurname, customerWarehouseId, customerDistrictId, amount
         );
         return send(msgBody, new PaymentResult.Builder(
@@ -148,24 +150,29 @@ public class DatabaseConnection implements Closeable {
      * Send a Delivery transaction
      */
     public TransactionStatus<DeliveryResult> delivery(int warehouseId, int carrierId) {
-        DeliveryMessage msgBody = new DeliveryMessage(warehouseId, carrierId, new Date().getTime());
+        DeliveryRequest msgBody = new DeliveryRequest(warehouseId, carrierId, new Date().getTime());
         return send(msgBody, new DeliveryResult.Builder(warehouseId, carrierId)).getTransactionStatus();
     }
 
     /**
      * Deliver a message to Kafka
      *
-     * @param msgBody The message to send
+     * @param msg The message to send
      */
     @SuppressWarnings("FutureReturnValueIgnored")
-    private <T extends TransactionResult, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(TransactionRequestBody msgBody, B resultBuilder) {
+    private <T extends TransactionResult, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(
+        TransactionRequestMessage msg, B resultBuilder
+    ) {
         long transactionId = nextTransactionId();
 
         PendingTransaction<T, B> pendingTransaction = new PendingTransaction<>(transactionId, resultBuilder);
         pendingTransactions.put(transactionId, pendingTransaction);
 
-        TransactionRequestMessage msg = new TransactionRequestMessage(transactionId, msgBody);
-        transactionRequestProducer.send(new ProducerRecord<>(TRANSACTION_REQUEST_TOPIC, transactionId, msg), pendingTransaction.getWrittenToLogCallback());
+        // Publish to Kafka, and provide the writtenToLogCallback to Kafka to call once that's done
+        transactionRequestProducer.send(
+            new ProducerRecord<>(TRANSACTION_REQUEST_TOPIC, transactionId, msg),
+            pendingTransaction.getWrittenToLogCallback()
+        );
 
         return pendingTransaction;
     }
@@ -183,16 +190,14 @@ public class DatabaseConnection implements Closeable {
         }
     }
 
-    private static Random rand = new Random();
+    private int lastTransactionId = 0;
 
     /**
      * Generate a new transaction ID
      *
-     * This has been abstracted into a method so different methods, such as snowflakes, can be used in future.
-     *
      * @return A globally unique transaction ID
      */
     private long nextTransactionId() {
-        return rand.nextLong();
+        return (Integer.toUnsignedLong(connectionId) << 32) | ++lastTransactionId;
     }
 }

@@ -35,7 +35,7 @@ public class SharedMapStore<K, V> implements SharedKeyValueStore<K, V> {
                 if (attempts >= BACKOFF_ATTEMPTS) {
                     throw new StoreKeyMissingException(key);
                 }
-                Thread.sleep(100 + attempts++);
+                Thread.sleep(100 + 100 * attempts++);
             }
             result = map.get(key);
         } while (result == null);

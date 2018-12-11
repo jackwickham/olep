@@ -1,15 +1,18 @@
 package net.jackw.olep.message.transaction_request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.errorprone.annotations.Immutable;
 
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "type"
+)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = NewOrderRequest.class, name = "neworder"),
+    @JsonSubTypes.Type(value = PaymentRequest.class, name = "payment"),
+    @JsonSubTypes.Type(value = DeliveryRequest.class, name = "delivery")
+})
 @Immutable
-public class TransactionRequestMessage {
-    public final long transactionId;
-    public final TransactionRequestBody body;
-
-    public TransactionRequestMessage(@JsonProperty("transactionId") long transactionId, @JsonProperty("body") TransactionRequestBody body) {
-        this.transactionId = transactionId;
-        this.body = body;
-    }
-}
+public abstract class TransactionRequestMessage {}

@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
 @Immutable
-public class DeliveryMessage extends TransactionRequestBody {
+public class DeliveryRequest extends TransactionRequestMessage {
     public final int warehouseId;
     public final int carrierId;
     public final long deliveryDate;
 
-    public DeliveryMessage(
+    public DeliveryRequest(
         @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("carrierId") int carrierId,
         @JsonProperty("deliveryDate") long deliveryDate

@@ -1,6 +1,6 @@
 package net.jackw.olep.transaction_worker;
 
-import net.jackw.olep.message.transaction_request.NewOrderMessage;
+import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -18,11 +18,11 @@ public class TransactionRouter implements Processor<Long, TransactionRequestMess
 
     @Override
     public void process(Long key, TransactionRequestMessage value) {
-        if (value.body instanceof NewOrderMessage) {
-            context.forward(key, value.body);
+        if (value instanceof NewOrderRequest) {
+            context.forward(key, value);
         } else {
             // Nothing more we can do here...
-            throw new IllegalArgumentException("Couldn't route transaction of type " + value.body.getClass().getName());
+            throw new IllegalArgumentException("Couldn't route transaction of type " + value.getClass().getName());
         }
     }
 

@@ -5,14 +5,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Immutable;
 
 @Immutable
-public class NewOrderMessage extends TransactionRequestBody {
+public class NewOrderRequest extends TransactionRequestMessage {
     public final int customerId;
     public final int warehouseId;
     public final int districtId;
     public final ImmutableList<OrderLine> lines;
     public final long date;
 
-    public NewOrderMessage(
+    public NewOrderRequest(
         @JsonProperty("customerId") int customerId,
         @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,

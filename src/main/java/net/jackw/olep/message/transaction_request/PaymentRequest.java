@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 @Immutable
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PaymentMessage extends TransactionRequestBody {
+public class PaymentRequest extends TransactionRequestMessage {
     public final int warehouseId;
     public final int districtId;
     public final Integer customerId;
@@ -17,7 +17,7 @@ public class PaymentMessage extends TransactionRequestBody {
     public final int customerDistrictId;
     public final BigDecimal amount;
 
-    public PaymentMessage(
+    public PaymentRequest(
         @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,
         @JsonProperty("customerId") int customerId,
@@ -28,7 +28,7 @@ public class PaymentMessage extends TransactionRequestBody {
         this(warehouseId, districtId, customerId, null, customerWarehouseId, customerDistrictId, amount);
     }
 
-    public PaymentMessage(
+    public PaymentRequest(
         @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,
         @JsonProperty("customerSurname") String customerSurname,
@@ -39,7 +39,7 @@ public class PaymentMessage extends TransactionRequestBody {
         this(warehouseId, districtId, null, customerSurname, customerWarehouseId, customerDistrictId, amount);
     }
 
-    private PaymentMessage(
+    private PaymentRequest(
         int warehouseId, int districtId, Integer customerId, String customerSurname, int customerWarehouseId,
         int customerDistrictId, BigDecimal amount
     ) {

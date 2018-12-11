@@ -11,7 +11,7 @@ import net.jackw.olep.common.records.Order;
 import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
-import net.jackw.olep.message.transaction_request.NewOrderMessage;
+import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
@@ -30,7 +30,7 @@ import java.util.Set;
  * Process a New-Order transaction that affects this worker
  */
 // TODO: Is this the right key?
-public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
+public class NewOrderProcessor implements Processor<Long, NewOrderRequest> {
     private ProcessorContext context;
     private LocalStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
     private LocalStore<WarehouseSpecificKey, Integer> stockQuantityStore;
@@ -72,9 +72,9 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
     }
 
     @Override
-    public void process(Long key, NewOrderMessage value) {
+    public void process(Long key, NewOrderRequest value) {
         try {
-            NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
+            final NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
 
             boolean remote = true;
             if (getWarehouses().contains(value.warehouseId)) {
@@ -107,7 +107,7 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                 );
 
                 int nextLineNumber = 0;
-                for (NewOrderMessage.OrderLine line : value.lines) {
+                for (NewOrderRequest.OrderLine line : value.lines) {
                     int lineNumber = nextLineNumber++;
                     WarehouseSpecificKey stockKey = new WarehouseSpecificKey(line.itemId, line.supplyingWarehouseId);
 
@@ -136,10 +136,8 @@ public class NewOrderProcessor implements Processor<Long, NewOrderMessage> {
                 // TODO: Add this order to the modification log (transactionally)
             }
 
-            results = new NewOrderResult.PartialResult();
-
             int nextLineNumber = 0;
-            for (NewOrderMessage.OrderLine line : value.lines) {
+            for (NewOrderRequest.OrderLine line : value.lines) {
                 int lineNumber = nextLineNumber++;
 
                 if (!getWarehouses().contains(line.supplyingWarehouseId)) {

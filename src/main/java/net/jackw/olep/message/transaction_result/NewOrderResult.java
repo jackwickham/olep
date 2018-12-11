@@ -7,8 +7,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.Credit;
-import net.jackw.olep.common.records.OrderLine;
-import net.jackw.olep.message.transaction_request.NewOrderMessage;
+import net.jackw.olep.message.transaction_request.NewOrderRequest;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -74,15 +73,15 @@ public class NewOrderResult extends TransactionResult {
         private final long orderDate;
 
         public Builder(
-            int warehouseId, int districtId, int customerId, long orderDate, List<NewOrderMessage.OrderLine> lines
+            int warehouseId, int districtId, int customerId, long orderDate, List<NewOrderRequest.OrderLine> lines
         ) {
             this.warehouseId = warehouseId;
             this.districtId = districtId;
             this.customerId = customerId;
             this.orderDate = orderDate;
 
-            for (ListIterator<NewOrderMessage.OrderLine> it = lines.listIterator(); it.hasNext(); ) {
-                NewOrderMessage.OrderLine line = it.next();
+            for (ListIterator<NewOrderRequest.OrderLine> it = lines.listIterator(); it.hasNext(); ) {
+                NewOrderRequest.OrderLine line = it.next();
                 OrderLineResult.Builder lineBuilder = new OrderLineResult.Builder(
                     line.supplyingWarehouseId, line.itemId, line.quantity
                 );
