@@ -10,6 +10,7 @@ import net.jackw.olep.common.TransactionResultPartitioner;
 import net.jackw.olep.common.TransactionWarehouseKey;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
@@ -26,6 +27,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
+import java.util.ArrayDeque;
 import java.util.Properties;
 
 public class WorkerApp extends StreamsApp {
@@ -122,7 +124,14 @@ public class WorkerApp extends StreamsApp {
 
         //StoreBuilder<KeyValueStore<CustomerShared.Key, CustomerMutable>> customerMutableStoreBuilder
 
-        // customer_id_immutable probably doesn't belong here, and new_orders doesn't either
+        // customer_id_immutable probably doesn't belong here
+
+        @SuppressWarnings("unchecked")
+        StoreBuilder<KeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>>> newOrdersStoreBuilder = Stores.keyValueStoreBuilder(
+            Stores.persistentKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
+            new JsonSerde<>(WarehouseSpecificKey.class),
+            new JsonSerde<>((Class)ArrayDeque.class)
+        );
 
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, Integer>> stockQuantityStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.STOCK_QUANTITY_STORE),
@@ -153,6 +162,7 @@ public class WorkerApp extends StreamsApp {
             // State stores for worker-local state
             .addStateStore(nextOrderIdStoreBuilder, "new-order-processor")
             .addStateStore(stockQuantityStoreBuilder, "new-order-processor")
+            .addStateStore(newOrdersStoreBuilder, "new-order-processor")
             // The processors will write to the result and modification logs
             .addSink(
                 "modification-log",

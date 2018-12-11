@@ -3,6 +3,7 @@ package net.jackw.olep.transaction_worker;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -23,6 +24,7 @@ import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Process a New-Order transaction that affects this worker
@@ -32,6 +34,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
     private ProcessorContext context;
     private LocalStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
     private LocalStore<WarehouseSpecificKey, Integer> stockQuantityStore;
+    private NewOrdersStore newOrdersStore;
 
     private final SharedKeyValueStore<Integer, Item> itemStore;
     private final SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore;
@@ -69,6 +72,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
             // Default value is S_QUANTITY random within [10 .. 100]
             () -> rand.uniform(10, 100)
         );
+        this.newOrdersStore = new NewOrdersStore((KeyValueStore) context.getStateStore(KafkaConfig.NEW_ORDER_STORE));
     }
 
     @Override
@@ -131,7 +135,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
                     ));
                 }
 
-                // TODO: Add New-Order (= Order.Key) to the new order queue
+                newOrdersStore.add(districtKey, orderBuilder.buildNewOrder());
 
                 Order order = orderBuilder.build();
                 // TODO: Add this order to the modification log (transactionally)

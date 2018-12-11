@@ -1,9 +1,11 @@
 package net.jackw.olep.transaction_worker;
 
 import com.google.common.collect.ImmutableList;
+import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.Order;
 import net.jackw.olep.common.records.OrderLine;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +21,8 @@ public class OrderBuilder {
 
     private List<OrderLine> orderLines;
     private Boolean allLocal = true;
+
+    private BigDecimal totalAmount = BigDecimal.ZERO;
 
     public OrderBuilder(int orderId, int districtId, int warehouseId, int customerId, long entryDate) {
         this.orderId = orderId;
@@ -38,6 +42,7 @@ public class OrderBuilder {
         if (line.warehouseId != warehouseId) {
             allLocal = false;
         }
+        totalAmount = totalAmount.add(line.amount);
     }
 
     /**
@@ -48,5 +53,12 @@ public class OrderBuilder {
             orderId, districtId, warehouseId, customerId, entryDate, null, ImmutableList.copyOf(orderLines),
             allLocal
         );
+    }
+
+    /**
+     * Get the NewOrder associated with this order
+     */
+    public NewOrder buildNewOrder() {
+        return new NewOrder(warehouseId, districtId, customerId, totalAmount);
     }
 }
