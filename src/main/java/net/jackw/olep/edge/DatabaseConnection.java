@@ -14,14 +14,16 @@ import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.errors.WakeupException;
-import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 
@@ -44,11 +46,14 @@ import static net.jackw.olep.common.KafkaConfig.TRANSACTION_RESULT_TOPIC;
  */
 public class DatabaseConnection implements Closeable {
     private final Producer<Long, TransactionRequestMessage> transactionRequestProducer;
-    private final Consumer<Long, PendingTransaction> transactionResultConsumer;
+    private final Consumer<Long, byte[]> transactionResultConsumer;
 
     private final Map<Long, PendingTransaction<?, ?>> pendingTransactions;
 
     private final Thread resultThread;
+
+    // Takes a byte[] and updates the corresponding PendingTransaction
+    private final TransactionResultProcessor transactionResultProcessor;
 
     // Use a CSPRNG to generate connection IDs to avoid collisions
     private static final Random rand = new SecureRandom();
@@ -67,16 +72,28 @@ public class DatabaseConnection implements Closeable {
         Properties transactionRequestProducerProps = new Properties();
         transactionRequestProducerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         transactionRequestProducerProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 1);
-        transactionRequestProducer = new KafkaProducer<>(transactionRequestProducerProps, Serdes.Long().serializer(), transactionRequestSerializer);
+        transactionRequestProducer = new KafkaProducer<>(
+            transactionRequestProducerProps, Serdes.Long().serializer(), transactionRequestSerializer
+        );
 
         // Set up the consumer, which is used to receive transaction result messages from the DB
-        Deserializer<PendingTransaction> transactionResultDeserializer = new TransactionResultDeserializer(pendingTransactions);
+        // The body is initially only decoded as a byte[], because we can only decode it if we sent the corresponding
+        // transaction, and we only know that once the key has been decoded
         Properties transactionResultConsumerProps = new Properties();
         transactionResultConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         transactionResultConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "result-consumer" + connectionId);
         transactionResultConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-        transactionResultConsumer = new KafkaConsumer<>(transactionResultConsumerProps, Serdes.Long().deserializer(), transactionResultDeserializer);
-        transactionResultConsumer.subscribe(List.of(TRANSACTION_RESULT_TOPIC));
+        transactionResultConsumer = new KafkaConsumer<>(
+            transactionResultConsumerProps, Serdes.Long().deserializer(), Serdes.ByteArray().deserializer()
+        );
+        // Assign to the correct partition
+        transactionResultConsumer.assign(List.of(new TopicPartition(
+            TRANSACTION_RESULT_TOPIC,
+            getPartition(transactionResultConsumer.partitionsFor(TRANSACTION_RESULT_TOPIC).size())
+        )));
+
+        // Create the transaction result processor too
+        transactionResultProcessor = new TransactionResultProcessor(pendingTransactions);
 
         // Start a thread that listens to the result log and processes the results
         resultThread = new Thread(this::processRecords);
@@ -164,6 +181,7 @@ public class DatabaseConnection implements Closeable {
         TransactionRequestMessage msg, B resultBuilder
     ) {
         long transactionId = nextTransactionId();
+        System.out.printf("Sending transaction %d\n", transactionId);
 
         PendingTransaction<T, B> pendingTransaction = new PendingTransaction<>(transactionId, resultBuilder);
         pendingTransactions.put(transactionId, pendingTransaction);
@@ -183,7 +201,12 @@ public class DatabaseConnection implements Closeable {
     private void processRecords() {
         while (true) {
             try {
-                transactionResultConsumer.poll(Duration.ofHours(12));
+                ConsumerRecords<Long, byte[]> records = transactionResultConsumer.poll(Duration.ofHours(12));
+                for (ConsumerRecord<Long, byte[]> record : records) {
+                    if (connectionId == (int)(long)record.key()) {
+                        transactionResultProcessor.process(record.value());
+                    }
+                }
             } catch (InterruptException | WakeupException e) {
                 break;
             }
@@ -198,6 +221,16 @@ public class DatabaseConnection implements Closeable {
      * @return A globally unique transaction ID
      */
     private long nextTransactionId() {
-        return (Integer.toUnsignedLong(connectionId) << 32) | ++lastTransactionId;
+        return (Integer.toUnsignedLong(++lastTransactionId) << 32) | Integer.toUnsignedLong(connectionId);
+    }
+
+    /**
+     * Get the partition that transaction results will be written to
+     *
+     * @param numPartitions The total number of transaction result partitions
+     * @return The correct partition
+     */
+    private int getPartition(int numPartitions) {
+        return (int)(((long)connectionId & 0xFFFFFFFFL) % numPartitions);
     }
 }

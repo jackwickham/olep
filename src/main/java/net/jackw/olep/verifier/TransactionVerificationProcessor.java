@@ -1,6 +1,7 @@
 package net.jackw.olep.verifier;
 
 import net.jackw.olep.common.SharedKeyValueStore;
+import net.jackw.olep.common.TransactionWarehouseKey;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
@@ -10,6 +11,10 @@ import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
+
+import java.util.Collection;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class TransactionVerificationProcessor implements Processor<Long, TransactionRequestMessage> {
     private ProcessorContext context;
@@ -36,21 +41,32 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
         if (message instanceof NewOrderRequest) {
             NewOrderRequest body = (NewOrderRequest) message;
             if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {
-                acceptTransaction(key, message);
+                // Get the warehouses of the workers that need to see this transaction
+                Set<Integer> warehouses = body.lines.stream()
+                    .map(line -> line.supplyingWarehouseId)
+                    .collect(Collectors.toSet());
+                warehouses.add(body.warehouseId);
+
+                acceptTransaction(key, message, warehouses);
             } else {
                 rejectTransaction(key, message);
             }
         } else if (message instanceof PaymentRequest || message instanceof DeliveryRequest) {
             // These transactions can never fail (in theory)
-            acceptTransaction(key, message);
+            // TODO: Calculate workers that need to see it
+            acceptTransaction(key, message, Set.of());
         } else {
             // ??? Don't recognise this transaction, so reject it
             rejectTransaction(key, message);
         }
     }
 
-    private void acceptTransaction(long id, TransactionRequestMessage transaction) {
-        context.forward(id, transaction, To.child("accepted-transactions"));
+    private void acceptTransaction(long id, TransactionRequestMessage transaction, Set<Integer> warehouses) {
+        // Forward the transaction to each of the relevant warehouses
+        for (int warehouse : warehouses) {
+            context.forward(new TransactionWarehouseKey(id, warehouse), transaction, To.child("accepted-transactions"));
+        }
+        // Then write the acceptance message to the result log
         context.forward(id, new TransactionResultMessage(id, true), To.child("transaction-results"));
         System.out.println("Accepted a transaction of type " + transaction.getClass().getName());
     }

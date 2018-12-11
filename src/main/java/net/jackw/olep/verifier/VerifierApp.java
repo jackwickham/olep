@@ -5,6 +5,9 @@ import net.jackw.olep.common.SharedStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.TransactionResultPartitioner;
+import net.jackw.olep.common.TransactionWarehouseKey;
+import net.jackw.olep.common.WarehousePartitioner;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
@@ -49,6 +52,7 @@ public class VerifierApp extends StreamsApp {
 
         topology
             .addSource(
+                Topology.AutoOffsetReset.EARLIEST,
                 "transaction-requests",
                 Serdes.Long().deserializer(),
                 new JsonDeserializer<>(TransactionRequestMessage.class),
@@ -59,8 +63,9 @@ public class VerifierApp extends StreamsApp {
             .addSink(
                 "accepted-transactions",
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
-                Serdes.Long().serializer(),
+                new TransactionWarehouseKey.KeySerializer(),
                 new JsonSerializer<>(TransactionRequestMessage.class),
+                new WarehousePartitioner(),
                 "process"
             )
             .addSink(
@@ -68,6 +73,7 @@ public class VerifierApp extends StreamsApp {
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
                 Serdes.Long().serializer(),
                 new JsonSerializer<>(TransactionResultMessage.class),
+                new TransactionResultPartitioner(),
                 "process"
             );
 

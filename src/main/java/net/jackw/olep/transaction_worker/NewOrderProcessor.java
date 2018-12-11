@@ -23,14 +23,12 @@ import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Process a New-Order transaction that affects this worker
  */
 // TODO: Is this the right key?
-public class NewOrderProcessor implements Processor<Long, NewOrderRequest> {
+public class NewOrderProcessor extends BaseTransactionProcessor implements Processor<Long, NewOrderRequest> {
     private ProcessorContext context;
     private LocalStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
     private LocalStore<WarehouseSpecificKey, Integer> stockQuantityStore;
@@ -46,13 +44,15 @@ public class NewOrderProcessor implements Processor<Long, NewOrderRequest> {
         SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore,
         SharedKeyValueStore<WarehouseSpecificKey, DistrictShared> districtImmutableStore,
         SharedKeyValueStore<DistrictSpecificKey, CustomerShared> customerImmutableStore,
-        SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore
+        SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore,
+        int acceptedTransactionsPartitions
     ) {
-       this.itemStore = itemStore;
-       this.warehouseImmutableStore = warehouseImmutableStore;
-       this.districtImmutableStore = districtImmutableStore;
-       this.customerImmutableStore = customerImmutableStore;
-       this.stockImmutableStore = stockImmutableStore;
+        super(acceptedTransactionsPartitions);
+        this.itemStore = itemStore;
+        this.warehouseImmutableStore = warehouseImmutableStore;
+        this.districtImmutableStore = districtImmutableStore;
+        this.customerImmutableStore = customerImmutableStore;
+        this.stockImmutableStore = stockImmutableStore;
     }
 
     @Override
@@ -73,11 +73,12 @@ public class NewOrderProcessor implements Processor<Long, NewOrderRequest> {
 
     @Override
     public void process(Long key, NewOrderRequest value) {
+        System.out.printf("Processing transaction %d\n", key);
         try {
             final NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
 
             boolean remote = true;
-            if (getWarehouses().contains(value.warehouseId)) {
+            if (isProcessorForWarehouse(value.warehouseId, context)) {
                 // This worker is responsible for the home warehouse
                 remote = false;
 
@@ -140,7 +141,7 @@ public class NewOrderProcessor implements Processor<Long, NewOrderRequest> {
             for (NewOrderRequest.OrderLine line : value.lines) {
                 int lineNumber = nextLineNumber++;
 
-                if (!getWarehouses().contains(line.supplyingWarehouseId)) {
+                if (!isProcessorForWarehouse(line.supplyingWarehouseId, context)) {
                     // Not responsible for this warehouse
                     continue;
                 }
@@ -176,14 +177,5 @@ public class NewOrderProcessor implements Processor<Long, NewOrderRequest> {
     @Override
     public void close() {
 
-    }
-
-    private Set<Integer> getWarehouses() {
-        // TODO
-        Set<Integer> warehouses = new HashSet<>(100);
-        for (int i = 1; i <= 100; i++) {
-            warehouses.add(i);
-        }
-        return warehouses;
     }
 }

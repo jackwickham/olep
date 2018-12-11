@@ -39,6 +39,7 @@ public abstract class StreamsApp {
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, getApplicationID());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 2);
 
         Topology topology = getTopology();
         System.out.println(topology.describe());
@@ -87,22 +88,28 @@ public abstract class StreamsApp {
         setup();
         streams = getStreams();
 
-        // Add a shutdown listener to gracefully handle Ctrl+C
-        Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
-            @Override
-            public void run() {
-                appShutdownLatch.countDown();
-            }
-        });
-
-        // Run forever
         try {
+            // Add a shutdown listener to gracefully handle Ctrl+C
+            Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
+                @Override
+                public void run() {
+                    appShutdownLatch.countDown();
+                }
+            });
+
+            // Run forever
             streams.start();
             appShutdownLatch.await();
             System.out.println("Shutting down");
             shutdown();
         } catch (Throwable e) {
             e.printStackTrace();
+            try {
+                shutdown();
+            } catch (Throwable e2) {
+                // Nothing we can do now
+                e2.printStackTrace();
+            }
             System.exit(1);
         }
     }
