@@ -1,5 +1,6 @@
 package net.jackw.olep.transaction_worker;
 
+import net.jackw.olep.common.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.JsonSerializer;
@@ -8,8 +9,6 @@ import net.jackw.olep.common.SharedStoreConsumer;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.TransactionResultPartitioner;
 import net.jackw.olep.common.TransactionWarehouseKey;
-import net.jackw.olep.common.records.CustomerShared;
-import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
@@ -35,7 +34,7 @@ public class WorkerApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
     private SharedStoreConsumer<Integer, WarehouseShared> warehouseConsumer;
     private SharedStoreConsumer<WarehouseSpecificKey, DistrictShared> districtConsumer;
-    private SharedStoreConsumer<DistrictSpecificKey, CustomerShared> customerConsumer;
+    private SharedCustomerStoreConsumer customerConsumer;
     private SharedStoreConsumer<WarehouseSpecificKey, StockShared> stockConsumer;
 
     /**
@@ -68,12 +67,10 @@ public class WorkerApp extends StreamsApp {
             WarehouseSpecificKey.class,
             DistrictShared.class
         );
-        customerConsumer = new SharedStoreConsumer<>(
+        customerConsumer = new SharedCustomerStoreConsumer(
             getBootstrapServers(),
             getApplicationID() + "-" + getNodeID(),
-            KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC,
-            DistrictSpecificKey.class,
-            CustomerShared.class
+            KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC
         );
         stockConsumer = new SharedStoreConsumer<>(
             getBootstrapServers(),

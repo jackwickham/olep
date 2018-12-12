@@ -4,14 +4,14 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map;
 
-public class SharedMapStore<K, V> implements SharedKeyValueStore<K, V> {
-    private ConcurrentHashMap<K, V> map;
-    private final int BACKOFF_ATTEMPTS = 10;
+class SharedMapStore<K, V> implements WritableKeyValueStore<K, V> {
+    private Map<K, V> map;
 
-    public SharedMapStore(int initialCapacity) {
-        map = new ConcurrentHashMap<>(initialCapacity);
+    SharedMapStore(int initialCapacity) {
+        map = new HashMap<>(initialCapacity);
     }
 
     @Override
@@ -25,32 +25,22 @@ public class SharedMapStore<K, V> implements SharedKeyValueStore<K, V> {
         return map.get(key);
     }
 
-    @Override
-    @Nonnull
-    public V getBlocking(K key) throws InterruptedException {
-        int attempts = 0;
-        V result;
-        do {
-            while (!map.containsKey(key)) {
-                if (attempts >= BACKOFF_ATTEMPTS) {
-                    throw new StoreKeyMissingException(key);
-                }
-                Thread.sleep(100 + 100 * attempts++);
-            }
-            result = map.get(key);
-        } while (result == null);
-        return result;
-    }
-
     /**
-     * Save a value into the store with the given key
+     * Save a value into the store with the given key, and return the previous value if it exists
      */
     @CanIgnoreReturnValue
+    @Nullable
+    @Override
     public V put(K key, @Nonnull V value) {
         return map.put(key, value);
     }
 
+    /**
+     * Remove the element with the given key from the store, returning the previous value if it existed
+     */
     @CanIgnoreReturnValue
+    @Nullable
+    @Override
     public V remove(K key) {
         return map.remove(key);
     }

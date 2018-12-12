@@ -4,6 +4,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface SharedKeyValueStore<K, V> {
+    int BACKOFF_ATTEMPTS = 10;
+
     /**
      * Tests whether the specified key has a corresponding value in this store
      *
@@ -29,5 +31,18 @@ public interface SharedKeyValueStore<K, V> {
      * @return The value associated with that key
      */
     @Nonnull
-    V getBlocking(K key) throws InterruptedException;
+    default V getBlocking(K key) throws InterruptedException {
+        int attempts = 0;
+        V result;
+        do {
+            while (!containsKey(key)) {
+                if (attempts >= BACKOFF_ATTEMPTS) {
+                    throw new StoreKeyMissingException(key);
+                }
+                Thread.sleep(100 + 100 * attempts++);
+            }
+            result = get(key);
+        } while (result == null);
+        return result;
+    }
 }

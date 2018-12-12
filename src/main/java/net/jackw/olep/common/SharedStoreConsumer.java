@@ -1,6 +1,5 @@
 package net.jackw.olep.common;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -22,13 +21,11 @@ import java.util.Properties;
  */
 public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
     private Consumer<K, V> consumer;
-    private SharedMapStore<K, V> store;
+    private WritableKeyValueStore<K, V> store;
 
-    // I'm not sure if this flag really needs to be behind the lock, but it seems like the easiest way to make sure that
-    // it will definitely be read correctly by the other thread, and the cost is very small because it is only used in
-    // exceptional cases
-    @GuardedBy("this")
-    private boolean done = false;
+    // Volatile is needed to ensure that this new value is guaranteed to be seen after the wakeup event is received
+    // See https://docs.oracle.com/javase/specs/jls/se11/html/jls-17.html#jls-17.4
+    private volatile boolean done = false;
 
     /**
      * Construct a new shared store consumer, and subscribe to the corresponding topic
@@ -39,8 +36,8 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
      * @param keyDeserializer The deserializer for the store key
      * @param valueDeserializer The deserializer for the store values
      */
-    public SharedStoreConsumer(String bootstrapServers, String nodeID, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
-        store = new SharedMapStore<>(100_000);
+    SharedStoreConsumer(String bootstrapServers, String nodeID, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
+        store = createStore();
 
         Properties itemConsumerProps = new Properties();
         itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -94,10 +91,8 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
                     }
                 }
             } catch (WakeupException e) {
-                synchronized (this) {
-                    if (done) {
-                        return;
-                    }
+                if (done) {
+                    return;
                 }
             }
         }
@@ -105,10 +100,15 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
 
     @Override
     public void close() throws InterruptedException {
-        synchronized (this) {
-            done = true;
-        }
+        done = true;
         consumer.wakeup();
         join();
+    }
+
+    /**
+     * Create and return the underlying store that data should be saved in
+     */
+    protected WritableKeyValueStore<K, V> createStore() {
+        return new SharedMapStore<>(100_000);
     }
 }

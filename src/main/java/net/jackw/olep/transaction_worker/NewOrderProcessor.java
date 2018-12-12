@@ -25,12 +25,10 @@ import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 /**
  * Process a New-Order transaction that affects this worker
  */
-// TODO: Is this the right key?
 public class NewOrderProcessor extends BaseTransactionProcessor implements Processor<Long, NewOrderRequest> {
     private ProcessorContext context;
     private LocalStore<WarehouseSpecificKey, Integer> nextOrderIdStore;

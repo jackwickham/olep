@@ -62,4 +62,9 @@ public class CustomerShared extends Record<DistrictSpecificKey> {
     public DistrictSpecificKey getKey() {
         return new DistrictSpecificKey(id, districtId, warehouseId);
     }
+
+    @JsonIgnore
+    public CustomerNameKey getNameKey() {
+        return new CustomerNameKey(warehouseId, districtId, lastName);
+    }
 }
