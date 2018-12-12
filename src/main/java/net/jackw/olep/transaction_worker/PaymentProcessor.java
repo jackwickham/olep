@@ -112,7 +112,7 @@ public class PaymentProcessor extends BaseTransactionProcessor implements Proces
             results.customerBalance = customerMutable.balance;
 
             if (customer.credit == Credit.BC) {
-                results.customerData = customerMutable.data.substring(0, 200);
+                results.customerData = customerMutable.data.substring(0, Math.min(customerMutable.data.length(), 200));
             }
 
             TransactionResultMessage resultMessage = new TransactionResultMessage(key, results);
