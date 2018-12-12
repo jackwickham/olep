@@ -27,7 +27,7 @@ public class ClusterCreator {
         Set<String> dbTopics = Set.of(
             // Transaction topics
             KafkaConfig.TRANSACTION_REQUEST_TOPIC, KafkaConfig.TRANSACTION_RESULT_TOPIC,
-            KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
+            KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, KafkaConfig.MODIFICATION_LOG,
             // Shared store topics
             KafkaConfig.ITEM_IMMUTABLE_TOPIC, KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC,
             KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC,

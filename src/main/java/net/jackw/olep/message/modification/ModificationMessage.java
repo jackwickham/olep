@@ -3,6 +3,7 @@ package net.jackw.olep.message.modification;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.errorprone.annotations.Immutable;
+import net.jackw.olep.message.transaction_request.PaymentRequest;
 
 /**
  * Marker interface for modification events
@@ -17,7 +18,7 @@ import com.google.errorprone.annotations.Immutable;
 )
 @JsonSubTypes({
     @JsonSubTypes.Type(value = NewOrderModification.class, name = "neworder"),
-    //@JsonSubTypes.Type(value = PaymentRequest.class, name = "payment"),
+    @JsonSubTypes.Type(value = PaymentRequest.class, name = "payment"),
     //@JsonSubTypes.Type(value = DeliveryRequest.class, name = "delivery")
 })
 @Immutable

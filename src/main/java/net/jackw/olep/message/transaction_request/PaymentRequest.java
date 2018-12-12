@@ -4,13 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
+import net.jackw.olep.message.modification.ModificationMessage;
 
 import java.math.BigDecimal;
 import java.util.Set;
 
 @Immutable
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PaymentRequest extends TransactionRequestMessage {
+public class PaymentRequest extends TransactionRequestMessage implements ModificationMessage {
     public final int warehouseId;
     public final int districtId;
     public final Integer customerId;

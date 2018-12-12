@@ -9,8 +9,6 @@ import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
-import net.jackw.olep.common.records.Item;
-import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
@@ -118,7 +116,12 @@ public class PaymentProcessor extends BaseTransactionProcessor implements Proces
             TransactionResultMessage resultMessage = new TransactionResultMessage(key, results);
             context.forward(key, resultMessage, To.child("transaction-results"));
 
-            // TODO: Create history record
+            // The PaymentRequest is also the modification record, so just send that to the modification log
+            context.forward(key, value, To.child("modification-log"));
+
+            // TPC-C says we should create a history record (and cast it into the abyss)
+            // We could do that, but for now it can be derived by a consumer if they so desire
+            // The entire system is made of history records
         } catch (InterruptedException e) {
             throw new InterruptException(e);
         }
