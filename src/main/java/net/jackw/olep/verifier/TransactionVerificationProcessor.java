@@ -12,9 +12,7 @@ import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
 
-import java.util.Collection;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class TransactionVerificationProcessor implements Processor<Long, TransactionRequestMessage> {
     private ProcessorContext context;
@@ -41,20 +39,13 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
         if (message instanceof NewOrderRequest) {
             NewOrderRequest body = (NewOrderRequest) message;
             if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {
-                // Get the warehouses of the workers that need to see this transaction
-                Set<Integer> warehouses = body.lines.stream()
-                    .map(line -> line.supplyingWarehouseId)
-                    .collect(Collectors.toSet());
-                warehouses.add(body.warehouseId);
-
-                acceptTransaction(key, message, warehouses);
+                acceptTransaction(key, message, message.getWorkerWarehouses());
             } else {
                 rejectTransaction(key, message);
             }
         } else if (message instanceof PaymentRequest || message instanceof DeliveryRequest) {
             // These transactions can never fail (in theory)
-            // TODO: Calculate workers that need to see it
-            acceptTransaction(key, message, Set.of());
+            acceptTransaction(key, message, message.getWorkerWarehouses());
         } else {
             // ??? Don't recognise this transaction, so reject it
             rejectTransaction(key, message);

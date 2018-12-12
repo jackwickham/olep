@@ -60,6 +60,7 @@ class SharedCustomerMapStore implements WritableKeyValueStore<DistrictSpecificKe
     };
 
     @Nullable
+    @Override
     public CustomerShared get(CustomerNameKey key) {
         Collection<CustomerShared> customers = nameMultimap.get(key);
         if (customers.isEmpty()) {

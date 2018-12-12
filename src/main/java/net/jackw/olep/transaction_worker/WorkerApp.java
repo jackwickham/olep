@@ -9,6 +9,8 @@ import net.jackw.olep.common.SharedStoreConsumer;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.TransactionResultPartitioner;
 import net.jackw.olep.common.TransactionWarehouseKey;
+import net.jackw.olep.common.records.CustomerMutable;
+import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
@@ -120,9 +122,11 @@ public class WorkerApp extends StreamsApp {
             Serdes.Integer()
         );
 
-        //StoreBuilder<KeyValueStore<CustomerShared.Key, CustomerMutable>> customerMutableStoreBuilder
-
-        // customer_id_immutable probably doesn't belong here
+        StoreBuilder<KeyValueStore<DistrictSpecificKey, CustomerMutable>> customerMutableStoreBuilder = Stores.keyValueStoreBuilder(
+            Stores.persistentKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),
+            new JsonSerde<>(DistrictSpecificKey.class),
+            new JsonSerde<>(CustomerMutable.class)
+        );
 
         @SuppressWarnings("unchecked")
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>>> newOrdersStoreBuilder = Stores.keyValueStoreBuilder(
@@ -157,17 +161,22 @@ public class WorkerApp extends StreamsApp {
                 itemConsumer.getStore(), warehouseConsumer.getStore(), districtConsumer.getStore(),
                 customerConsumer.getStore(), stockConsumer.getStore(), acceptedTransactionsPartitions
             ), "router")
+            .addProcessor("payment-processor", () -> new PaymentProcessor(
+                warehouseConsumer.getStore(), districtConsumer.getStore(), customerConsumer.getStore(),
+                acceptedTransactionsPartitions
+            ), "router")
             // State stores for worker-local state
             .addStateStore(nextOrderIdStoreBuilder, "new-order-processor")
             .addStateStore(stockQuantityStoreBuilder, "new-order-processor")
             .addStateStore(newOrdersStoreBuilder, "new-order-processor")
+            .addStateStore(customerMutableStoreBuilder, "payment-processor")
             // The processors will write to the result and modification logs
             .addSink(
                 "modification-log",
                 KafkaConfig.MODIFICATION_LOG,
                 Serdes.Long().serializer(),
                 new JsonSerializer<>(ModificationMessage.class),
-                "new-order-processor"
+                "new-order-processor", "payment-processor"
             )
             .addSink(
                 "transaction-results",
@@ -175,7 +184,7 @@ public class WorkerApp extends StreamsApp {
                 Serdes.Long().serializer(),
                 new JsonSerializer<>(TransactionResultMessage.class),
                 new TransactionResultPartitioner(),
-                "new-order-processor"
+                "new-order-processor", "payment-processor"
             );
 
         return topology;

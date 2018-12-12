@@ -41,6 +41,8 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
     private final SharedKeyValueStore<DistrictSpecificKey, CustomerShared> customerImmutableStore;
     private final SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore;
 
+    private final RandomDataGenerator rand = new RandomDataGenerator();
+
     public NewOrderProcessor(
         SharedKeyValueStore<Integer, Item> itemStore,
         SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore,
@@ -61,9 +63,8 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         this.context = context;
-        final RandomDataGenerator rand = new RandomDataGenerator();
 
-        this.nextOrderIdStore = new LocalStore(
+        this.nextOrderIdStore = new LocalStore<WarehouseSpecificKey, Integer>(
             (KeyValueStore) context.getStateStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE), 1
         );
         this.stockQuantityStore = new LocalStore<WarehouseSpecificKey, Integer>(
@@ -143,7 +144,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
                 // Forward the transaction to the modification log
                 // We might want to add extra data to the NewOrderModification here in future, depending on what is
                 // actually used by the views, but this corresponds with the event sourcing model
-                context.forward(key, new NewOrderModification(value, orderId));
+                context.forward(key, new NewOrderModification(value, orderId), To.child("modification-log"));
             }
 
             int nextLineNumber = 0;

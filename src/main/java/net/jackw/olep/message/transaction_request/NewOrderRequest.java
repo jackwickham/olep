@@ -1,8 +1,12 @@
 package net.jackw.olep.message.transaction_request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Immutable;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Immutable
 public class NewOrderRequest extends TransactionRequestMessage {
@@ -41,5 +45,15 @@ public class NewOrderRequest extends TransactionRequestMessage {
             this.supplyingWarehouseId = supplyingWarehouseId;
             this.quantity = quantity;
         }
+    }
+
+    @Override
+    @JsonIgnore
+    public Set<Integer> getWorkerWarehouses() {
+        Set<Integer> warehouses = lines.stream()
+            .map(line -> line.supplyingWarehouseId)
+            .collect(Collectors.toSet());
+        warehouses.add(warehouseId);
+        return warehouses;
     }
 }

@@ -1,10 +1,12 @@
 package net.jackw.olep.message.transaction_request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
 import java.math.BigDecimal;
+import java.util.Set;
 
 @Immutable
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -18,30 +20,35 @@ public class PaymentRequest extends TransactionRequestMessage {
     public final BigDecimal amount;
 
     public PaymentRequest(
-        @JsonProperty("warehouseId") int warehouseId,
-        @JsonProperty("districtId") int districtId,
-        @JsonProperty("customerId") int customerId,
-        @JsonProperty("customerWarehouseId") int customerWarehouseId,
-        @JsonProperty("customerDistrictId") int customerDistrictId,
-        @JsonProperty("amount") BigDecimal amount
+        int warehouseId,
+        int districtId,
+        int customerId,
+        int customerWarehouseId,
+        int customerDistrictId,
+        BigDecimal amount
     ) {
         this(warehouseId, districtId, customerId, null, customerWarehouseId, customerDistrictId, amount);
     }
 
     public PaymentRequest(
-        @JsonProperty("warehouseId") int warehouseId,
-        @JsonProperty("districtId") int districtId,
-        @JsonProperty("customerSurname") String customerSurname,
-        @JsonProperty("customerWarehouseId") int customerWarehouseId,
-        @JsonProperty("customerDistrictId") int customerDistrictId,
-        @JsonProperty("amount") BigDecimal amount
+        int warehouseId,
+        int districtId,
+        String customerSurname,
+        int customerWarehouseId,
+        int customerDistrictId,
+        BigDecimal amount
     ) {
         this(warehouseId, districtId, null, customerSurname, customerWarehouseId, customerDistrictId, amount);
     }
 
-    private PaymentRequest(
-        int warehouseId, int districtId, Integer customerId, String customerSurname, int customerWarehouseId,
-        int customerDistrictId, BigDecimal amount
+    public PaymentRequest(
+        @JsonProperty("warehouseId") int warehouseId,
+        @JsonProperty("districtId") int districtId,
+        @JsonProperty("customerId") Integer customerId,
+        @JsonProperty("customerSurname") String customerSurname,
+        @JsonProperty("customerWarehouseId") int customerWarehouseId,
+        @JsonProperty("customerDistrictId") int customerDistrictId,
+        @JsonProperty("amount") BigDecimal amount
     ) {
         this.warehouseId = warehouseId;
         this.districtId = districtId;
@@ -50,5 +57,11 @@ public class PaymentRequest extends TransactionRequestMessage {
         this.customerWarehouseId = customerWarehouseId;
         this.customerDistrictId = customerDistrictId;
         this.amount = amount;
+    }
+
+    @Override
+    @JsonIgnore
+    public Set<Integer> getWorkerWarehouses() {
+        return Set.of(warehouseId);
     }
 }

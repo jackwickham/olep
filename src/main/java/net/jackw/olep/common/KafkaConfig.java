@@ -18,6 +18,7 @@ public class KafkaConfig {
     public static final String DISTRICT_NEXT_ORDER_ID_STORE = "district-next-order-id";
     public static final String STOCK_QUANTITY_STORE = "stock-quantity";
     public static final String NEW_ORDER_STORE = "new-orders";
+    public static final String CUSTOMER_MUTABLE_STORE = "customer-mutable";
 
     private KafkaConfig() { }
 }

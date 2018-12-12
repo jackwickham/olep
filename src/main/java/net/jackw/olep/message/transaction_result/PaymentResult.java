@@ -1,5 +1,6 @@
 package net.jackw.olep.message.transaction_result;
 
+import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
@@ -53,7 +54,7 @@ public class PaymentResult extends TransactionResult {
         public Integer customerId;
         public Address customerAddress;
         public String customerPhone;
-        public Integer customerSince;
+        public Long customerSince;
         public Credit customerCredit;
         public BigDecimal customerCreditLimit;
         public BigDecimal customerDiscount;
@@ -109,5 +110,26 @@ public class PaymentResult extends TransactionResult {
         this.customerDiscount = customerDiscount;
         this.customerBalance = customerBalance;
         this.customerData = customerData;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("warehouseId", warehouseId)
+            .add("warehouseAddress", warehouseAddress)
+            .add("districtId", districtId)
+            .add("districtAddress", districtAddress)
+            .add("customerWarehouseId", customerWarehouseId)
+            .add("customerDistrictId", customerDistrictId)
+            .add("customerId", customerId)
+            .add("customerAddress", customerAddress)
+            .add("customerPhone", customerPhone)
+            .add("customerSince", customerSince)
+            .add("customerCredit", customerCredit)
+            .add("customerCreditLimit", customerCreditLimit)
+            .add("customerDiscount", customerDiscount)
+            .add("customerBalance", customerBalance)
+            .add("customerData", customerData)
+            .toString();
     }
 }
