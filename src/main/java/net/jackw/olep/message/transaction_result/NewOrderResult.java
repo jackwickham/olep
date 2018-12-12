@@ -110,7 +110,6 @@ public class NewOrderResult extends TransactionResult {
 
         private SortedMap<Integer, OrderLineResult.Builder> lines = new TreeMap<>();
 
-        @SuppressWarnings("unchecked")
         @JsonMerge
         @JsonProperty("lines")
         @Override

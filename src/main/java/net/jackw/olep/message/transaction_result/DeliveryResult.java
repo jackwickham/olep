@@ -3,6 +3,8 @@ package net.jackw.olep.message.transaction_result;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.Immutable;
 
+import java.util.Map;
+
 @Immutable
 public class DeliveryResult extends TransactionResult {
     public static class Builder extends PartialResult implements TransactionResultBuilder<DeliveryResult> {
@@ -21,13 +23,13 @@ public class DeliveryResult extends TransactionResult {
 
         @Override
         public DeliveryResult build() {
-            return new DeliveryResult(warehouseId, carrierId, processedOrders);
+            return new DeliveryResult(warehouseId, carrierId, ImmutableMap.copyOf(processedOrders));
         }
     }
 
     public static class PartialResult implements PartialTransactionResult {
         // All of the orders will be processed by one machine, so there's no need to make it mutable or handle merges
-        public ImmutableMap<Integer, Integer> processedOrders;
+        public Map<Integer, Integer> processedOrders;
     }
 
     public final int warehouseId;

@@ -43,7 +43,7 @@ public class NewOrdersStore {
     @Nullable
     public NewOrder poll(WarehouseSpecificKey district) {
         ArrayDeque<NewOrder> queue = store.get(district);
-        if (queue.isEmpty()) {
+        if (queue == null || queue.isEmpty()) {
             return null;
         } else {
             NewOrder result = queue.remove();

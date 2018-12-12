@@ -40,6 +40,8 @@ public class TestApplication {
                     CommonFieldGenerators.generateLastName(rand, rand.uniform(0, 999)),
                     new BigDecimal("31.20")
                 ).register(new StatusPrinter<>("Payment+name"));
+
+                connection.delivery(1, rand.nextInt(500)).register(new StatusPrinter<>("delivery"));
             }
 
             Thread.sleep(5000);

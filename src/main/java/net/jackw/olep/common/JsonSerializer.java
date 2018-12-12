@@ -23,6 +23,7 @@ public class JsonSerializer<T> implements Serializer<T> {
      *
      * @param c The class that is being serialized
      */
+    @Deprecated
     public JsonSerializer(Class<T> c) {
         this();
     }
@@ -33,7 +34,6 @@ public class JsonSerializer<T> implements Serializer<T> {
      * @param configs configs in key/value pairs
      * @param isKey   whether is for key or value
      */
-    @SuppressWarnings("unchecked")
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) { }
 

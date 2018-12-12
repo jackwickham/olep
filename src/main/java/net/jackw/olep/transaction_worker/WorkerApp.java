@@ -1,5 +1,6 @@
 package net.jackw.olep.transaction_worker;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import net.jackw.olep.common.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
@@ -128,11 +129,10 @@ public class WorkerApp extends StreamsApp {
             new JsonSerde<>(CustomerMutable.class)
         );
 
-        @SuppressWarnings("unchecked")
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>>> newOrdersStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
             new JsonSerde<>(WarehouseSpecificKey.class),
-            new JsonSerde<>((Class)ArrayDeque.class)
+            new JsonSerde<>(new TypeReference<>() {})
         );
 
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, Integer>> stockQuantityStoreBuilder = Stores.keyValueStoreBuilder(
@@ -165,10 +165,11 @@ public class WorkerApp extends StreamsApp {
                 warehouseConsumer.getStore(), districtConsumer.getStore(), customerConsumer.getStore(),
                 acceptedTransactionsPartitions
             ), "router")
+            .addProcessor("delivery-processor", () -> new DeliveryProcessor(acceptedTransactionsPartitions), "router")
             // State stores for worker-local state
             .addStateStore(nextOrderIdStoreBuilder, "new-order-processor")
             .addStateStore(stockQuantityStoreBuilder, "new-order-processor")
-            .addStateStore(newOrdersStoreBuilder, "new-order-processor")
+            .addStateStore(newOrdersStoreBuilder, "new-order-processor", "delivery-processor")
             .addStateStore(customerMutableStoreBuilder, "payment-processor")
             // The processors will write to the result and modification logs
             .addSink(
@@ -176,7 +177,7 @@ public class WorkerApp extends StreamsApp {
                 KafkaConfig.MODIFICATION_LOG,
                 Serdes.Long().serializer(),
                 new JsonSerializer<>(ModificationMessage.class),
-                "new-order-processor", "payment-processor"
+                "new-order-processor", "payment-processor", "delivery-processor"
             )
             .addSink(
                 "transaction-results",
@@ -184,7 +185,7 @@ public class WorkerApp extends StreamsApp {
                 Serdes.Long().serializer(),
                 new JsonSerializer<>(TransactionResultMessage.class),
                 new TransactionResultPartitioner(),
-                "new-order-processor", "payment-processor"
+                "new-order-processor", "payment-processor", "delivery-processor"
             );
 
         return topology;
