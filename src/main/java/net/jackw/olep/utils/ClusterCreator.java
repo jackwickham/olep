@@ -64,6 +64,8 @@ public class ClusterCreator {
             // To allow for scaling if needed, have twice as many partitions as verifiers/workers
             topicsToCreate.add(new NewTopic(KafkaConfig.TRANSACTION_REQUEST_TOPIC, numVerifiers * 2, transactionReplicationFactor));
             topicsToCreate.add(new NewTopic(KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, numWorkers * 2, transactionReplicationFactor));
+            // Modification log probably wants to be partitioned more later
+            topicsToCreate.add(new NewTopic(KafkaConfig.MODIFICATION_LOG, 1, transactionReplicationFactor));
             // The transaction results can be filtered by the application, but aim to have ~1 partition per application
             topicsToCreate.add(new NewTopic(KafkaConfig.TRANSACTION_RESULT_TOPIC, numApplications, transactionReplicationFactor));
 

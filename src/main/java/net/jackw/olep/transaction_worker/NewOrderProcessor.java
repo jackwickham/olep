@@ -12,6 +12,7 @@ import net.jackw.olep.common.records.Order;
 import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
+import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
@@ -137,8 +138,14 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
 
                 newOrdersStore.add(districtKey, orderBuilder.buildNewOrder());
 
-                Order order = orderBuilder.build();
-                // TODO: Add this order to the modification log (transactionally)
+                //Order order = orderBuilder.build();
+                // We don't actually need to build the order at all
+                // TODO: If it isn't needed anywhere, we can remove it entirely
+
+                // Forward the transaction to the modification log
+                // We might want to add extra data to the NewOrderModification here in future, depending on what is
+                // actually used by the views, but this corresponds with the event sourcing model
+                context.forward(key, new NewOrderModification(value, orderId));
             }
 
             int nextLineNumber = 0;
@@ -162,12 +169,11 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
                 stockQuantity -= line.quantity;
                 stockQuantityStore.put(stockKey, stockQuantity);
 
-                // TODO: Update stock ytd, order_cnt, quantity and possibly remoteCnt in the modification log
+                // The other changes are performed in the view if needed, based on the event that is sent by the worker
+                // for the owning warehouse
 
                 results.addLine(lineNumber, new OrderLineResult.PartialResult(stockQuantity));
             }
-
-            // TODO: Send one transaction to the modification log with all the changes
 
             TransactionResultMessage resultMessage = new TransactionResultMessage(key, results);
             context.forward(key, resultMessage, To.child("transaction-results"));
