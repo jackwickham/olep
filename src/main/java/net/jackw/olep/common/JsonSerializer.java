@@ -19,16 +19,6 @@ public class JsonSerializer<T> implements Serializer<T> {
     }
 
     /**
-     * Construct a new serializer with the provided class
-     *
-     * @param c The class that is being serialized
-     */
-    @Deprecated
-    public JsonSerializer(Class<T> c) {
-        this();
-    }
-
-    /**
      * Configure this class.
      *
      * @param configs configs in key/value pairs

@@ -8,6 +8,8 @@ import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Abstract application for stream processors
@@ -42,7 +44,7 @@ public abstract class StreamsApp {
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 2);
 
         Topology topology = getTopology();
-        System.out.println(topology.describe());
+        log.debug(topology.describe());
 
         return new KafkaStreams(topology, props);
     }
@@ -100,15 +102,15 @@ public abstract class StreamsApp {
             // Run forever
             streams.start();
             appShutdownLatch.await();
-            System.out.println("Shutting down");
+            log.info("Shutting down");
             shutdown();
         } catch (Throwable e) {
-            e.printStackTrace();
+            log.error(e);
             try {
                 shutdown();
             } catch (Throwable e2) {
                 // Nothing we can do now
-                e2.printStackTrace();
+                log.error("Uncaught exception while shutting down", e);
             }
             System.exit(1);
         }
@@ -122,4 +124,6 @@ public abstract class StreamsApp {
     protected String getBootstrapServers() {
         return bootstrapServers;
     }
+
+    private static Logger log = LogManager.getLogger();
 }

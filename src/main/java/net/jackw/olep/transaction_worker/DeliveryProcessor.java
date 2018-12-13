@@ -1,6 +1,6 @@
 package net.jackw.olep.transaction_worker;
 
-import com.google.common.collect.ImmutableMap;
+import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
@@ -9,17 +9,15 @@ import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.PartialTransactionResult;
-import net.jackw.olep.message.transaction_result.TransactionResult;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
-import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
-import java.util.Map;
 
 public class DeliveryProcessor extends BaseTransactionProcessor implements Processor<Long, DeliveryRequest> {
     private ProcessorContext context;
@@ -38,7 +36,7 @@ public class DeliveryProcessor extends BaseTransactionProcessor implements Proce
 
     @Override
     public void process(Long key, DeliveryRequest value) {
-        System.out.printf("Processing delivery transaction %d\n", key);
+        log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing delivery transaction {}", key);
         final DeliveryResult.PartialResult results = new DeliveryResult.PartialResult();
 
         results.processedOrders = new HashMap<>(10);
@@ -68,4 +66,6 @@ public class DeliveryProcessor extends BaseTransactionProcessor implements Proce
     private void sendResults(Long transactionId, PartialTransactionResult result) {
         context.forward(transactionId, new TransactionResultMessage(transactionId, result));
     }
+
+    private static Logger log = LogManager.getLogger();
 }

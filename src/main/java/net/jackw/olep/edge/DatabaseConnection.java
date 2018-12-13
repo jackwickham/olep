@@ -26,6 +26,8 @@ import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.Closeable;
 import java.math.BigDecimal;
@@ -68,7 +70,7 @@ public class DatabaseConnection implements Closeable {
         pendingTransactions = new ConcurrentHashMap<>();
 
         // Set up the producer, which is used to send requests from the application to the DB
-        Serializer<TransactionRequestMessage> transactionRequestSerializer = new JsonSerializer<>(TransactionRequestMessage.class);
+        Serializer<TransactionRequestMessage> transactionRequestSerializer = new JsonSerializer<>();
         Properties transactionRequestProducerProps = new Properties();
         transactionRequestProducerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         transactionRequestProducerProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 1);
@@ -102,7 +104,7 @@ public class DatabaseConnection implements Closeable {
 
     @Override
     public void close() {
-        System.out.println("Closing");
+        log.info("Closing");
         try {
             // Stop the listener if possible
             if (resultThread.isAlive()) {
@@ -181,7 +183,7 @@ public class DatabaseConnection implements Closeable {
         TransactionRequestMessage msg, B resultBuilder
     ) {
         long transactionId = nextTransactionId();
-        System.out.printf("Sending transaction %d\n", transactionId);
+        log.debug("Sending transaction {}", transactionId);
 
         PendingTransaction<T, B> pendingTransaction = new PendingTransaction<>(transactionId, resultBuilder);
         pendingTransactions.put(transactionId, pendingTransaction);
@@ -233,4 +235,6 @@ public class DatabaseConnection implements Closeable {
     private int getPartition(int numPartitions) {
         return (int)(((long)connectionId & 0xFFFFFFFFL) % numPartitions);
     }
+
+    private static Logger log = LogManager.getLogger("DatabaseConnection");
 }

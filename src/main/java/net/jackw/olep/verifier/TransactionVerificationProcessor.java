@@ -1,5 +1,6 @@
 package net.jackw.olep.verifier;
 
+import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.common.TransactionWarehouseKey;
 import net.jackw.olep.common.records.Item;
@@ -11,6 +12,8 @@ import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Set;
 
@@ -35,7 +38,7 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
      */
     @Override
     public void process(Long key, TransactionRequestMessage message) {
-        System.out.printf("Processing transaction %d\n", key);
+        log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing transaction {}", key);
         if (message instanceof NewOrderRequest) {
             NewOrderRequest body = (NewOrderRequest) message;
             if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {
@@ -59,16 +62,18 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
         }
         // Then write the acceptance message to the result log
         context.forward(id, new TransactionResultMessage(id, true), To.child("transaction-results"));
-        System.out.println("Accepted a transaction of type " + transaction.getClass().getName());
+        log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Accepted a transaction of type {}", transaction.getClass().getName());
     }
 
     private void rejectTransaction(long id, TransactionRequestMessage transaction) {
         context.forward(id, new TransactionResultMessage(id, false), To.child("transaction-results"));
-        System.out.println("Rejected a messaged of type " + transaction.getClass().getName());
+        log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Rejected a messaged of type {}", transaction.getClass().getName());
     }
 
     @Override
     public void close() {
 
     }
+
+    private static Logger log = LogManager.getLogger();
 }

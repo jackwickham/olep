@@ -18,9 +18,7 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
-import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
-import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -176,14 +174,14 @@ public class WorkerApp extends StreamsApp {
                 "modification-log",
                 KafkaConfig.MODIFICATION_LOG,
                 Serdes.Long().serializer(),
-                new JsonSerializer<>(ModificationMessage.class),
+                new JsonSerializer<>(),
                 "new-order-processor", "payment-processor", "delivery-processor"
             )
             .addSink(
                 "transaction-results",
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
                 Serdes.Long().serializer(),
-                new JsonSerializer<>(TransactionResultMessage.class),
+                new JsonSerializer<>(),
                 new TransactionResultPartitioner(),
                 "new-order-processor", "payment-processor", "delivery-processor"
             );

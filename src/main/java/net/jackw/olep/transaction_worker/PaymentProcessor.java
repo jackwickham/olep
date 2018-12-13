@@ -1,5 +1,6 @@
 package net.jackw.olep.transaction_worker;
 
+import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.SharedCustomerStore;
 import net.jackw.olep.common.SharedKeyValueStore;
@@ -20,6 +21,8 @@ import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
 
@@ -59,7 +62,7 @@ public class PaymentProcessor extends BaseTransactionProcessor implements Proces
     @Override
     public void process(Long key, PaymentRequest value) {
         try {
-            System.out.printf("Processing payment transaction with id %d\n", key);
+            log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing payment transaction with id {}", key);
             final PaymentResult.PartialResult results = new PaymentResult.PartialResult();
 
             CustomerShared customer;
@@ -131,4 +134,6 @@ public class PaymentProcessor extends BaseTransactionProcessor implements Proces
     public void close() {
 
     }
+
+    private static Logger log = LogManager.getLogger();
 }

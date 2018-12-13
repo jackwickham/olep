@@ -1,0 +1,24 @@
+Configuration:
+  status: warn
+
+  Appenders:
+    Console:
+      name: Console
+      target: SYSTEM_ERR
+      PatternLayout:
+        Pattern: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+
+  Loggers:
+    logger:
+      - name: org.apache.kafka
+        level: warn
+        AppenderRef:
+          ref: Console
+      - name: new.jackw
+        level: debug
+        AppenderRef:
+          ref: Console
+    Root:
+      level: debug
+      AppenderRef:
+        ref: Console

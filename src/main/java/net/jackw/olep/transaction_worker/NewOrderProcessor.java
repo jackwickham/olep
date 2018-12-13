@@ -1,14 +1,13 @@
 package net.jackw.olep.transaction_worker;
 
+import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.common.records.CustomerShared;
-import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.Item;
-import net.jackw.olep.common.records.Order;
 import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
@@ -23,6 +22,8 @@ import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
 
@@ -77,7 +78,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
 
     @Override
     public void process(Long key, NewOrderRequest value) {
-        System.out.printf("Processing transaction %d\n", key);
+        log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing new-order transaction {}\n", key);
         try {
             final NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
 
@@ -187,4 +188,6 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
     public void close() {
 
     }
+
+    private static Logger log = LogManager.getLogger();
 }

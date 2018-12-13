@@ -34,11 +34,15 @@ dependencies {
     // JSON/etc library
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
     compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-guava', version: '2.9.7'
+    compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.9.7'
     // Akka for scheduling within the application
     compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.17'
     // Log4j for loggging
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.1'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.11.1'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+    compile group: 'org.slf4j', name: 'slf4j-ext', version: '1.7.25'
 
     // Expose the errorprone client library to the application
     compile group: 'com.google.errorprone', name: 'error_prone_core', version: '2.3.2'

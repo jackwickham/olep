@@ -43,7 +43,7 @@ public class PopulateStores {
         ItemFactory factory = ItemFactory.getInstance();
 
         // Set up the producer, which is used to send requests from the application to the DB
-        Serializer<Item> serializer = new JsonSerializer<>(Item.class);
+        Serializer<Item> serializer = new JsonSerializer<>();
 
         try (Producer<Integer, Item> producer = new KafkaProducer<>(props, Serdes.Integer().serializer(), serializer)) {
             for (int i = 0; i < itemCount; i++) {
@@ -59,16 +59,16 @@ public class PopulateStores {
 
         try (
             Producer<Integer, WarehouseShared> warehouseProducer = new KafkaProducer<>(
-                props, Serdes.Integer().serializer(), new JsonSerializer<>(WarehouseShared.class)
+                props, Serdes.Integer().serializer(), new JsonSerializer<>()
             );
             Producer<WarehouseSpecificKey, DistrictShared> districtProducer = new KafkaProducer<>(
-                props, new JsonSerializer<>(WarehouseSpecificKey.class), new JsonSerializer<>(DistrictShared.class)
+                props, new JsonSerializer<>(), new JsonSerializer<>()
             );
             Producer<DistrictSpecificKey, CustomerShared> customerProducer = new KafkaProducer<>(
-                props, new JsonSerializer<>(DistrictSpecificKey.class), new JsonSerializer<>(CustomerShared.class)
+                props, new JsonSerializer<>(), new JsonSerializer<>()
             );
             Producer<WarehouseSpecificKey, StockShared> stockProducer = new KafkaProducer<>(
-                props, new JsonSerializer<>(WarehouseSpecificKey.class), new JsonSerializer<>(StockShared.class)
+                props, new JsonSerializer<>(), new JsonSerializer<>()
             );
         ) {
             for (int wh = 0; wh < warehouseCount; wh++) {
