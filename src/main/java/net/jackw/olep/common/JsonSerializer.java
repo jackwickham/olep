@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Map;
 
@@ -54,4 +56,6 @@ public class JsonSerializer<T> implements Serializer<T> {
      */
     @Override
     public void close() { }
+
+    private static Logger log = LogManager.getLogger();
 }

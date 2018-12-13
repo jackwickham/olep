@@ -1,5 +1,6 @@
 package net.jackw.olep.common;
 
+import com.google.common.base.MoreObjects;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
 
@@ -19,14 +20,13 @@ public class TransactionWarehouseKey {
     }
 
     public static class KeySerializer implements Serializer<TransactionWarehouseKey> {
-        private ByteBuffer buffer = ByteBuffer.allocate(12);
 
         @Override
         public void configure(Map configs, boolean isKey) { }
 
         @Override
         public byte[] serialize(String topic, TransactionWarehouseKey data) {
-            return buffer.rewind().putLong(data.transactionId).putInt(data.warehouseId).array();
+            return ByteBuffer.allocate(12).putLong(data.transactionId).putInt(data.warehouseId).array();
         }
 
         @Override
@@ -48,5 +48,13 @@ public class TransactionWarehouseKey {
 
         @Override
         public void close() { }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("transactionId", transactionId)
+            .add("warehouseId", warehouseId)
+            .toString();
     }
 }

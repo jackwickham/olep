@@ -2,6 +2,7 @@ package net.jackw.olep.message.transaction_request;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Immutable;
 
@@ -55,5 +56,16 @@ public class NewOrderRequest extends TransactionRequestMessage {
             .collect(Collectors.toSet());
         warehouses.add(warehouseId);
         return warehouses;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("customerId", customerId)
+            .add("warehouseId", warehouseId)
+            .add("districtId", districtId)
+            .add("lines", lines)
+            .add("date", date)
+            .toString();
     }
 }

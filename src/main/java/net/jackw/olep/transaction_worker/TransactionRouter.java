@@ -8,6 +8,8 @@ import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Routes transactions to the correct transaction worker based on its type
@@ -38,4 +40,6 @@ public class TransactionRouter implements Processor<TransactionWarehouseKey, Tra
     public void close() {
 
     }
+
+    private static Logger log = LogManager.getLogger();
 }

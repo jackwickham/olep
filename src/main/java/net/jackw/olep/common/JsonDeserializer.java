@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Map;
@@ -64,6 +66,7 @@ public class JsonDeserializer<T> implements Deserializer<T> {
     @Override
     public T deserialize(String topic, byte[] data) {
         if (data == null) {
+            log.warn("Deserialized null from {}", topic);
             return null;
         }
 
@@ -86,4 +89,6 @@ public class JsonDeserializer<T> implements Deserializer<T> {
      */
     @Override
     public void close() { }
+
+    private static Logger log = LogManager.getLogger();
 }

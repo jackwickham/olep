@@ -2,21 +2,18 @@ package net.jackw.olep.application;
 
 import net.jackw.olep.edge.DatabaseConnection;
 import net.jackw.olep.edge.TransactionStatusListener;
-import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
-import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.message.transaction_result.TransactionResult;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
 
 public class TestApplication {
     private static
-    final AtomicInteger complete = new AtomicInteger(0);
+    final CountDownLatch complete = new CountDownLatch(12);
 
     public static void main(String[] args) throws InterruptedException {
         try (DatabaseConnection connection = new DatabaseConnection("localhost:9092")) {
@@ -44,8 +41,7 @@ public class TestApplication {
                 connection.delivery(1, rand.nextInt(500)).register(new StatusPrinter<>("delivery"));
             }
 
-            Thread.sleep(5000);
-            System.out.printf("%d transactions completed\n", complete.get());
+            complete.await();
         }
     }
 
@@ -64,13 +60,13 @@ public class TestApplication {
         @Override
         public void rejectedHandler(Throwable t) {
             System.out.printf("%s transaction rejected\n", type);
-            complete.incrementAndGet();
+            complete.countDown();
         }
 
         @Override
         public void completeHandler(T result) {
             System.out.println(result.toString());
-            complete.incrementAndGet();
+            complete.countDown();
         }
     }
 }

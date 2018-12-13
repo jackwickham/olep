@@ -2,6 +2,7 @@ package net.jackw.olep.message.transaction_request;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 
 import java.util.Set;
@@ -29,5 +30,14 @@ public class DeliveryRequest extends TransactionRequestMessage {
     @JsonIgnore
     public Set<Integer> getWorkerWarehouses() {
         return Set.of(warehouseId);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("warehouseId", warehouseId)
+            .add("carrierId", carrierId)
+            .add("deliveryDate", deliveryDate)
+            .toString();
     }
 }

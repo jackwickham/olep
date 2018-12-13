@@ -78,7 +78,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
 
     @Override
     public void process(Long key, NewOrderRequest value) {
-        log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing new-order transaction {}\n", key);
+        log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing new-order transaction {}", key);
         try {
             final NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
 

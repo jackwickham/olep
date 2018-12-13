@@ -3,6 +3,7 @@ package net.jackw.olep.message.transaction_request;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.message.modification.ModificationMessage;
 
@@ -64,5 +65,18 @@ public class PaymentRequest extends TransactionRequestMessage implements Modific
     @JsonIgnore
     public Set<Integer> getWorkerWarehouses() {
         return Set.of(warehouseId);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("warehouseId", warehouseId)
+            .add("districtId", districtId)
+            .add("customerId", customerId)
+            .add("customerSurname", customerSurname)
+            .add("customerWarehouseId", customerWarehouseId)
+            .add("customerDistrictId", customerDistrictId)
+            .add("amount", amount)
+            .toString();
     }
 }

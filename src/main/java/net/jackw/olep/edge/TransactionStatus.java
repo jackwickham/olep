@@ -146,5 +146,5 @@ public class TransactionStatus<T extends TransactionResult> {
         }
     }
 
-    private static Logger log = LogManager.getLogger("TransactionStatus");
+    private static Logger log = LogManager.getLogger();
 }

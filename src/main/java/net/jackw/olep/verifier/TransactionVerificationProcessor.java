@@ -38,7 +38,6 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
      */
     @Override
     public void process(Long key, TransactionRequestMessage message) {
-        log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing transaction {}", key);
         if (message instanceof NewOrderRequest) {
             NewOrderRequest body = (NewOrderRequest) message;
             if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {
@@ -51,23 +50,25 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
             acceptTransaction(key, message, message.getWorkerWarehouses());
         } else {
             // ??? Don't recognise this transaction, so reject it
+            log.error(LogConfig.TRANSACTION_PROCESSING_MARKER, "Attempted to process unrecognised transaction with type {}", message.getClass().getName());
             rejectTransaction(key, message);
         }
     }
 
     private void acceptTransaction(long id, TransactionRequestMessage transaction, Set<Integer> warehouses) {
         // Forward the transaction to each of the relevant warehouses
+        log.debug(LogConfig.TRANSACTION_PROCESSING_MARKER, "Forwarding {} to warehouses {}", id, warehouses);
         for (int warehouse : warehouses) {
             context.forward(new TransactionWarehouseKey(id, warehouse), transaction, To.child("accepted-transactions"));
         }
         // Then write the acceptance message to the result log
         context.forward(id, new TransactionResultMessage(id, true), To.child("transaction-results"));
-        log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Accepted a transaction of type {}", transaction.getClass().getName());
+        log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Accepted transaction {} of type {}", id, transaction.getClass().getSimpleName());
     }
 
     private void rejectTransaction(long id, TransactionRequestMessage transaction) {
         context.forward(id, new TransactionResultMessage(id, false), To.child("transaction-results"));
-        log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Rejected a messaged of type {}", transaction.getClass().getName());
+        log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Rejected transaction {} of type {}", id, transaction.getClass().getSimpleName());
     }
 
     @Override

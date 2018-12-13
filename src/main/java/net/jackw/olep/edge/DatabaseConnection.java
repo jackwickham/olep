@@ -183,7 +183,7 @@ public class DatabaseConnection implements Closeable {
         TransactionRequestMessage msg, B resultBuilder
     ) {
         long transactionId = nextTransactionId();
-        log.debug("Sending transaction {}", transactionId);
+        log.debug("Sending {} transaction {}", msg.getClass().getSimpleName(), transactionId);
 
         PendingTransaction<T, B> pendingTransaction = new PendingTransaction<>(transactionId, resultBuilder);
         pendingTransactions.put(transactionId, pendingTransaction);
@@ -236,5 +236,5 @@ public class DatabaseConnection implements Closeable {
         return (int)(((long)connectionId & 0xFFFFFFFFL) % numPartitions);
     }
 
-    private static Logger log = LogManager.getLogger("DatabaseConnection");
+    private static Logger log = LogManager.getLogger();
 }

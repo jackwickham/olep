@@ -115,11 +115,11 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
             T result = transactionResultBuilder.build();
             if (!complete.complete(result)) {
                 // We had already built this
-                log.warn("Builder shouldn't be updated after it has already been build");
+                log.warn("{} - Builder shouldn't be updated after it has already been build", transactionId);
             }
-            log.debug("completed");
+            log.debug("{} completed", transactionId);
         } else {
-            log.debug("updated but not buildable");
+            log.debug("{} updated but not buildable", transactionId);
         }
     }
 
@@ -131,12 +131,12 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
     public void setAccepted(boolean isAccepted) {
         if (isAccepted) {
             if (!accepted.complete(null)) {
-                log.warn("Shouldn't set accepted after it has already been marked as accepted");
+                log.warn("{} - Shouldn't set accepted after it has already been marked as accepted", transactionId);
             }
-            log.debug("Marked accepted");
+            log.debug("{} marked accepted", transactionId);
         } else {
             if (!accepted.completeExceptionally(new TransactionRejectedException())) {
-                log.warn("Shouldn't set accepted after it has already been marked as accepted");
+                log.warn("{} - Shouldn't set accepted after it has already been marked as accepted", transactionId);
             }
         }
     }
@@ -168,5 +168,5 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
         return transactionId == other.transactionId;
     }
 
-    private static Logger log = LogManager.getLogger("PendingTransaction");
+    private static Logger log = LogManager.getLogger();
 }

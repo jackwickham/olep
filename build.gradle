@@ -72,6 +72,11 @@ task runApplication(type: JavaExec, dependsOn: 'classes') {
     main = "net.jackw.olep.application.TestApplication"
 }
 
+task runWorker(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.transaction_worker.WorkerApp"
+}
+
 task runPopulateStores(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.jackw.olep.utils.immutable_stores.PopulateStores"
