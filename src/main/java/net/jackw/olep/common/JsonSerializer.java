@@ -38,10 +38,6 @@ public class JsonSerializer<T> implements Serializer<T> {
      */
     @Override
     public byte[] serialize(String topic, T data) {
-        if (data == null) {
-            return null;
-        }
-
         try {
             return objectMapper.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {

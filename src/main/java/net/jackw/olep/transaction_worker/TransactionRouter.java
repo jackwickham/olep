@@ -1,6 +1,6 @@
 package net.jackw.olep.transaction_worker;
 
-import net.jackw.olep.common.TransactionWarehouseKey;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.PaymentRequest;

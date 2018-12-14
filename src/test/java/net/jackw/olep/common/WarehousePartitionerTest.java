@@ -1,5 +1,6 @@
 package net.jackw.olep.common;
 
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

@@ -2,7 +2,7 @@ package net.jackw.olep.verifier;
 
 import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.SharedKeyValueStore;
-import net.jackw.olep.common.TransactionWarehouseKey;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
@@ -10,7 +10,6 @@ import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_result.ApprovalMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
-import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.To;

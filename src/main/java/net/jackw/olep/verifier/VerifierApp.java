@@ -6,12 +6,11 @@ import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.TransactionResultPartitioner;
-import net.jackw.olep.common.TransactionWarehouseKey;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.common.WarehousePartitioner;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
-import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
 

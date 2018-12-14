@@ -9,7 +9,7 @@ import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.SharedStoreConsumer;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.TransactionResultPartitioner;
-import net.jackw.olep.common.TransactionWarehouseKey;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.NewOrder;

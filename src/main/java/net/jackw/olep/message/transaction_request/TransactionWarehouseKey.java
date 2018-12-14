@@ -1,4 +1,4 @@
-package net.jackw.olep.common;
+package net.jackw.olep.message.transaction_request;
 
 import com.google.common.base.MoreObjects;
 import org.apache.kafka.common.serialization.Deserializer;
