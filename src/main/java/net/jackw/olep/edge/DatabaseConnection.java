@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.LRUSet;
+import net.jackw.olep.common.TransactionResultPartitioner;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.PaymentResult;
@@ -99,7 +100,9 @@ public class DatabaseConnection implements Closeable {
         // Assign to the correct partition
         TopicPartition partition = new TopicPartition(
             TRANSACTION_RESULT_TOPIC,
-            getPartition(transactionResultConsumer.partitionsFor(TRANSACTION_RESULT_TOPIC).size())
+            TransactionResultPartitioner.partition(
+                connectionId, transactionResultConsumer.partitionsFor(TRANSACTION_RESULT_TOPIC).size()
+            )
         );
         transactionResultConsumer.assign(List.of(partition));
         // And seek to the end, since we've not sent any transactions yet
@@ -255,20 +258,6 @@ public class DatabaseConnection implements Closeable {
      */
     private long nextTransactionId() {
         return (Integer.toUnsignedLong(++lastTransactionId) << 32) | Integer.toUnsignedLong(connectionId);
-    }
-
-    /**
-     * Get the partition that transaction results will be written to
-     *
-     * @param numPartitions The total number of transaction result partitions
-     * @return The correct partition
-     */
-    private int getPartition(int numPartitions) {
-        int partition = connectionId % numPartitions;
-        if (partition < 0) {
-            partition += numPartitions;
-        }
-        return partition;
     }
 
     private static Logger log = LogManager.getLogger();
