@@ -70,6 +70,8 @@ public class RandomDataGenerator extends Random {
             if (result < 0) {
                 // Long.MIN_VALUE doesn't abs, because there is no equivalent positive integer
                 // There's only a positive 0 so far though, so count this as negative 0
+                // However, based on my testing using https://stackoverflow.com/a/15237585/2826188 I don't believe it's
+                // actually possible to receive Long.MIN_VALUE from java.util.Random
                 result = 0;
             }
         } while (result > maxUniformValue);

@@ -1,17 +1,17 @@
 package net.jackw.olep.edge;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.fasterxml.jackson.core.type.TypeReference;
+import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.message.transaction_result.ApprovalMessage;
-import org.apache.kafka.common.errors.SerializationException;
-
-import java.io.IOException;
+import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 
 public class TransactionResultProcessor {
-    private final ObjectMapper objectMapper;
+    private final JsonDeserializer<ApprovalMessage> approvalDeserializer;
+    private final JsonDeserializer<TransactionResultBuilder<?>> transactionResultDeserializer;
 
     public TransactionResultProcessor() {
-        objectMapper = new ObjectMapper().registerModule(new GuavaModule());
+        approvalDeserializer = new JsonDeserializer<>(ApprovalMessage.class);
+        transactionResultDeserializer = new JsonDeserializer<>(new TypeReference<>() {});
     }
 
     /**
@@ -21,20 +21,16 @@ public class TransactionResultProcessor {
      * @return Whether this transaction is now complete (no outstanding result messages)
      */
     public boolean process(boolean approvalMessage, byte[] value, PendingTransaction<?, ?> pendingTransaction) {
-        try {
-            if (approvalMessage) {
-                // We just have the approval result, so update the pending transaction with this result
-                ApprovalMessage result = objectMapper.readValue(value, ApprovalMessage.class);
-                pendingTransaction.setAccepted(result.approved);
-                return false;
-            } else {
-                // We have data about the transaction itself, so we need to update the result builder with the new info
-                objectMapper.readerForUpdating(pendingTransaction.getTransactionResultBuilder()).readValue(value);
-                // Then notify the transaction that we have done so
-                return pendingTransaction.builderUpdated();
-            }
-        } catch (IOException e) {
-            throw new SerializationException(e);
+        if (approvalMessage) {
+            // We just have the approval result, so update the pending transaction with this result
+            ApprovalMessage result = approvalDeserializer.deserialize(value);
+            pendingTransaction.setAccepted(result.approved);
+            return false;
+        } else {
+            // We have data about the transaction itself, so we need to update the result builder with the new info
+            transactionResultDeserializer.deserialize(value, pendingTransaction.getTransactionResultBuilder());
+            // Then notify the transaction that we have done so
+            return pendingTransaction.builderUpdated();
         }
     }
 }

@@ -54,6 +54,14 @@ public class RandomDataGeneratorTest {
     }
 
     @Test
+    public void testUniformLongWithSameUpperAndLowerBounds() {
+        long bound = 5L;
+        assertEquals(bound, rand.uniform(bound, bound));
+    }
+
+
+
+    @Test
     public void testUniformBigDecimalWithinRange() {
         for (int i = 0; i < 30; i++) {
             BigDecimal val = rand.uniform(42L, 52L, 1);

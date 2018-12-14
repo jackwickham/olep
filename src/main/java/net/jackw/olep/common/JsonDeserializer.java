@@ -3,11 +3,13 @@ package net.jackw.olep.common;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
 
@@ -70,6 +72,16 @@ public class JsonDeserializer<T> implements Deserializer<T> {
             return null;
         }
 
+        return deserialize(data);
+    }
+
+    /**
+     * Deserialize a record from a byte array into a new object
+     *
+     * @param data The serialized bytes
+     * @return Deserialized data
+     */
+    public T deserialize(@Nonnull byte[] data) {
         try {
             if (type != null) {
                 // Use the TypeReference if possible
@@ -77,6 +89,27 @@ public class JsonDeserializer<T> implements Deserializer<T> {
             } else {
                 return objectMapper.readValue(data, destinationClass);
             }
+        } catch (IOException e) {
+            throw new SerializationException(e);
+        }
+    }
+
+    /**
+     * Deserialize a record from a byte array and update an existing object with the results
+     *
+     * @param data The serialized bytes
+     * @param target The object to deserialize into
+     * @return target
+     */
+    @CanIgnoreReturnValue
+    public T deserialize(byte[] data, T target) {
+        if (data == null) {
+            log.warn("Deserialized null");
+            return null;
+        }
+
+        try {
+            return objectMapper.readerForUpdating(target).readValue(data);
         } catch (IOException e) {
             throw new SerializationException(e);
         }
