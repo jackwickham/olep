@@ -1,11 +1,13 @@
 package net.jackw.olep.message.transaction_result;
 
+import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Objects;
 
 @Immutable
 public class TransactionResultKey {
@@ -53,5 +55,28 @@ public class TransactionResultKey {
 
         @Override
         public void close() { }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof TransactionResultKey) {
+            TransactionResultKey other = (TransactionResultKey) obj;
+            return transactionId == other.transactionId && approvalMessage == other.approvalMessage;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(transactionId, approvalMessage);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("transactionId", transactionId)
+            .add("approvalMessage", approvalMessage)
+            .toString();
     }
 }

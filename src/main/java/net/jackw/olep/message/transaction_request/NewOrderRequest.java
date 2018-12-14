@@ -6,6 +6,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Immutable;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -67,5 +68,22 @@ public class NewOrderRequest extends TransactionRequestMessage {
             .add("lines", lines)
             .add("date", date)
             .toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NewOrderRequest)) return false;
+        NewOrderRequest that = (NewOrderRequest) o;
+        return customerId == that.customerId &&
+            warehouseId == that.warehouseId &&
+            districtId == that.districtId &&
+            date == that.date &&
+            lines.equals(that.lines);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(customerId, warehouseId, districtId, lines, date);
     }
 }

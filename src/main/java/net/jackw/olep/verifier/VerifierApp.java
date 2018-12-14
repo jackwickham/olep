@@ -53,15 +53,15 @@ public class VerifierApp extends StreamsApp {
         topology
             .addSource(
                 Topology.AutoOffsetReset.EARLIEST,
-                "transaction-requests",
+                KafkaConfig.TRANSACTION_REQUEST_TOPIC,
                 Serdes.Long().deserializer(),
                 new JsonDeserializer<>(TransactionRequestMessage.class),
                 KafkaConfig.TRANSACTION_REQUEST_TOPIC
             )
             // Process takes candidate transactions, and decides whether they are acceptable
-            .addProcessor("process", () -> new TransactionVerificationProcessor(itemConsumer.getStore()), "transaction-requests")
+            .addProcessor("process", () -> new TransactionVerificationProcessor(itemConsumer.getStore()), KafkaConfig.TRANSACTION_REQUEST_TOPIC)
             .addSink(
-                "accepted-transactions",
+                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
                 new TransactionWarehouseKey.KeySerializer(),
                 new JsonSerializer<>(),
@@ -69,7 +69,7 @@ public class VerifierApp extends StreamsApp {
                 "process"
             )
             .addSink(
-                "transaction-results",
+                KafkaConfig.TRANSACTION_RESULT_TOPIC,
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
                 new TransactionResultKey.ResultKeySerializer(),
                 new JsonSerializer<>(),

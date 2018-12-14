@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 
+import java.util.Objects;
 import java.util.Set;
 
 @Immutable
@@ -39,5 +40,20 @@ public class DeliveryRequest extends TransactionRequestMessage {
             .add("carrierId", carrierId)
             .add("deliveryDate", deliveryDate)
             .toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DeliveryRequest)) return false;
+        DeliveryRequest that = (DeliveryRequest) o;
+        return warehouseId == that.warehouseId &&
+            carrierId == that.carrierId &&
+            deliveryDate == that.deliveryDate;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(warehouseId, carrierId, deliveryDate);
     }
 }

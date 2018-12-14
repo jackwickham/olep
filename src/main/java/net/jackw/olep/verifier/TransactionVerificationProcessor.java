@@ -1,5 +1,6 @@
 package net.jackw.olep.verifier;
 
+import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
@@ -60,15 +61,15 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
         // Forward the transaction to each of the relevant warehouses
         log.debug(LogConfig.TRANSACTION_PROCESSING_MARKER, "Forwarding {} to warehouses {}", id, warehouses);
         for (int warehouse : warehouses) {
-            context.forward(new TransactionWarehouseKey(id, warehouse), transaction, To.child("accepted-transactions"));
+            context.forward(new TransactionWarehouseKey(id, warehouse), transaction, To.child(KafkaConfig.ACCEPTED_TRANSACTION_TOPIC));
         }
         // Then write the acceptance message to the result log
-        context.forward(new TransactionResultKey(id, true), new ApprovalMessage(true), To.child("transaction-results"));
+        context.forward(new TransactionResultKey(id, true), new ApprovalMessage(true), To.child(KafkaConfig.TRANSACTION_RESULT_TOPIC));
         log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Accepted transaction {} of type {}", id, transaction.getClass().getSimpleName());
     }
 
     private void rejectTransaction(long id, TransactionRequestMessage transaction) {
-        context.forward(new TransactionResultKey(id, true), new ApprovalMessage(false), To.child("transaction-results"));
+        context.forward(new TransactionResultKey(id, true), new ApprovalMessage(false), To.child(KafkaConfig.TRANSACTION_RESULT_TOPIC));
         log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Rejected transaction {} of type {}", id, transaction.getClass().getSimpleName());
     }
 

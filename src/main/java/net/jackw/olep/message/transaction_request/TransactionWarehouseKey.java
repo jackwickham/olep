@@ -6,6 +6,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * The key for an accepted transaction that should be routed to a particular worker
@@ -56,5 +57,20 @@ public class TransactionWarehouseKey {
             .add("transactionId", transactionId)
             .add("warehouseId", warehouseId)
             .toString();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(transactionId, warehouseId);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof TransactionWarehouseKey) {
+            TransactionWarehouseKey other = (TransactionWarehouseKey) obj;
+            return transactionId == other.transactionId && warehouseId == other.warehouseId;
+        } else {
+            return false;
+        }
     }
 }

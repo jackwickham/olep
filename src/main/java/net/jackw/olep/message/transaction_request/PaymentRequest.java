@@ -8,6 +8,7 @@ import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.message.modification.ModificationMessage;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.Set;
 
 @Immutable
@@ -64,7 +65,7 @@ public class PaymentRequest extends TransactionRequestMessage implements Modific
     @Override
     @JsonIgnore
     public Set<Integer> getWorkerWarehouses() {
-        return Set.of(warehouseId);
+        return Set.of(customerWarehouseId);
     }
 
     @Override
@@ -78,5 +79,32 @@ public class PaymentRequest extends TransactionRequestMessage implements Modific
             .add("customerDistrictId", customerDistrictId)
             .add("amount", amount)
             .toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PaymentRequest)) return false;
+        PaymentRequest that = (PaymentRequest) o;
+        return warehouseId == that.warehouseId &&
+            districtId == that.districtId &&
+            customerWarehouseId == that.customerWarehouseId &&
+            customerDistrictId == that.customerDistrictId &&
+            Objects.equals(customerId, that.customerId) &&
+            Objects.equals(customerSurname, that.customerSurname) &&
+            Objects.equals(amount, that.amount);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+            warehouseId,
+            districtId,
+            customerId,
+            customerSurname,
+            customerWarehouseId,
+            customerDistrictId,
+            amount
+        );
     }
 }

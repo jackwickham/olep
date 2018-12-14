@@ -15,6 +15,9 @@ plugins {
 
     // Add the errorprone Gradle plugin so the checks are run during compile
     id("net.ltgt.errorprone") version "0.6"
+
+    // jacoco provides coverage checks
+    id 'jacoco'
 }
 
 // Targeting Java 11
@@ -31,6 +34,7 @@ dependencies {
     compile group: 'org.apache.kafka', name: 'kafka_2.12', version: '2.0.0'
     compile group: 'org.apache.kafka', name: 'kafka-streams', version: '2.0.0'
     compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.0.0'
+    testCompile group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.0.0'
     // JSON/etc library
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
     compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-guava', version: '2.9.7'
