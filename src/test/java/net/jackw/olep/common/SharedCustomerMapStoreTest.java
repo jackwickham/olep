@@ -2,6 +2,7 @@ package net.jackw.olep.common;
 
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
+import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
 import org.junit.Before;
 import org.junit.Test;
@@ -96,5 +97,37 @@ public class SharedCustomerMapStoreTest {
         store.remove(cB.getKey());
 
         assertSame(cA, store.get(cB.getNameKey()));
+    }
+
+    @Test
+    public void testGetBlockingNameDoesntBlockIfAlreadyInStore() throws InterruptedException {
+        CustomerShared c = makeCustomer("", "LAST");
+        store.put(c.getKey(), c);
+
+        Thread.currentThread().interrupt();
+        // If the thread tries to block, it will throw an InterruptedException and clear interrupted
+        assertSame(c, store.getBlocking(c.getNameKey()));
+        assertTrue(Thread.interrupted());
+    }
+
+    @Test
+    public void testGetBlockingReturnsResultIfItBecomesAvailable() throws InterruptedException {
+        final CustomerShared c = makeCustomer("", "LAST");
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(70);
+                store.put(c.getKey(), c);
+            } catch (InterruptedException e) {
+                // :(
+            }
+        }).start();
+
+        assertSame(c, store.getBlocking(c.getNameKey()));
+    }
+
+    @Test(expected = StoreKeyMissingException.class)
+    public void testGetBlockingThrowsExceptionIfNoResultAppears() throws InterruptedException {
+        store.getBlocking(new CustomerNameKey(1, 1, "TEST"), 2);
     }
 }

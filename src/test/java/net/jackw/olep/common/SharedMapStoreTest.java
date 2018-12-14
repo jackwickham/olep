@@ -39,4 +39,36 @@ public class SharedMapStoreTest {
         assertSame(o1, store.put(2, o2));
         assertSame(o2, store.get(2));
     }
+
+    @Test
+    public void testGetBlockingDoesntBlockIfAlreadyInStore() throws InterruptedException {
+        Object o = new Object();
+        store.put(8, o);
+
+        Thread.currentThread().interrupt();
+        // If the thread tries to block, it will throw an InterruptedException and clear interrupted
+        assertSame(o, store.getBlocking(8));
+        assertTrue(Thread.interrupted());
+    }
+
+    @Test
+    public void testGetBlockingReturnsResultIfItBecomesAvailable() throws InterruptedException {
+        final Object o = new Object();
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(70);
+                store.put(1, o);
+            } catch (InterruptedException e) {
+                // :(
+            }
+        }).start();
+
+        assertSame(o, store.getBlocking(1));
+    }
+
+    @Test(expected = StoreKeyMissingException.class)
+    public void testGetBlockingThrowsExceptionIfNoResultAppears() throws InterruptedException {
+        store.getBlocking(9, 2);
+    }
 }
