@@ -52,6 +52,8 @@ dependencies {
     testCompile 'junit:junit:4.12'
     // And mockito for mocking and spying on stuff
     testCompile "org.mockito:mockito-core:2.+"
+    // Hamcrest matchers
+    testCompile 'org.hamcrest:hamcrest-junit:2.0.0.0'
 }
 
 // In this section you declare where to find the dependencies of your project

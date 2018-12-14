@@ -7,6 +7,7 @@ import java.util.AbstractSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -27,7 +28,12 @@ public class LRUSet<T> extends AbstractSet<T> implements Set<T> {
     private final AtomicReference<T> last = new AtomicReference<>(null);
     // Pointer to the first element in the set
     private final AtomicReference<T> first = new AtomicReference<>(null);
+    // The maximum number of elements that this set is allowed to contain
     private final int capacity;
+    // Approximately the number of elements that the set currently contains. This will never over-estimate the number of
+    // elements, but it may under-estimate it if an element is currently being inserted or a deletion is being performed
+    // that will subsequently fail
+    private final AtomicInteger sizeInternal = new AtomicInteger();
 
     // Create a fake T (so we can reference it with an AtomicReference) to mark the node as being deleted
     // It's better to do the unsafe cast here than where it's used, or to have a map to Object, because this reduces
@@ -49,6 +55,8 @@ public class LRUSet<T> extends AbstractSet<T> implements Set<T> {
 
     @Override
     public int size() {
+        // Using map.size rather than sizeInternal because sizeInternal may erroneously return a value smaller than the
+        // true size, which would break the linearizable guarantee
         return Math.min(map.size(), capacity);
     }
 
@@ -62,18 +70,30 @@ public class LRUSet<T> extends AbstractSet<T> implements Set<T> {
         return map.containsKey(o);
     }
 
+    /**
+     * Get an iterator for the elements in the set
+     *
+     * The iteration will be performed in an unspecified order (not insertion order)
+     */
     @Override
     public Iterator<T> iterator() {
         return map.keySet().iterator();
     }
 
     @Override
-    public boolean add(T t) {
+    public boolean add(@Nonnull T t) {
+        Preconditions.checkNotNull(t, "Can't insert null into an LRUSet");
+
         AtomicReference<T> ref = new AtomicReference<>();
         if (map.putIfAbsent(t, ref) != null) {
             // Already in the map
             return false;
         } else {
+            // We successfully inserted, so increment the size
+            // This has to be done after the insertion because we can never over-estimate the number of elements, to
+            // prevent too many elements from being deleted
+            sizeInternal.incrementAndGet();
+
             T lastElem;
 
             // Get the current last element, then update the pointer to point to us
@@ -110,7 +130,7 @@ public class LRUSet<T> extends AbstractSet<T> implements Set<T> {
     private void checkSize() {
         while(true) {
             T head = first.get();
-            if (map.size() > capacity) {
+            if (sizeInternal.get() > capacity) {
                 // Decapitate it
                 if (head != null && removeFirst(head)) {
                     break;
@@ -141,11 +161,18 @@ public class LRUSet<T> extends AbstractSet<T> implements Set<T> {
             return false;
         }
 
+        // Decrease the size of the set now, to ensure that we never over-estimate the size of the set
+        // If we end up failing, the size gets incremented again. If another thread checked the size while it was
+        // decremented, it's not a problem because we are going to check it again in checkSize if it fails, and have
+        // another go at deleting an element
+        sizeInternal.decrementAndGet();
+
         // Point first to the next element
         if (!first.compareAndSet(firstElem, successor)) {
             // This element can't have been first
             // successorRef must still be BEING_DELETED, because we never allow that to be overwritten except here
             successorRef.set(successor);
+            sizeInternal.incrementAndGet();
             return false;
         }
 
