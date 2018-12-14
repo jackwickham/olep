@@ -14,7 +14,7 @@ import static org.junit.Assert.*;
 
 public class LRUSetConcurrencyTest {
     private LRUSet<Object> set;
-    private static final int NUM_RUNS = 500;
+    private static final int NUM_RUNS = 5000;
 
     @Test
     public void testConcurrentAddsOfSameElementOnlySucceedOnce() throws Throwable {
