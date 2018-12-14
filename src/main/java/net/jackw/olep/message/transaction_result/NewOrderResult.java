@@ -17,7 +17,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 @Immutable
-public class NewOrderResult extends TransactionResult {
+public class NewOrderResult extends TransactionResultMessage {
     public final int warehouseId;
     public final int districtId;
     public final int customerId;

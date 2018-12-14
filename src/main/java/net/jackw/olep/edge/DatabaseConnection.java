@@ -3,10 +3,12 @@ package net.jackw.olep.edge;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonSerializer;
+import net.jackw.olep.common.LRUSet;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.PaymentResult;
-import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultKey;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static net.jackw.olep.common.KafkaConfig.TRANSACTION_REQUEST_TOPIC;
@@ -48,9 +51,11 @@ import static net.jackw.olep.common.KafkaConfig.TRANSACTION_RESULT_TOPIC;
  */
 public class DatabaseConnection implements Closeable {
     private final Producer<Long, TransactionRequestMessage> transactionRequestProducer;
-    private final Consumer<Long, byte[]> transactionResultConsumer;
+    private final Consumer<TransactionResultKey, byte[]> transactionResultConsumer;
 
     private final Map<Long, PendingTransaction<?, ?>> pendingTransactions;
+    // Store recently completed transactions so duplicate messages about them can be discarded without reporting errors
+    private final Set<Long> recentlyCompletedTransactions;
 
     private final Thread resultThread;
 
@@ -68,6 +73,7 @@ public class DatabaseConnection implements Closeable {
 
         // Initialise regular fields
         pendingTransactions = new ConcurrentHashMap<>();
+        recentlyCompletedTransactions = new LRUSet<>(100);
 
         // Set up the producer, which is used to send requests from the application to the DB
         Serializer<TransactionRequestMessage> transactionRequestSerializer = new JsonSerializer<>();
@@ -86,16 +92,21 @@ public class DatabaseConnection implements Closeable {
         transactionResultConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "result-consumer" + connectionId);
         transactionResultConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         transactionResultConsumer = new KafkaConsumer<>(
-            transactionResultConsumerProps, Serdes.Long().deserializer(), Serdes.ByteArray().deserializer()
+            transactionResultConsumerProps,
+            new TransactionResultKey.ResultKeyDeserializer(),
+            Serdes.ByteArray().deserializer()
         );
         // Assign to the correct partition
-        transactionResultConsumer.assign(List.of(new TopicPartition(
+        TopicPartition partition = new TopicPartition(
             TRANSACTION_RESULT_TOPIC,
             getPartition(transactionResultConsumer.partitionsFor(TRANSACTION_RESULT_TOPIC).size())
-        )));
+        );
+        transactionResultConsumer.assign(List.of(partition));
+        // And seek to the end, since we've not sent any transactions yet
+        transactionResultConsumer.seekToEnd(List.of(partition));
 
-        // Create the transaction result processor too
-        transactionResultProcessor = new TransactionResultProcessor(pendingTransactions);
+        // Create the transaction result processor, so we can decode the results
+        transactionResultProcessor = new TransactionResultProcessor();
 
         // Start a thread that listens to the result log and processes the results
         resultThread = new Thread(this::processRecords);
@@ -179,7 +190,7 @@ public class DatabaseConnection implements Closeable {
      * @param msg The message to send
      */
     @SuppressWarnings("FutureReturnValueIgnored")
-    private <T extends TransactionResult, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(
+    private <T extends TransactionResultMessage, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(
         TransactionRequestMessage msg, B resultBuilder
     ) {
         long transactionId = nextTransactionId();
@@ -203,10 +214,30 @@ public class DatabaseConnection implements Closeable {
     private void processRecords() {
         while (true) {
             try {
-                ConsumerRecords<Long, byte[]> records = transactionResultConsumer.poll(Duration.ofHours(12));
-                for (ConsumerRecord<Long, byte[]> record : records) {
-                    if (connectionId == (int)(long)record.key()) {
-                        transactionResultProcessor.process(record.value());
+                ConsumerRecords<TransactionResultKey, byte[]> records = transactionResultConsumer.poll(Duration.ofHours(12));
+                for (ConsumerRecord<TransactionResultKey, byte[]> record : records) {
+                    long transactionId = record.key().transactionId;
+                    if (connectionId == record.key().getConnectionId()) {
+                        // It's for us!
+                        PendingTransaction<?, ?> pendingTransaction = pendingTransactions.get(transactionId);
+                        if (pendingTransaction == null) {
+                            if (!recentlyCompletedTransactions.contains(transactionId)) {
+                                log.warn("Received a transaction result for a transaction that isn't pending or recently completed");
+                            } else {
+                                // Otherwise it's a duplicate, so we can just ignore it
+                                log.debug("Received duplicate result for completed transaction {}", transactionId);
+                            }
+                        } else {
+                            log.debug("Received message");
+                            boolean complete = transactionResultProcessor.process(
+                                record.key().approvalMessage, record.value(), pendingTransaction
+                            );
+
+                            if (complete) {
+                                pendingTransactions.remove(transactionId);
+                                recentlyCompletedTransactions.add(transactionId);
+                            }
+                        }
                     }
                 }
             } catch (InterruptException | WakeupException e) {
@@ -233,7 +264,11 @@ public class DatabaseConnection implements Closeable {
      * @return The correct partition
      */
     private int getPartition(int numPartitions) {
-        return (int)(((long)connectionId & 0xFFFFFFFFL) % numPartitions);
+        int partition = connectionId % numPartitions;
+        if (partition < 0) {
+            partition += numPartitions;
+        }
+        return partition;
     }
 
     private static Logger log = LogManager.getLogger();

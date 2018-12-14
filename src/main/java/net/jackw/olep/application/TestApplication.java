@@ -3,7 +3,7 @@ package net.jackw.olep.application;
 import net.jackw.olep.edge.DatabaseConnection;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
-import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
 
@@ -45,7 +45,7 @@ public class TestApplication {
         }
     }
 
-    private static class StatusPrinter<T extends TransactionResult> implements TransactionStatusListener<T> {
+    private static class StatusPrinter<T extends TransactionResultMessage> implements TransactionStatusListener<T> {
         private String type;
 
         public StatusPrinter(String type) {

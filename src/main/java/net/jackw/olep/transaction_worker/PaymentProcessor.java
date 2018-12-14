@@ -14,19 +14,16 @@ import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_result.PaymentResult;
-import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.apache.kafka.common.errors.InterruptException;
-import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
 
-public class PaymentProcessor extends BaseTransactionProcessor implements Processor<Long, PaymentRequest> {
+public class PaymentProcessor extends BaseTransactionProcessor<Long, PaymentRequest> {
     private ProcessorContext context;
     private LocalStore<DistrictSpecificKey, CustomerMutable> customerMutableStore;
 
@@ -51,6 +48,7 @@ public class PaymentProcessor extends BaseTransactionProcessor implements Proces
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
+        super.init(context);
         this.context = context;
 
         this.customerMutableStore = new LocalStore<DistrictSpecificKey, CustomerMutable>(
@@ -116,11 +114,10 @@ public class PaymentProcessor extends BaseTransactionProcessor implements Proces
                 results.customerData = customerMutable.data.substring(0, Math.min(customerMutable.data.length(), 200));
             }
 
-            TransactionResultMessage resultMessage = new TransactionResultMessage(key, results);
-            context.forward(key, resultMessage, To.child("transaction-results"));
+            sendResults(key, results);
 
             // The PaymentRequest is also the modification record, so just send that to the modification log
-            context.forward(key, value, To.child("modification-log"));
+            sendModification(key, value);
 
             // TPC-C says we should create a history record (and cast it into the abyss)
             // We could do that, but for now it can be derived by a consumer if they so desire
@@ -128,11 +125,6 @@ public class PaymentProcessor extends BaseTransactionProcessor implements Proces
         } catch (InterruptedException e) {
             throw new InterruptException(e);
         }
-    }
-
-    @Override
-    public void close() {
-
     }
 
     private static Logger log = LogManager.getLogger();

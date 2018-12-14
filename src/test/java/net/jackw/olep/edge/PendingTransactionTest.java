@@ -1,6 +1,6 @@
 package net.jackw.olep.edge;
 
-import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.junit.Test;
@@ -17,10 +17,10 @@ import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
 public class PendingTransactionTest {
-    @Mock private TransactionResultBuilder<TransactionResult> transactionResultBuilder;
+    @Mock private TransactionResultBuilder<TransactionResultMessage> transactionResultBuilder;
 
     @Test public void testConstructionProducesCorrectInitialState() {
-        PendingTransaction<TransactionResult, TransactionResultBuilder<TransactionResult>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
+        PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
 
         verify(transactionResultBuilder, never()).build();
         assertEquals(4, pendingTransaction.getTransactionId());
@@ -33,7 +33,7 @@ public class PendingTransactionTest {
     }
 
     @Test public void testWrittenToDiskCallbackSuccess() throws InterruptedException, ExecutionException, TimeoutException {
-        PendingTransaction<TransactionResult, TransactionResultBuilder<TransactionResult>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
+        PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
         RecordMetadata mockRecordMetadata = new RecordMetadata(null, 0, 0, 0, null, 0, 0);
 
         pendingTransaction.getWrittenToLogCallback().onCompletion(mockRecordMetadata, null);
@@ -44,7 +44,7 @@ public class PendingTransactionTest {
     }
 
     @Test public void testWrittenToDiskCallbackFailure() {
-        PendingTransaction<TransactionResult, TransactionResultBuilder<TransactionResult>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
+        PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
         Exception err = new Exception();
 
         pendingTransaction.getWrittenToLogCallback().onCompletion(null, err);
@@ -55,7 +55,7 @@ public class PendingTransactionTest {
     }
 
     @Test public void testSetAcceptedTrue() {
-        PendingTransaction<TransactionResult, TransactionResultBuilder<TransactionResult>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
+        PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
 
         pendingTransaction.setAccepted(true);
 
@@ -68,7 +68,7 @@ public class PendingTransactionTest {
     }
 
     @Test public void testSetAcceptedFalse() {
-        PendingTransaction<TransactionResult, TransactionResultBuilder<TransactionResult>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
+        PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
 
         pendingTransaction.setAccepted(false);
 
@@ -79,7 +79,7 @@ public class PendingTransactionTest {
 
     @Test public void testUpdatedBuilderButCantBuild() {
         when(transactionResultBuilder.canBuild()).thenReturn(false);
-        PendingTransaction<TransactionResult, TransactionResultBuilder<TransactionResult>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
+        PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
 
         pendingTransaction.builderUpdated();
 
@@ -93,9 +93,9 @@ public class PendingTransactionTest {
 
     @Test public void testUpdatedBuilderCanBuild() {
         when(transactionResultBuilder.canBuild()).thenReturn(true);
-        TransactionResult mockResult = mock(TransactionResult.class);
+        TransactionResultMessage mockResult = mock(TransactionResultMessage.class);
         when(transactionResultBuilder.build()).thenReturn(mockResult);
-        PendingTransaction<TransactionResult, TransactionResultBuilder<TransactionResult>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
+        PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
 
         pendingTransaction.builderUpdated();
 

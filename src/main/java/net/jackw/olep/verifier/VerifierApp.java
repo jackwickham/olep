@@ -10,6 +10,8 @@ import net.jackw.olep.common.TransactionWarehouseKey;
 import net.jackw.olep.common.WarehousePartitioner;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
+import net.jackw.olep.message.transaction_result.TransactionResultKey;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
 
@@ -70,7 +72,7 @@ public class VerifierApp extends StreamsApp {
             .addSink(
                 "transaction-results",
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
-                Serdes.Long().serializer(),
+                new TransactionResultKey.ResultKeySerializer(),
                 new JsonSerializer<>(),
                 new TransactionResultPartitioner(),
                 "process"

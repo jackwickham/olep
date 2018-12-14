@@ -6,7 +6,7 @@ import com.google.errorprone.annotations.Immutable;
 import java.util.Map;
 
 @Immutable
-public class DeliveryResult extends TransactionResult {
+public class DeliveryResult extends TransactionResultMessage {
     public static class Builder extends PartialResult implements TransactionResultBuilder<DeliveryResult> {
         private final int warehouseId;
         private final int carrierId;

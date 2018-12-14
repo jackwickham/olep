@@ -1,8 +1,8 @@
 package net.jackw.olep.edge;
 
-import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 
-public interface TransactionStatusListener<T extends TransactionResult> {
+public interface TransactionStatusListener<T extends TransactionResultMessage> {
     /**
      * Callback when the transaction request has been committed to the log
      *

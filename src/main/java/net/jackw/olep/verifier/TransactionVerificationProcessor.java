@@ -8,6 +8,8 @@ import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
+import net.jackw.olep.message.transaction_result.ApprovalMessage;
+import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -62,12 +64,12 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
             context.forward(new TransactionWarehouseKey(id, warehouse), transaction, To.child("accepted-transactions"));
         }
         // Then write the acceptance message to the result log
-        context.forward(id, new TransactionResultMessage(id, true), To.child("transaction-results"));
+        context.forward(new TransactionResultKey(id, true), new ApprovalMessage(true), To.child("transaction-results"));
         log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Accepted transaction {} of type {}", id, transaction.getClass().getSimpleName());
     }
 
     private void rejectTransaction(long id, TransactionRequestMessage transaction) {
-        context.forward(id, new TransactionResultMessage(id, false), To.child("transaction-results"));
+        context.forward(new TransactionResultKey(id, true), new ApprovalMessage(false), To.child("transaction-results"));
         log.debug(LogConfig.TRANSACTION_DONE_MARKER, "Rejected transaction {} of type {}", id, transaction.getClass().getSimpleName());
     }
 

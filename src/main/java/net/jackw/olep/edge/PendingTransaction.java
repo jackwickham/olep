@@ -1,7 +1,7 @@
 package net.jackw.olep.edge;
 
 import com.google.common.annotations.VisibleForTesting;
-import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
  * @param <T> The class that will hold the result of this transaction
  * @param <B> A class for building T
  */
-public class PendingTransaction<T extends TransactionResult, B extends TransactionResultBuilder<T>> {
+public class PendingTransaction<T extends TransactionResultMessage, B extends TransactionResultBuilder<T>> {
     private final long transactionId;
     private final B transactionResultBuilder;
 
@@ -109,8 +109,10 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
      *
      * This method should be called after each TransactionResult message which contains results for this transaction
      * has been processed.
+     *
+     * @return Whether this transaction is now complete
      */
-    public void builderUpdated() {
+    public boolean builderUpdated() {
         if (transactionResultBuilder.canBuild()) {
             T result = transactionResultBuilder.build();
             if (!complete.complete(result)) {
@@ -118,8 +120,10 @@ public class PendingTransaction<T extends TransactionResult, B extends Transacti
                 log.warn("{} - Builder shouldn't be updated after it has already been build", transactionId);
             }
             log.debug("{} completed", transactionId);
+            return true;
         } else {
             log.debug("{} updated but not buildable", transactionId);
+            return false;
         }
     }
 

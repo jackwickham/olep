@@ -9,7 +9,7 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 
 @Immutable
-public class PaymentResult extends TransactionResult {
+public class PaymentResult extends TransactionResultMessage {
     public static class Builder extends PartialResult implements TransactionResultBuilder<PaymentResult> {
         private final int warehouseId;
         private final int districtId;

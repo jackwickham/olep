@@ -1,6 +1,6 @@
 package net.jackw.olep.edge;
 
-import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 public class TransactionStatusTest {
     private CompletableFuture<Void> transactionDeliveredFuture = new CompletableFuture<>();
     private CompletableFuture<Void> transactionAcceptedFuture = new CompletableFuture<>();
-    private CompletableFuture<TransactionResult> transactionCompleteFuture = new CompletableFuture<>();
+    private CompletableFuture<TransactionResultMessage> transactionCompleteFuture = new CompletableFuture<>();
 
     private final int HANDLER_NONE = 0;
     private final int HANDLER_DELIVERED = 1;
@@ -27,13 +27,13 @@ public class TransactionStatusTest {
     private final int HANDLER_REJECTED = 16;
 
     @Test public void testNoHandlersCalledWhenNoFuturesComplete() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         assertHandlersCalled(transactionStatus, HANDLER_NONE);
     }
 
     @Test public void testNoHandlersCalledWhenOnlyAcceptedFutureCompletes() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         transactionAcceptedFuture.complete(null);
 
@@ -41,15 +41,15 @@ public class TransactionStatusTest {
     }
 
     @Test public void testNoHandlersCalledWhenOnlyCompleteFutureCompletes() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
-        transactionCompleteFuture.complete(mock(TransactionResult.class));
+        transactionCompleteFuture.complete(mock(TransactionResultMessage.class));
 
         assertHandlersCalled(transactionStatus, HANDLER_NONE);
     }
 
     @Test public void testOnlyDeliveryHandlerCalledWhenDeliveryFutureCompletes() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         transactionDeliveredFuture.complete(null);
 
@@ -57,7 +57,7 @@ public class TransactionStatusTest {
     }
 
     @Test public void testDeliveryAndAcceptedHandlerCalledWhenDeliveryAndAcceptedFuturesComplete() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         transactionDeliveredFuture.complete(null);
         transactionAcceptedFuture.complete(null);
@@ -66,17 +66,17 @@ public class TransactionStatusTest {
     }
 
     @Test public void testAllSuccessHandlerCalledWhenAllSuccessFuturesComplete() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         transactionDeliveredFuture.complete(null);
         transactionAcceptedFuture.complete(null);
-        transactionCompleteFuture.complete(mock(TransactionResult.class));
+        transactionCompleteFuture.complete(mock(TransactionResultMessage.class));
 
         assertHandlersCalled(transactionStatus, HANDLER_DELIVERED | HANDLER_ACCEPTED | HANDLER_COMPLETED);
     }
 
     @Test public void testDeliveryFailedAndRejectedHandlersCalledWhenDeliveryFutureFails() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         transactionDeliveredFuture.completeExceptionally(new Exception());
 
@@ -84,7 +84,7 @@ public class TransactionStatusTest {
     }
 
     @Test public void testRejectedHandlerCalledWhenAcceptedFutureFails() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         transactionDeliveredFuture.complete(null);
         transactionAcceptedFuture.completeExceptionally(new Exception());
@@ -93,7 +93,7 @@ public class TransactionStatusTest {
     }
 
     @Test public void testDeliveryHandlerCalledOnCompletionIfAttachedBefore() {
-        TransactionStatus<TransactionResult> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         Runnable deliveredHandler = mock(Runnable.class);
         transactionStatus.addDeliveredHandler(deliveredHandler);
@@ -103,7 +103,7 @@ public class TransactionStatusTest {
         verify(deliveredHandler, times(1)).run();
     }
 
-    private void assertHandlersCalled(TransactionStatus<TransactionResult> transactionStatus, int handlers) {
+    private void assertHandlersCalled(TransactionStatus<TransactionResultMessage> transactionStatus, int handlers) {
         VerificationMode once = times(1);
         Runnable deliveredHandler = mock(Runnable.class);
         transactionStatus.addDeliveredHandler(deliveredHandler);
@@ -113,7 +113,7 @@ public class TransactionStatusTest {
         transactionStatus.addAcceptedHandler(acceptedHandler);
         verify(acceptedHandler, ((handlers & HANDLER_ACCEPTED) > 0 ? once : never())).run();
 
-        Consumer<TransactionResult> completeHandler = mock(Consumer.class);
+        Consumer<TransactionResultMessage> completeHandler = mock(Consumer.class);
         transactionStatus.addCompleteHandler(completeHandler);
         verify(completeHandler, ((handlers & HANDLER_COMPLETED) > 0 ? once : never())).accept(any());
 

@@ -1,6 +1,6 @@
 package net.jackw.olep.edge;
 
-import net.jackw.olep.message.transaction_result.TransactionResult;
+import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * @param <T> The type of the transaction result
  */
 @SuppressWarnings("FutureReturnValueIgnored")
-public class TransactionStatus<T extends TransactionResult> {
+public class TransactionStatus<T extends TransactionResultMessage> {
     private CompletableFuture<Void> writtenToLog;
     private CompletableFuture<Void> accepted;
     private CompletableFuture<T> complete;

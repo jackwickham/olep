@@ -19,6 +19,7 @@ import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
+import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -180,7 +181,7 @@ public class WorkerApp extends StreamsApp {
             .addSink(
                 "transaction-results",
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
-                Serdes.Long().serializer(),
+                new TransactionResultKey.ResultKeySerializer(),
                 new JsonSerializer<>(),
                 new TransactionResultPartitioner(),
                 "new-order-processor", "payment-processor", "delivery-processor"

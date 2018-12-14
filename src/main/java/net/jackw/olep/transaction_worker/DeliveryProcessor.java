@@ -5,21 +5,16 @@ import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.DeliveryModification;
-import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
-import net.jackw.olep.message.transaction_result.PartialTransactionResult;
-import net.jackw.olep.message.transaction_result.TransactionResultMessage;
-import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 
-public class DeliveryProcessor extends BaseTransactionProcessor implements Processor<Long, DeliveryRequest> {
+public class DeliveryProcessor extends BaseTransactionProcessor<Long, DeliveryRequest> {
     private ProcessorContext context;
     private NewOrdersStore newOrdersStore;
 
@@ -30,6 +25,7 @@ public class DeliveryProcessor extends BaseTransactionProcessor implements Proce
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
+        super.init(context);
         this.context = context;
         this.newOrdersStore = new NewOrdersStore((KeyValueStore) context.getStateStore(KafkaConfig.NEW_ORDER_STORE));
     }
@@ -54,17 +50,6 @@ public class DeliveryProcessor extends BaseTransactionProcessor implements Proce
         }
 
         sendResults(key, results);
-    }
-
-    @Override
-    public void close() { }
-
-    private void sendModification(Long transactionId, ModificationMessage mod) {
-        context.forward(transactionId, mod, To.child("modification-log"));
-    }
-
-    private void sendResults(Long transactionId, PartialTransactionResult result) {
-        context.forward(transactionId, new TransactionResultMessage(transactionId, result));
     }
 
     private static Logger log = LogManager.getLogger();

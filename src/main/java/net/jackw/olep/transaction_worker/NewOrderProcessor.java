@@ -15,12 +15,9 @@ import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
-import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.apache.kafka.common.errors.InterruptException;
-import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,7 +27,7 @@ import java.math.BigDecimal;
 /**
  * Process a New-Order transaction that affects this worker
  */
-public class NewOrderProcessor extends BaseTransactionProcessor implements Processor<Long, NewOrderRequest> {
+public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRequest> {
     private ProcessorContext context;
     private LocalStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
     private LocalStore<WarehouseSpecificKey, Integer> stockQuantityStore;
@@ -63,6 +60,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
+        super.init(context);
         this.context = context;
 
         this.nextOrderIdStore = new LocalStore<WarehouseSpecificKey, Integer>(
@@ -145,7 +143,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
                 // Forward the transaction to the modification log
                 // We might want to add extra data to the NewOrderModification here in future, depending on what is
                 // actually used by the views, but this corresponds with the event sourcing model
-                context.forward(key, new NewOrderModification(value, orderId), To.child("modification-log"));
+                sendModification(key, new NewOrderModification(value, orderId));
             }
 
             int nextLineNumber = 0;
@@ -175,18 +173,12 @@ public class NewOrderProcessor extends BaseTransactionProcessor implements Proce
                 results.addLine(lineNumber, new OrderLineResult.PartialResult(stockQuantity));
             }
 
-            TransactionResultMessage resultMessage = new TransactionResultMessage(key, results);
-            context.forward(key, resultMessage, To.child("transaction-results"));
+            sendResults(key, results);
         } catch (InterruptedException e) {
             // Uncheck it so we can throw it into Kafka
             // This exception could be thrown in practice
             throw new InterruptException(e);
         }
-    }
-
-    @Override
-    public void close() {
-
     }
 
     private static Logger log = LogManager.getLogger();
