@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Simple log consumer
  */
@@ -39,7 +41,7 @@ public class Tee {
         while (true) {
             ConsumerRecords<TransactionResultKey, byte[]> msgs = consumer.poll(Duration.ofHours(12));
             for (ConsumerRecord<TransactionResultKey, byte[]> msg : msgs) {
-                System.out.printf("%d is approval: %s: %s\n", msg.key().transactionId, msg.key().approvalMessage ? "true": "false", new String(msg.value()));
+                System.out.printf("%d is approval: %s: %s\n", msg.key().transactionId, msg.key().approvalMessage ? "true": "false", new String(msg.value(), UTF_8));
             }
         }
     }

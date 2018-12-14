@@ -1,0 +1,100 @@
+package net.jackw.olep.common;
+
+import net.jackw.olep.common.records.Address;
+import net.jackw.olep.common.records.Credit;
+import net.jackw.olep.common.records.CustomerShared;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.math.BigDecimal;
+
+import static org.junit.Assert.*;
+
+public class SharedCustomerMapStoreTest {
+    private SharedCustomerMapStore store;
+
+    private int nextCustomerId = 1;
+
+    private CustomerShared makeCustomer(String firstName, String lastName) {
+        return new CustomerShared(
+            nextCustomerId++, 1, 1, firstName, "A", lastName, new Address("", "", "", "", ""),
+            "", 1L, Credit.GC, BigDecimal.ONE, BigDecimal.ZERO
+        );
+    }
+
+    @Before
+    public void initializeStore() {
+        store = new SharedCustomerMapStore(2);
+    }
+
+    @Test
+    public void testInsertGetFlow() {
+        CustomerShared c = makeCustomer("", "l");
+        assertNull(store.put(c.getKey(), c));
+        assertTrue(store.containsKey(c.getKey()));
+        assertSame(c, store.get(c.getKey()));
+    }
+
+    @Test
+    public void testRemoveFromIdStore() {
+        CustomerShared c = makeCustomer("", "l");
+        store.put(c.getKey(), c);
+        assertSame(c, store.remove(c.getKey()));
+        assertFalse(store.containsKey(c.getKey()));
+        assertNull(store.get(c.getKey()));
+    }
+
+    @Test
+    public void testInsertingAddsToNameStore() {
+        CustomerShared c = makeCustomer("", "LAST");
+        store.put(c.getKey(), c);
+        assertSame(c, store.get(c.getNameKey()));
+    }
+
+    @Test
+    public void testLookupsByNameReturnMiddleCustomerSortedByFirstName() {
+        CustomerShared cA = makeCustomer("A", "LAST");
+        CustomerShared cB = makeCustomer("B", "LAST");
+        CustomerShared cC = makeCustomer("C", "LAST");
+        store.put(cA.getKey(), cA);
+        store.put(cB.getKey(), cB);
+        store.put(cC.getKey(), cC);
+
+        assertSame(cB, store.get(cA.getNameKey()));
+    }
+
+    @Test
+    public void testLookupsByNameRoundsUpWhenEvenCustomers() {
+        CustomerShared cA = makeCustomer("A", "LAST");
+        CustomerShared cB = makeCustomer("B", "LAST");
+        CustomerShared cC = makeCustomer("C", "LAST");
+        CustomerShared cD = makeCustomer("D", "LAST");
+        store.put(cA.getKey(), cA);
+        store.put(cD.getKey(), cD);
+        store.put(cB.getKey(), cB);
+        store.put(cC.getKey(), cC);
+
+        assertSame(cC, store.get(cA.getNameKey()));
+    }
+
+    @Test
+    public void testRemoveAlsoRemovesFromNameStore() {
+        CustomerShared c = makeCustomer("A", "LAST");
+        store.put(c.getKey(), c);
+        store.remove(c.getKey());
+
+        assertNull(store.get(c.getNameKey()));
+    }
+
+    @Test
+    public void testRemoveDoestRemoveOthersFromNameStore() {
+        CustomerShared cA = makeCustomer("A", "LAST");
+        CustomerShared cB = makeCustomer("B", "LAST");
+
+        store.put(cA.getKey(), cA);
+        store.put(cB.getKey(), cB);
+        store.remove(cB.getKey());
+
+        assertSame(cA, store.get(cB.getNameKey()));
+    }
+}

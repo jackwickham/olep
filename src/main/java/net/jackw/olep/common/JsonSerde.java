@@ -8,10 +8,8 @@ import org.apache.kafka.common.serialization.Serializer;
 import java.util.Map;
 
 public class JsonSerde<T> implements Serde<T> {
-    private JsonSerializer<T> serializer;
-    private JsonDeserializer<T> deserializer;
-
-    public JsonSerde() { }
+    private final JsonSerializer<T> serializer;
+    private final JsonDeserializer<T> deserializer;
 
     public JsonSerde(Class<T> c) {
         serializer = new JsonSerializer<>();

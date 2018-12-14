@@ -3,6 +3,7 @@ package net.jackw.olep.common;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -25,6 +26,7 @@ class SharedCustomerMapStore implements WritableKeyValueStore<DistrictSpecificKe
     }
 
     @Nullable
+    @CanIgnoreReturnValue
     @Override
     public CustomerShared put(DistrictSpecificKey key, @Nonnull CustomerShared value) {
         nameMultimap.put(value.getNameKey(), value);
@@ -32,6 +34,7 @@ class SharedCustomerMapStore implements WritableKeyValueStore<DistrictSpecificKe
     }
 
     @Nullable
+    @CanIgnoreReturnValue
     @Override
     public CustomerShared remove(DistrictSpecificKey key) {
         CustomerShared value = idMap.remove(key);
@@ -51,6 +54,10 @@ class SharedCustomerMapStore implements WritableKeyValueStore<DistrictSpecificKe
     public CustomerShared get(DistrictSpecificKey key) {
         return idMap.get(key);
     }
+
+
+    //// Customer-specific methods ////
+
 
     private Ordering<CustomerShared> nameOrdering = new Ordering<>() {
         @Override

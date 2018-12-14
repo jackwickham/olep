@@ -3,6 +3,7 @@ package net.jackw.olep.common;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.junit.Test;
 
 import java.util.Objects;
@@ -51,6 +52,27 @@ public class JsonDeserializerTest {
         assertEquals(new Target(200, "Hello, world"), t);
     }
 
+    @Test
+    public void testJsonSerdeReturnsWorkingDeserializerFromClass() {
+        byte[] data = "{\"n\":200}".getBytes(UTF_8);
+        Deserializer<Target> deserializer = new JsonSerde<>(Target.class).deserializer();
+
+        Target result = deserializer.deserialize("topic", data);
+
+        assertEquals(new Target(200, null), result);
+    }
+
+    @Test
+    public void testJsonSerdeReturnsWorkingDeserializerFromTypeReference() {
+        byte[] data = "{\"n\":200}".getBytes(UTF_8);
+        Deserializer<Target> deserializer = new JsonSerde<>(new TypeReference<Target>() {}).deserializer();
+
+        Target result = deserializer.deserialize("topic", data);
+
+        assertEquals(new Target(200, null), result);
+    }
+
+    @SuppressWarnings("EqualsHashCode")
     public static class Target {
         public Integer n = 100;
         public String s = null;
