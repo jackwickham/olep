@@ -13,7 +13,7 @@ import java.util.Set;
 
 @Immutable
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PaymentRequest extends TransactionRequestMessage implements ModificationMessage {
+public class PaymentRequest extends TransactionRequestMessage {
     public final int warehouseId;
     public final int districtId;
     public final Integer customerId;

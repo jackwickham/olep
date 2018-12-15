@@ -12,6 +12,7 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
+import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -66,11 +67,11 @@ public class PaymentProcessor extends BaseTransactionProcessor<Long, PaymentRequ
             CustomerShared customer;
             if (value.customerId != null) {
                 customer = customerImmutableStore.getBlocking(
-                    new DistrictSpecificKey(value.customerId, value.districtId, value.warehouseId)
+                    new DistrictSpecificKey(value.customerId, value.customerDistrictId, value.customerWarehouseId)
                 );
             } else {
                 customer = customerImmutableStore.getBlocking(
-                    new CustomerNameKey(value.warehouseId, value.districtId, value.customerSurname)
+                    new CustomerNameKey(value.customerWarehouseId, value.customerDistrictId, value.customerSurname)
                 );
             }
 
@@ -96,12 +97,15 @@ public class PaymentProcessor extends BaseTransactionProcessor<Long, PaymentRequ
 
             WarehouseShared warehouse = warehouseImmutableStore.getBlocking(value.warehouseId);
             DistrictShared district = districtImmutableStore.getBlocking(
-                new WarehouseSpecificKey(value.warehouseId, value.districtId)
+                new WarehouseSpecificKey(value.districtId, value.warehouseId)
             );
 
             results.warehouseAddress = warehouse.address;
             results.districtAddress = district.address;
             results.customerId = customer.id;
+            results.customerFirstName = customer.firstName;
+            results.customerMiddleName = customer.middleName;
+            results.customerLastName = customer.lastName;
             results.customerAddress = customer.address;
             results.customerPhone = customer.phone;
             results.customerSince = customer.since;
@@ -117,7 +121,10 @@ public class PaymentProcessor extends BaseTransactionProcessor<Long, PaymentRequ
             sendResults(key, results);
 
             // The PaymentRequest is also the modification record, so just send that to the modification log
-            sendModification(key, value);
+            sendModification(key, new PaymentModification(
+                value.warehouseId, value.districtId, customer.id, value.customerWarehouseId,
+                value.customerDistrictId, value.amount, customerMutable.balance, customerMutable.data
+            ));
 
             // TPC-C says we should create a history record (and cast it into the abyss)
             // We could do that, but for now it can be derived by a consumer if they so desire

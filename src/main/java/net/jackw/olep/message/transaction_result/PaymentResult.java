@@ -42,8 +42,8 @@ public class PaymentResult extends TransactionResultMessage {
         public PaymentResult build() {
             return new PaymentResult(
                 warehouseId, warehouseAddress, districtId, districtAddress, customerWarehouseId, customerDistrictId,
-                customerId, customerAddress, customerPhone, customerSince, customerCredit, customerCreditLimit,
-                customerDiscount, customerBalance, customerData
+                customerId, customerFirstName, customerMiddleName, customerLastName, customerAddress, customerPhone,
+                customerSince, customerCredit, customerCreditLimit, customerDiscount, customerBalance, customerData
             );
         }
     }
@@ -52,6 +52,9 @@ public class PaymentResult extends TransactionResultMessage {
         public Address warehouseAddress;
         public Address districtAddress;
         public Integer customerId;
+        public String customerFirstName;
+        public String customerMiddleName;
+        public String customerLastName;
         public Address customerAddress;
         public String customerPhone;
         public Long customerSince;
@@ -69,6 +72,9 @@ public class PaymentResult extends TransactionResultMessage {
     public final int customerWarehouseId;
     public final int customerDistrictId;
     public final int customerId;
+    public final String customerFirstName;
+    public final String customerMiddleName;
+    public final String customerLastName;
     public final Address customerAddress;
     public final String customerPhone;
     public final long customerSince;
@@ -86,6 +92,9 @@ public class PaymentResult extends TransactionResultMessage {
         int customerWarehouseId,
         int customerDistrictId,
         int customerId,
+        String customerFirstName,
+        String customerMiddleName,
+        String customerLastName,
         Address customerAddress,
         String customerPhone,
         long customerSince,
@@ -102,6 +111,9 @@ public class PaymentResult extends TransactionResultMessage {
         this.customerWarehouseId = customerWarehouseId;
         this.customerDistrictId = customerDistrictId;
         this.customerId = customerId;
+        this.customerFirstName = customerFirstName;
+        this.customerMiddleName = customerMiddleName;
+        this.customerLastName = customerLastName;
         this.customerAddress = customerAddress;
         this.customerPhone = customerPhone;
         this.customerSince = customerSince;
@@ -122,6 +134,9 @@ public class PaymentResult extends TransactionResultMessage {
             .add("customerWarehouseId", customerWarehouseId)
             .add("customerDistrictId", customerDistrictId)
             .add("customerId", customerId)
+            .add("customerFirstName", customerFirstName)
+            .add("customerMiddleName", customerMiddleName)
+            .add("customerLastName", customerLastName)
             .add("customerAddress", customerAddress)
             .add("customerPhone", customerPhone)
             .add("customerSince", customerSince)
