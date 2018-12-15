@@ -148,13 +148,13 @@ public class WorkerApp extends StreamsApp {
         topology
             .addSource(
                 Topology.AutoOffsetReset.EARLIEST,
-                "accepted-transactions",
+                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
                 new TransactionWarehouseKey.KeyDeserializer(),
                 new JsonDeserializer<>(TransactionRequestMessage.class),
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC
             )
             // Process takes candidate transactions, and decides whether they are acceptable
-            .addProcessor("router", TransactionRouter::new, "accepted-transactions")
+            .addProcessor("router", TransactionRouter::new, KafkaConfig.ACCEPTED_TRANSACTION_TOPIC)
             // Each transaction type is routed to a different processor
             .addProcessor("new-order-processor", () -> new NewOrderProcessor(
                 itemConsumer.getStore(), warehouseConsumer.getStore(), districtConsumer.getStore(),
@@ -172,14 +172,14 @@ public class WorkerApp extends StreamsApp {
             .addStateStore(customerMutableStoreBuilder, "payment-processor")
             // The processors will write to the result and modification logs
             .addSink(
-                "modification-log",
+                KafkaConfig.MODIFICATION_LOG,
                 KafkaConfig.MODIFICATION_LOG,
                 Serdes.Long().serializer(),
                 new JsonSerializer<>(),
                 "new-order-processor", "payment-processor", "delivery-processor"
             )
             .addSink(
-                "transaction-results",
+                KafkaConfig.TRANSACTION_RESULT_TOPIC,
                 KafkaConfig.TRANSACTION_RESULT_TOPIC,
                 new TransactionResultKey.ResultKeySerializer(),
                 new JsonSerializer<>(),

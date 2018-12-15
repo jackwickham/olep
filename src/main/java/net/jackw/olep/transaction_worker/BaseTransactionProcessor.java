@@ -1,6 +1,7 @@
 package net.jackw.olep.transaction_worker;
 
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
+import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.transaction_result.PartialTransactionResult;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
@@ -42,7 +43,7 @@ public abstract class BaseTransactionProcessor<K, V> implements Processor<K, V> 
      * @param mod The modification
      */
     protected void sendModification(Long transactionId, ModificationMessage mod) {
-        context.forward(transactionId, mod, To.child("modification-log"));
+        context.forward(transactionId, mod, To.child(KafkaConfig.MODIFICATION_LOG));
     }
 
     /**
@@ -52,6 +53,10 @@ public abstract class BaseTransactionProcessor<K, V> implements Processor<K, V> 
      * @param result The results to send
      */
     protected void sendResults(Long transactionId, PartialTransactionResult result) {
-        context.forward(new TransactionResultKey(transactionId, false), result, To.child("transaction-results"));
+        context.forward(
+            new TransactionResultKey(transactionId, false),
+            result,
+            To.child(KafkaConfig.TRANSACTION_RESULT_TOPIC)
+        );
     }
 }
