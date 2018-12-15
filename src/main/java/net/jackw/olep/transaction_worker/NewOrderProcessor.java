@@ -122,8 +122,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRe
                     // Add the order line to the generated order
                     BigDecimal lineAmount = item.price.multiply(new BigDecimal(line.quantity));
                     OrderLine orderLine = new OrderLine(
-                        orderId, value.districtId, value.warehouseId, lineNumber, line.itemId,
-                        line.supplyingWarehouseId, line.quantity, lineAmount,
+                        lineNumber, line.itemId, line.supplyingWarehouseId, line.quantity, lineAmount,
                         stockShared.getDistrictInfo(value.districtId)
                     );
 
@@ -143,7 +142,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRe
                 // Forward the transaction to the modification log
                 // We might want to add extra data to the NewOrderModification here in future, depending on what is
                 // actually used by the views, but this corresponds with the event sourcing model
-                sendModification(key, new NewOrderModification(value, orderId));
+                sendModification(key, new NewOrderModification(value, orderBuilder.getLines(), orderId));
             }
 
             int nextLineNumber = 0;

@@ -8,10 +8,7 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 
 @Immutable
-public class OrderLine extends Record<OrderLineKey> {
-    public final int orderId;
-    public final int districtId;
-    public final int warehouseId;
+public class OrderLine {
     public final int lineNumber;
     public final int itemId;
     public final int supplyWarehouseId;
@@ -21,9 +18,6 @@ public class OrderLine extends Record<OrderLineKey> {
     @Nonnull public final String distInfo;
 
     public OrderLine(
-        @JsonProperty("orderId") int orderId,
-        @JsonProperty("districtId") int districtId,
-        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("lineNumber") int lineNumber,
         @JsonProperty("itemId") int itemId,
         @JsonProperty("supplyWarehouseId") int supplyWarehouseId,
@@ -32,9 +26,6 @@ public class OrderLine extends Record<OrderLineKey> {
         @JsonProperty("amount") @Nonnull BigDecimal amount,
         @JsonProperty("distInfo") @Nonnull String distInfo
     ) {
-        this.orderId = orderId;
-        this.districtId = districtId;
-        this.warehouseId = warehouseId;
         this.lineNumber = lineNumber;
         this.itemId = itemId;
         this.supplyWarehouseId = supplyWarehouseId;
@@ -45,13 +36,10 @@ public class OrderLine extends Record<OrderLineKey> {
     }
 
     public OrderLine(
-        int orderId, int districtId, int warehouseId, int lineNumber, int itemId, int supplyWarehouseId, int quantity,
-        @Nonnull BigDecimal amount, @Nonnull String distInfo
+        int lineNumber, int itemId, int supplyWarehouseId, int quantity, @Nonnull BigDecimal amount,
+        @Nonnull String distInfo
     ) {
-        this(
-            orderId, districtId, warehouseId, lineNumber, itemId, supplyWarehouseId, null, quantity, amount,
-            distInfo
-        );
+        this(lineNumber, itemId, supplyWarehouseId, null, quantity, amount, distInfo);
     }
 
     /**
@@ -61,13 +49,6 @@ public class OrderLine extends Record<OrderLineKey> {
      * @return A copy of this OrderLine, with OL_DELIVERY_D populated
      */
     public OrderLine withDeliveryDate(long date) {
-        return new OrderLine(
-            orderId, districtId, warehouseId, lineNumber, itemId, supplyWarehouseId, date, quantity, amount, distInfo
-        );
-    }
-
-    @Override
-    public OrderLineKey getKey() {
-        return new OrderLineKey(orderId, districtId, warehouseId, lineNumber);
+        return new OrderLine(lineNumber, itemId, supplyWarehouseId, date, quantity, amount, distInfo);
     }
 }

@@ -56,7 +56,7 @@ public class PaymentProcessorTest {
     private CustomerMutable customerMutable;
 
     @Before
-    public void setUp() {
+    public void setUp() throws InterruptedException {
         processor = new PaymentProcessor(warehouseImmutableStore, districtImmutableStore, customerImmutableStore, 3);
         context = new MockProcessorContext();
         customerMutableStore = Stores.keyValueStoreBuilder(
@@ -68,15 +68,8 @@ public class PaymentProcessorTest {
         context.register(customerMutableStore, null);
 
         processor.init(context);
-    }
 
-    @After
-    public void tearDown() {
-        customerMutableStore.close();
-    }
-
-    @Before
-    public void populateStores() throws InterruptedException {
+        // Populate stores
         // Warehouse
         warehouseShared = new WarehouseShared(
             1, "WH1", makeAddress("w"), new BigDecimal("0.15")
@@ -88,6 +81,12 @@ public class PaymentProcessorTest {
             2, 1, "D2", makeAddress("d"), new BigDecimal("0.077")
         );
         when(districtImmutableStore.getBlocking(new WarehouseSpecificKey(2, 1))).thenReturn(districtShared);
+
+    }
+
+    @After
+    public void tearDown() {
+        customerMutableStore.close();
     }
 
     private void insertCustomer(boolean goodCredit) throws InterruptedException {

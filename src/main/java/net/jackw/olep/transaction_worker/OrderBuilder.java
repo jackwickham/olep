@@ -39,7 +39,7 @@ public class OrderBuilder {
      */
     public void addOrderLine(OrderLine line) {
         orderLines.add(line);
-        if (line.warehouseId != warehouseId) {
+        if (line.supplyWarehouseId != warehouseId) {
             allLocal = false;
         }
         totalAmount = totalAmount.add(line.amount);
@@ -60,5 +60,12 @@ public class OrderBuilder {
      */
     public NewOrder buildNewOrder() {
         return new NewOrder(orderId, warehouseId, districtId, customerId, totalAmount);
+    }
+
+    /**
+     * Get the order lines associated with this order
+     */
+    public ImmutableList<OrderLine> getLines() {
+        return ImmutableList.copyOf(orderLines);
     }
 }
