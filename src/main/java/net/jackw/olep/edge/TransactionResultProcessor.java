@@ -18,19 +18,27 @@ public class TransactionResultProcessor {
      * Decode a JSON representation of a TransactionResult, and update the corresponding pending transaction
      *
      * @param value The raw JSON data to process
+     * @param pendingTransaction The PendingTransaction that this message is for
      * @return Whether this transaction is now complete (no outstanding result messages)
      */
-    public boolean process(boolean approvalMessage, byte[] value, PendingTransaction<?, ?> pendingTransaction) {
-        if (approvalMessage) {
-            // We just have the approval result, so update the pending transaction with this result
-            ApprovalMessage result = approvalDeserializer.deserialize(value);
-            pendingTransaction.setAccepted(result.approved);
-            return false;
-        } else {
-            // We have data about the transaction itself, so we need to update the result builder with the new info
-            transactionResultDeserializer.deserialize(value, pendingTransaction.getTransactionResultBuilder());
-            // Then notify the transaction that we have done so
-            return pendingTransaction.builderUpdated();
-        }
+    public boolean processResult(byte[] value, PendingTransaction<?, ?> pendingTransaction) {
+        // We have data about the transaction itself, so we need to update the result builder with the new info
+        transactionResultDeserializer.deserialize(value, pendingTransaction.getTransactionResultBuilder());
+        // Then notify the transaction that we have done so
+        return pendingTransaction.builderUpdated();
+    }
+
+    /**
+     * Decode the JSON for a transaction approval message, and update the corresponding pending transaction
+     *
+     * @param value The raw JSON data to process
+     * @param pendingTransaction The PendingTransaction that this message is for
+     * @return Whether to expect more messages about this transaction
+     */
+    public boolean processApprovalMessage(byte[] value, PendingTransaction<?, ?> pendingTransaction) {
+        // update the pending transaction with this result
+        ApprovalMessage result = approvalDeserializer.deserialize(value);
+        pendingTransaction.setAccepted(result.approved);
+        return !result.approved;
     }
 }

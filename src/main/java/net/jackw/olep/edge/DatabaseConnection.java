@@ -43,6 +43,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.jackw.olep.common.KafkaConfig.TRANSACTION_REQUEST_TOPIC;
 import static net.jackw.olep.common.KafkaConfig.TRANSACTION_RESULT_TOPIC;
@@ -231,12 +232,18 @@ public class DatabaseConnection implements Closeable {
                                 log.debug("Received duplicate result for completed transaction {}", transactionId);
                             }
                         } else {
-                            log.debug("Received message");
-                            boolean complete = transactionResultProcessor.process(
-                                record.key().approvalMessage, record.value(), pendingTransaction
-                            );
+                            log.debug("Received {} message", record.key().approvalMessage ? "approval" : "result");
+                            boolean complete;
+                            if (record.key().approvalMessage) {
+                                complete = transactionResultProcessor.processApprovalMessage(record.value(), pendingTransaction);
+                            } else {
+                                complete = transactionResultProcessor.processResult(record.value(), pendingTransaction);
+                            }
 
                             if (complete) {
+                                // Not expecting any more messages about this transaction, so stop keeping track of the
+                                // pending transaction, but add the ID to the set of recently completed transactions so
+                                // we can handle any duplicate messages
                                 pendingTransactions.remove(transactionId);
                                 recentlyCompletedTransactions.add(transactionId);
                             }
@@ -249,15 +256,17 @@ public class DatabaseConnection implements Closeable {
         }
     }
 
-    private int lastTransactionId = 0;
+    private final AtomicInteger lastTransactionId = new AtomicInteger(0);
 
     /**
-     * Generate a new transaction ID
+     * Generate a new transaction ID, thread safely
+     *
+     * This method is guaranteed to generate 2^32 unique transaction IDs per connection
      *
      * @return A globally unique transaction ID
      */
     private long nextTransactionId() {
-        return (Integer.toUnsignedLong(++lastTransactionId) << 32) | Integer.toUnsignedLong(connectionId);
+        return (Integer.toUnsignedLong(lastTransactionId.incrementAndGet()) << 32) | Integer.toUnsignedLong(connectionId);
     }
 
     private static Logger log = LogManager.getLogger();
