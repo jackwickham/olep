@@ -13,7 +13,6 @@ public class WarehouseShared extends Record<Integer> {
     @Nonnull public final String name;
     @Nonnull public final Address address;
     @Nonnull public final BigDecimal tax;
-    // ytd is worker-local
 
     public WarehouseShared(
         @JsonProperty("id") int id,

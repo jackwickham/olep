@@ -128,6 +128,6 @@ public class SharedCustomerMapStoreTest {
 
     @Test(expected = StoreKeyMissingException.class)
     public void testGetBlockingThrowsExceptionIfNoResultAppears() throws InterruptedException {
-        store.getBlocking(new CustomerNameKey(1, 1, "TEST"), 2);
+        store.getBlocking(new CustomerNameKey("TEST", 1, 1), 2);
     }
 }

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
-import net.jackw.olep.message.modification.ModificationMessage;
 
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -14,51 +13,51 @@ import java.util.Set;
 @Immutable
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PaymentRequest extends TransactionRequestMessage {
-    public final int warehouseId;
     public final int districtId;
+    public final int warehouseId;
     public final Integer customerId;
-    public final String customerSurname;
-    public final int customerWarehouseId;
+    public final String customerLastName;
     public final int customerDistrictId;
+    public final int customerWarehouseId;
     public final BigDecimal amount;
 
     public PaymentRequest(
-        int warehouseId,
         int districtId,
+        int warehouseId,
         int customerId,
-        int customerWarehouseId,
         int customerDistrictId,
+        int customerWarehouseId,
         BigDecimal amount
     ) {
-        this(warehouseId, districtId, customerId, null, customerWarehouseId, customerDistrictId, amount);
+        this(districtId, warehouseId, customerId, null, customerDistrictId, customerWarehouseId, amount);
     }
 
     public PaymentRequest(
-        int warehouseId,
         int districtId,
-        String customerSurname,
-        int customerWarehouseId,
+        int warehouseId,
+        String customerLastName,
         int customerDistrictId,
+        int customerWarehouseId,
         BigDecimal amount
     ) {
-        this(warehouseId, districtId, null, customerSurname, customerWarehouseId, customerDistrictId, amount);
+        this(districtId, warehouseId, null, customerLastName, customerDistrictId, customerWarehouseId, amount);
     }
 
     public PaymentRequest(
-        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,
+        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("customerId") Integer customerId,
-        @JsonProperty("customerSurname") String customerSurname,
-        @JsonProperty("customerWarehouseId") int customerWarehouseId,
+        @JsonProperty("customerLastName") String customerLastName,
         @JsonProperty("customerDistrictId") int customerDistrictId,
+        @JsonProperty("customerWarehouseId") int customerWarehouseId,
         @JsonProperty("amount") BigDecimal amount
     ) {
-        this.warehouseId = warehouseId;
         this.districtId = districtId;
+        this.warehouseId = warehouseId;
         this.customerId = customerId;
-        this.customerSurname = customerSurname;
-        this.customerWarehouseId = customerWarehouseId;
+        this.customerLastName = customerLastName;
         this.customerDistrictId = customerDistrictId;
+        this.customerWarehouseId = customerWarehouseId;
         this.amount = amount;
     }
 
@@ -71,12 +70,12 @@ public class PaymentRequest extends TransactionRequestMessage {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("warehouseId", warehouseId)
             .add("districtId", districtId)
+            .add("warehouseId", warehouseId)
             .add("customerId", customerId)
-            .add("customerSurname", customerSurname)
-            .add("customerWarehouseId", customerWarehouseId)
+            .add("customerLastName", customerLastName)
             .add("customerDistrictId", customerDistrictId)
+            .add("customerWarehouseId", customerWarehouseId)
             .add("amount", amount)
             .toString();
     }
@@ -91,19 +90,19 @@ public class PaymentRequest extends TransactionRequestMessage {
             customerWarehouseId == that.customerWarehouseId &&
             customerDistrictId == that.customerDistrictId &&
             Objects.equals(customerId, that.customerId) &&
-            Objects.equals(customerSurname, that.customerSurname) &&
+            Objects.equals(customerLastName, that.customerLastName) &&
             Objects.equals(amount, that.amount);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(
-            warehouseId,
             districtId,
+            warehouseId,
             customerId,
-            customerSurname,
-            customerWarehouseId,
+            customerLastName,
             customerDistrictId,
+            customerWarehouseId,
             amount
         );
     }

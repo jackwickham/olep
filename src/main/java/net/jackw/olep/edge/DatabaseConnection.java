@@ -139,13 +139,13 @@ public class DatabaseConnection implements Closeable {
      * Send a New-Order transaction
      */
     public TransactionStatus<NewOrderResult> newOrder(
-        int customerId, int warehouseId, int districtId, List<NewOrderRequest.OrderLine> lines
+        int customerId, int districtId, int warehouseId, List<NewOrderRequest.OrderLine> lines
     ) {
         long orderDate = new Date().getTime();
         NewOrderRequest msgBody = new NewOrderRequest(
-            customerId, warehouseId, districtId, ImmutableList.copyOf(lines), orderDate
+            customerId, districtId, warehouseId, ImmutableList.copyOf(lines), orderDate
         );
-        return send(msgBody, new NewOrderResult.Builder(warehouseId, districtId, customerId, orderDate, lines))
+        return send(msgBody, new NewOrderResult.Builder(customerId, districtId, warehouseId, orderDate, lines))
             .getTransactionStatus();
     }
 
@@ -153,14 +153,14 @@ public class DatabaseConnection implements Closeable {
      * Send a Payment transaction by customer ID
      */
     public TransactionStatus<PaymentResult> payment(
-        int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, int customerId,
+        int districtId, int warehouseId, int customerId, int customerDistrictId, int customerWarehouseId,
         BigDecimal amount
     ) {
         PaymentRequest msgBody = new PaymentRequest(
-            warehouseId, districtId, customerId, customerWarehouseId, customerDistrictId, amount
+            districtId, warehouseId, customerId, customerDistrictId, customerWarehouseId, amount
         );
         return send(msgBody, new PaymentResult.Builder(
-            warehouseId, districtId, customerWarehouseId, customerDistrictId, customerId
+            districtId, warehouseId, customerId, customerDistrictId, customerWarehouseId
         )).getTransactionStatus();
     }
 
@@ -168,14 +168,14 @@ public class DatabaseConnection implements Closeable {
      * Send a Payment transaction by customer last name
      */
     public TransactionStatus<PaymentResult> payment(
-        int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, String customerSurname,
+        int districtId, int warehouseId, String customerLastName, int customerDistrictId, int customerWarehouseId,
         BigDecimal amount
     ) {
         PaymentRequest msgBody = new PaymentRequest(
-            warehouseId, districtId, customerSurname, customerWarehouseId, customerDistrictId, amount
+            districtId, warehouseId, customerLastName, customerDistrictId, customerWarehouseId, amount
         );
         return send(msgBody, new PaymentResult.Builder(
-            warehouseId, districtId, customerWarehouseId, customerDistrictId
+            districtId, warehouseId, customerDistrictId, customerWarehouseId
         )).getTransactionStatus();
     }
 

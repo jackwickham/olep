@@ -169,7 +169,7 @@ public class NewOrderProcessorTest {
 
     @Test
     public void testHomeWarehouseAddsToModificationLog() {
-        NewOrderRequest request = new NewOrderRequest(5, 3, 4, ImmutableList.of(
+        NewOrderRequest request = new NewOrderRequest(5, 4, 3, ImmutableList.of(
             new NewOrderRequest.OrderLine(0, 4, 3),
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);
@@ -219,7 +219,7 @@ public class NewOrderProcessorTest {
 
     @Test
     public void testHomeWarehouseResultsContainAlmostAllDetails() {
-        NewOrderRequest request = new NewOrderRequest(5, 3, 4, ImmutableList.of(
+        NewOrderRequest request = new NewOrderRequest(5, 4, 3, ImmutableList.of(
             new NewOrderRequest.OrderLine(0, 4, 3),
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);
@@ -229,7 +229,7 @@ public class NewOrderProcessorTest {
             context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC).get(0).keyValue().value;
 
         assertEquals(1, (int) result.orderId);
-        assertEquals(customerShared.lastName, result.customerSurname);
+        assertEquals(customerShared.lastName, result.customerLastName);
         assertEquals(customerShared.credit, result.credit);
         assertEquals(customerShared.discount, result.discount);
         assertEquals(warehouseShared.tax, result.warehouseTax);
@@ -262,7 +262,7 @@ public class NewOrderProcessorTest {
             context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC).get(0).keyValue().value;
 
         assertNull(result.orderId);
-        assertNull(result.customerSurname);
+        assertNull(result.customerLastName);
         assertNull(result.credit);
         assertNull(result.discount);
         assertNull(result.warehouseTax);
@@ -283,7 +283,7 @@ public class NewOrderProcessorTest {
 
     @Test
     public void testResultsMergedWhenDispatchedFromHomeWarehouse() {
-        NewOrderRequest request = new NewOrderRequest(5, 3, 4, ImmutableList.of(
+        NewOrderRequest request = new NewOrderRequest(5, 4, 3, ImmutableList.of(
             new NewOrderRequest.OrderLine(0, 3, 3),
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);
@@ -296,7 +296,7 @@ public class NewOrderProcessorTest {
 
         // Make sure the regular data was still populated
         assertEquals(1, (int) result.orderId);
-        assertEquals(customerShared.lastName, result.customerSurname);
+        assertEquals(customerShared.lastName, result.customerLastName);
 
         assertThat(result.getLines().values(), Matchers.hasSize(2));
         // The first line should be fully populated
@@ -316,7 +316,7 @@ public class NewOrderProcessorTest {
     @Test
     public void orderIdIncrementedAndWrittenToStore() {
         WarehouseSpecificKey districtKey = new WarehouseSpecificKey(4, 3);
-        NewOrderRequest request = new NewOrderRequest(5, 3, 4, ImmutableList.of(), 5L);
+        NewOrderRequest request = new NewOrderRequest(5, 4, 3, ImmutableList.of(), 5L);
         processor.process(50L, request);
 
         NewOrderResult.PartialResult result = (NewOrderResult.PartialResult)
@@ -336,7 +336,7 @@ public class NewOrderProcessorTest {
     @Test
     public void testOrderInsertedIntoNewOrdersStore() {
         WarehouseSpecificKey districtKey = new WarehouseSpecificKey(4, 3);
-        NewOrderRequest request = new NewOrderRequest(5, 3, 4, ImmutableList.of(
+        NewOrderRequest request = new NewOrderRequest(5, 4, 3, ImmutableList.of(
             new NewOrderRequest.OrderLine(0, 4, 3),
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);

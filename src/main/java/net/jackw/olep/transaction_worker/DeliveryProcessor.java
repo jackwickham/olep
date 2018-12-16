@@ -45,7 +45,7 @@ public class DeliveryProcessor extends BaseTransactionProcessor<Long, DeliveryRe
             results.processedOrders.put(i, order.orderId);
 
             sendModification(key, new DeliveryModification(
-                value.warehouseId, i, order.orderId, value.carrierId, order.customerId, order.totalAmount
+                order.orderId, i, value.warehouseId, value.carrierId, order.customerId, order.totalAmount
             ));
         }
 

@@ -1,5 +1,6 @@
 package net.jackw.olep.common.records;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.errorprone.annotations.Immutable;
 
 /**
@@ -14,6 +15,7 @@ public abstract class Record<K> {
      *
      * This is usually the primary key as defined in TPC-C
      */
+    @JsonIgnore
     public abstract K getKey();
 
     @Override

@@ -99,7 +99,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRe
 
                 // Send the client the results general results
                 results.orderId = orderId;
-                results.customerSurname = customer.lastName;
+                results.customerLastName = customer.lastName;
                 results.credit = customer.credit;
                 results.discount = customer.discount;
                 results.warehouseTax = warehouse.tax;

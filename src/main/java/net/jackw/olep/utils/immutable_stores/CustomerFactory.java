@@ -24,7 +24,7 @@ public class CustomerFactory {
     private CustomerFactory(DistrictShared district) {
         nextId = 1;
         rand = new RandomDataGenerator();
-        warehouseId = district.wId;
+        warehouseId = district.warehouseId;
         districtId = district.id;
     }
 

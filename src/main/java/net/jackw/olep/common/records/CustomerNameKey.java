@@ -7,18 +7,18 @@ import java.util.Objects;
 
 @Immutable
 public class CustomerNameKey {
-    public final int warehouseId;
-    public final int districtId;
     public final String lastName;
+    public final int districtId;
+    public final int warehouseId;
 
     public CustomerNameKey(
-        int warehouseId,
+        String lastName,
         int districtId,
-        String lastName
+        int warehouseId
     ) {
-        this.warehouseId = warehouseId;
-        this.districtId = districtId;
         this.lastName = lastName;
+        this.districtId = districtId;
+        this.warehouseId = warehouseId;
     }
 
     @Override
@@ -39,9 +39,9 @@ public class CustomerNameKey {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("warehouseId", warehouseId)
-            .add("districtId", districtId)
             .add("name", lastName)
+            .add("districtId", districtId)
+            .add("warehouseId", warehouseId)
             .toString();
     }
 }

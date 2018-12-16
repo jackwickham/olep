@@ -12,24 +12,24 @@ import java.util.Objects;
  */
 @Immutable
 public class DeliveryModification implements ModificationMessage {
-    public final int warehouseId;
-    public final int districtId;
     public final int orderId;
+    public final int districtId;
+    public final int warehouseId;
     public final int carrierId;
     public final int customerId;
     public final BigDecimal orderTotal;
 
     public DeliveryModification(
-        @JsonProperty("warehouseId") int warehouseId,
-        @JsonProperty("districtId") int districtId,
         @JsonProperty("orderId") int orderId,
+        @JsonProperty("districtId") int districtId,
+        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("carrierId") int carrierId,
         @JsonProperty("customerId") int customerId,
         @JsonProperty("orderTotal") BigDecimal orderTotal
     ) {
-        this.warehouseId = warehouseId;
-        this.districtId = districtId;
         this.orderId = orderId;
+        this.districtId = districtId;
+        this.warehouseId = warehouseId;
         this.carrierId = carrierId;
         this.customerId = customerId;
         this.orderTotal = orderTotal;
@@ -37,7 +37,7 @@ public class DeliveryModification implements ModificationMessage {
 
     @Override
     public int hashCode() {
-        return Objects.hash(warehouseId, districtId, orderId, carrierId, customerId, orderTotal);
+        return Objects.hash(orderId, districtId, warehouseId, carrierId, customerId, orderTotal);
     }
 
     @Override
@@ -54,9 +54,9 @@ public class DeliveryModification implements ModificationMessage {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("warehouseId", warehouseId)
-            .add("districtId", districtId)
             .add("orderId", orderId)
+            .add("districtId", districtId)
+            .add("warehouseId", warehouseId)
             .add("carrierId", carrierId)
             .add("customerId", customerId)
             .add("orderTotal", orderId)

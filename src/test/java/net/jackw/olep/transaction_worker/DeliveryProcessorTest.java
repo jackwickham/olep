@@ -69,16 +69,16 @@ public class DeliveryProcessorTest {
         DeliveryRequest request = new DeliveryRequest(1, 18, 1L);
 
         ArrayDeque<NewOrder> pendingOrders3 = new ArrayDeque<>(2);
-        pendingOrders3.add(new NewOrder(5, 1, 3, 14, new BigDecimal("28.73")));
-        pendingOrders3.add(new NewOrder(6, 1, 3, 2, BigDecimal.TEN));
+        pendingOrders3.add(new NewOrder(5, 3, 1, 14, new BigDecimal("28.73")));
+        pendingOrders3.add(new NewOrder(6, 3, 1, 2, BigDecimal.TEN));
         newOrdersStore.put(new WarehouseSpecificKey(3, 1), pendingOrders3);
 
         ArrayDeque<NewOrder> pendingOrders5 = new ArrayDeque<>(1);
-        pendingOrders5.add(new NewOrder(11, 1, 5, 1, new BigDecimal("11.11")));
+        pendingOrders5.add(new NewOrder(11, 5, 1, 1, new BigDecimal("11.11")));
         newOrdersStore.put(new WarehouseSpecificKey(5, 1), pendingOrders5);
 
         ArrayDeque<NewOrder> pendingOrdersInOtherWarehouse = new ArrayDeque<>(1);
-        pendingOrders3.add(new NewOrder(12, 2, 1, 1, BigDecimal.TEN));
+        pendingOrders3.add(new NewOrder(12, 1, 2, 1, BigDecimal.TEN));
         newOrdersStore.put(new WarehouseSpecificKey(1, 2), pendingOrdersInOtherWarehouse);
 
         processor.process(1L, request);
@@ -94,12 +94,12 @@ public class DeliveryProcessorTest {
             new ForwardedMessageMatcher<>(
                 KafkaConfig.MODIFICATION_LOG,
                 1L,
-                new DeliveryModification(1, 3, 5, 18, 14, new BigDecimal("28.73"))
+                new DeliveryModification(5, 3, 1, 18, 14, new BigDecimal("28.73"))
             ),
             new ForwardedMessageMatcher<>(
                 KafkaConfig.MODIFICATION_LOG,
                 1L,
-                new DeliveryModification(1, 5, 11, 18, 1, new BigDecimal("11.11"))
+                new DeliveryModification(11, 5, 1, 18, 1, new BigDecimal("11.11"))
             )
         ));
     }

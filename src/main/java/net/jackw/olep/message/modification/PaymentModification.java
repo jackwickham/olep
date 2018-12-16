@@ -9,30 +9,30 @@ import java.util.Objects;
 
 @Immutable
 public class PaymentModification implements ModificationMessage {
-    public final int warehouseId;
     public final int districtId;
+    public final int warehouseId;
     public final int customerId;
-    public final int customerWarehouseId;
     public final int customerDistrictId;
+    public final int customerWarehouseId;
     public final BigDecimal amount;
     public final BigDecimal balance;
     public final String customerData;
 
     public PaymentModification(
-        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,
+        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("customerId") int customerId,
-        @JsonProperty("customerWarehouseId") int customerWarehouseId,
         @JsonProperty("customerDistrictId") int customerDistrictId,
+        @JsonProperty("customerWarehouseId") int customerWarehouseId,
         @JsonProperty("amount") BigDecimal amount,
         @JsonProperty("balance") BigDecimal balance,
         @JsonProperty("customerData") String customerData
     ) {
-        this.warehouseId = warehouseId;
         this.districtId = districtId;
+        this.warehouseId = warehouseId;
         this.customerId = customerId;
-        this.customerWarehouseId = customerWarehouseId;
         this.customerDistrictId = customerDistrictId;
+        this.customerWarehouseId = customerWarehouseId;
         this.amount = amount;
         this.balance = balance;
         this.customerData = customerData;
@@ -41,11 +41,11 @@ public class PaymentModification implements ModificationMessage {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("warehouseId", warehouseId)
             .add("districtId", districtId)
+            .add("warehouseId", warehouseId)
             .add("customerId", customerId)
-            .add("customerWarehouseId", customerWarehouseId)
             .add("customerDistrictId", customerDistrictId)
+            .add("customerWarehouseId", customerWarehouseId)
             .add("amount", amount)
             .add("balance", balance)
             .add("customerData", customerData)
@@ -73,11 +73,11 @@ public class PaymentModification implements ModificationMessage {
     @Override
     public int hashCode() {
         return Objects.hash(
-            warehouseId,
             districtId,
+            warehouseId,
             customerId,
-            customerWarehouseId,
             customerDistrictId,
+            customerWarehouseId,
             amount,
             balance,
             customerData

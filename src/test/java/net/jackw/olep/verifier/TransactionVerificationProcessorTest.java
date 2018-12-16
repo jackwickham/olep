@@ -45,7 +45,7 @@ public class TransactionVerificationProcessorTest {
 
     @Test
     public void testPaymentTransactionsAreApprovedAndForwardedToCustomersWarehouse() {
-        PaymentRequest paymentRequest = new PaymentRequest(1, 1, 1, 2, 1, BigDecimal.TEN);
+        PaymentRequest paymentRequest = new PaymentRequest(1, 1, 1, 1, 2, BigDecimal.TEN);
         processor.process(1L, paymentRequest);
 
         List<MockProcessorContext.CapturedForward> forwardedMessages = context.forwarded();

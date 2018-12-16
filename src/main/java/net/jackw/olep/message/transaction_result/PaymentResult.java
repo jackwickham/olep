@@ -11,23 +11,23 @@ import java.math.BigDecimal;
 @Immutable
 public class PaymentResult extends TransactionResultMessage {
     public static class Builder extends PartialResult implements TransactionResultBuilder<PaymentResult> {
-        private final int warehouseId;
         private final int districtId;
-        private final int customerWarehouseId;
+        private final int warehouseId;
         private final int customerDistrictId;
+        private final int customerWarehouseId;
 
         public Builder(
-            int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId, int customerId
+            int districtId, int warehouseId, int customerId, int customerDistrictId, int customerWarehouseId
         ) {
-            this(warehouseId, districtId, customerWarehouseId, customerDistrictId);
+            this(districtId, warehouseId, customerDistrictId, customerWarehouseId);
             this.customerId = customerId;
         }
 
-        public Builder(int warehouseId, int districtId, int customerWarehouseId, int customerDistrictId) {
-            this.warehouseId = warehouseId;
+        public Builder(int districtId, int warehouseId, int customerDistrictId, int customerWarehouseId) {
             this.districtId = districtId;
-            this.customerWarehouseId = customerWarehouseId;
+            this.warehouseId = warehouseId;
             this.customerDistrictId = customerDistrictId;
+            this.customerWarehouseId = customerWarehouseId;
         }
 
         @Override
@@ -41,16 +41,17 @@ public class PaymentResult extends TransactionResultMessage {
         @Override
         public PaymentResult build() {
             return new PaymentResult(
-                warehouseId, warehouseAddress, districtId, districtAddress, customerWarehouseId, customerDistrictId,
-                customerId, customerFirstName, customerMiddleName, customerLastName, customerAddress, customerPhone,
-                customerSince, customerCredit, customerCreditLimit, customerDiscount, customerBalance, customerData
+                districtId, districtAddress, warehouseId, warehouseAddress, customerId, customerDistrictId,
+                customerWarehouseId, customerFirstName, customerMiddleName, customerLastName, customerAddress,
+                customerPhone, customerSince, customerCredit, customerCreditLimit, customerDiscount, customerBalance,
+                customerData
             );
         }
     }
 
     public static class PartialResult implements PartialTransactionResult {
-        public Address warehouseAddress;
         public Address districtAddress;
+        public Address warehouseAddress;
         public Integer customerId;
         public String customerFirstName;
         public String customerMiddleName;
@@ -65,13 +66,13 @@ public class PaymentResult extends TransactionResultMessage {
         public String customerData;
     }
 
-    public final int warehouseId;
-    public final Address warehouseAddress;
     public final int districtId;
     public final Address districtAddress;
-    public final int customerWarehouseId;
-    public final int customerDistrictId;
+    public final int warehouseId;
+    public final Address warehouseAddress;
     public final int customerId;
+    public final int customerDistrictId;
+    public final int customerWarehouseId;
     public final String customerFirstName;
     public final String customerMiddleName;
     public final String customerLastName;
@@ -85,13 +86,13 @@ public class PaymentResult extends TransactionResultMessage {
     @Nullable public final String customerData;
 
     private PaymentResult(
-        int warehouseId,
-        Address warehouseAddress,
         int districtId,
         Address districtAddress,
-        int customerWarehouseId,
-        int customerDistrictId,
+        int warehouseId,
+        Address warehouseAddress,
         int customerId,
+        int customerDistrictId,
+        int customerWarehouseId,
         String customerFirstName,
         String customerMiddleName,
         String customerLastName,
@@ -104,13 +105,13 @@ public class PaymentResult extends TransactionResultMessage {
         BigDecimal customerBalance,
         @Nullable String customerData
     ) {
-        this.warehouseId = warehouseId;
-        this.warehouseAddress = warehouseAddress;
         this.districtId = districtId;
         this.districtAddress = districtAddress;
-        this.customerWarehouseId = customerWarehouseId;
-        this.customerDistrictId = customerDistrictId;
+        this.warehouseId = warehouseId;
+        this.warehouseAddress = warehouseAddress;
         this.customerId = customerId;
+        this.customerDistrictId = customerDistrictId;
+        this.customerWarehouseId = customerWarehouseId;
         this.customerFirstName = customerFirstName;
         this.customerMiddleName = customerMiddleName;
         this.customerLastName = customerLastName;
@@ -127,13 +128,13 @@ public class PaymentResult extends TransactionResultMessage {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("warehouseId", warehouseId)
-            .add("warehouseAddress", warehouseAddress)
             .add("districtId", districtId)
             .add("districtAddress", districtAddress)
-            .add("customerWarehouseId", customerWarehouseId)
-            .add("customerDistrictId", customerDistrictId)
+            .add("warehouseId", warehouseId)
+            .add("warehouseAddress", warehouseAddress)
             .add("customerId", customerId)
+            .add("customerDistrictId", customerDistrictId)
+            .add("customerWarehouseId", customerWarehouseId)
             .add("customerFirstName", customerFirstName)
             .add("customerMiddleName", customerMiddleName)
             .add("customerLastName", customerLastName)

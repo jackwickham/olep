@@ -22,20 +22,16 @@ public class TestApplication {
             for (int i = 0; i < 3; i++) {
                 final int itemId = rand.nextInt(200);
                 connection.newOrder(
-                    10,
-                    1,
-                    1,
-                    List.of(new NewOrderRequest.OrderLine(itemId, 2, 3))
+                    10, 1, 1, List.of(new NewOrderRequest.OrderLine(itemId, 2, 3))
                 ).register(new StatusPrinter<>("New-Order"));
 
                 connection.payment(
-                    1, 1, 1, 1, 10, new BigDecimal("31.20")
+                    1, 1, 10, 1, 1, new BigDecimal("31.20")
                 ).register(new StatusPrinter<>("Payment"));
 
                 connection.payment(
-                    6, 1, 3, 1,
-                    CommonFieldGenerators.generateLastName(rand, rand.uniform(0, 999)),
-                    new BigDecimal("31.20")
+                    1, 6, CommonFieldGenerators.generateLastName(rand, rand.uniform(0, 999)),
+                    1, 3, new BigDecimal("31.20")
                 ).register(new StatusPrinter<>("Payment+name"));
 
                 connection.delivery(1, rand.nextInt(500)).register(new StatusPrinter<>("delivery"));

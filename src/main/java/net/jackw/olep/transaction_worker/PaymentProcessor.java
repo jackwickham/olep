@@ -71,7 +71,7 @@ public class PaymentProcessor extends BaseTransactionProcessor<Long, PaymentRequ
                 );
             } else {
                 customer = customerImmutableStore.getBlocking(
-                    new CustomerNameKey(value.customerWarehouseId, value.customerDistrictId, value.customerSurname)
+                    new CustomerNameKey(value.customerLastName, value.customerDistrictId, value.customerWarehouseId)
                 );
             }
 
@@ -122,8 +122,8 @@ public class PaymentProcessor extends BaseTransactionProcessor<Long, PaymentRequ
 
             // The PaymentRequest is also the modification record, so just send that to the modification log
             sendModification(key, new PaymentModification(
-                value.warehouseId, value.districtId, customer.id, value.customerWarehouseId,
-                value.customerDistrictId, value.amount, customerMutable.balance, customerMutable.data
+                value.districtId, value.warehouseId, customer.id, value.customerDistrictId, value.customerWarehouseId,
+                value.amount, customerMutable.balance, customerMutable.data
             ));
 
             // TPC-C says we should create a history record (and cast it into the abyss)

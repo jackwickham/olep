@@ -13,21 +13,21 @@ import java.util.stream.Collectors;
 @Immutable
 public class NewOrderRequest extends TransactionRequestMessage {
     public final int customerId;
-    public final int warehouseId;
     public final int districtId;
+    public final int warehouseId;
     public final ImmutableList<OrderLine> lines;
     public final long date;
 
     public NewOrderRequest(
         @JsonProperty("customerId") int customerId,
-        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,
+        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("items") ImmutableList<OrderLine> lines,
         @JsonProperty("date") long date
     ) {
         this.customerId = customerId;
-        this.warehouseId = warehouseId;
         this.districtId = districtId;
+        this.warehouseId = warehouseId;
         this.lines = lines;
         this.date = date;
     }
@@ -63,8 +63,8 @@ public class NewOrderRequest extends TransactionRequestMessage {
     public String toString() {
         return MoreObjects.toStringHelper(this)
             .add("customerId", customerId)
-            .add("warehouseId", warehouseId)
             .add("districtId", districtId)
+            .add("warehouseId", warehouseId)
             .add("lines", lines)
             .add("date", date)
             .toString();
@@ -84,6 +84,6 @@ public class NewOrderRequest extends TransactionRequestMessage {
 
     @Override
     public int hashCode() {
-        return Objects.hash(customerId, warehouseId, districtId, lines, date);
+        return Objects.hash(customerId, districtId, warehouseId, lines, date);
     }
 }

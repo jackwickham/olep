@@ -18,12 +18,12 @@ import java.util.TreeMap;
 
 @Immutable
 public class NewOrderResult extends TransactionResultMessage {
-    public final int warehouseId;
-    public final int districtId;
     public final int customerId;
+    public final int districtId;
+    public final int warehouseId;
     public final long orderDate;
     public final int orderId;
-    public final String customerSurname;
+    public final String customerLastName;
     public final Credit credit;
     public final BigDecimal discount;
     public final BigDecimal warehouseTax;
@@ -31,16 +31,16 @@ public class NewOrderResult extends TransactionResultMessage {
     public final ImmutableList<OrderLineResult> lines;
 
     private NewOrderResult(
-        int warehouseId, int districtId, int customerId, long orderDate, int orderId, String customerSurname,
+        int customerId, int districtId, int warehouseId, long orderDate, int orderId, String customerLastName,
         Credit credit, BigDecimal discount, BigDecimal warehouseTax, BigDecimal districtTax,
         ImmutableList<OrderLineResult> lines
     ) {
-        this.warehouseId = warehouseId;
-        this.districtId = districtId;
         this.customerId = customerId;
+        this.districtId = districtId;
+        this.warehouseId = warehouseId;
         this.orderDate = orderDate;
         this.orderId = orderId;
-        this.customerSurname = customerSurname;
+        this.customerLastName = customerLastName;
         this.credit = credit;
         this.discount = discount;
         this.warehouseTax = warehouseTax;
@@ -51,12 +51,12 @@ public class NewOrderResult extends TransactionResultMessage {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("warehouseId", this.warehouseId)
-            .add("districtId", this.districtId)
             .add("customerId", this.customerId)
+            .add("districtId", this.districtId)
+            .add("warehouseId", this.warehouseId)
             .add("orderDate", new Date(this.orderDate))
             .add("orderId", this.orderId)
-            .add("customerSurname", this.customerSurname)
+            .add("customerLastName", this.customerLastName)
             .add("credit", this.credit)
             .add("discount", this.discount)
             .add("warehouseTax", this.warehouseTax)
@@ -67,17 +67,17 @@ public class NewOrderResult extends TransactionResultMessage {
 
 
     public static class Builder extends BasePartialResult implements TransactionResultBuilder<NewOrderResult> {
-        private final int warehouseId;
-        private final int districtId;
         private final int customerId;
+        private final int districtId;
+        private final int warehouseId;
         private final long orderDate;
 
         public Builder(
-            int warehouseId, int districtId, int customerId, long orderDate, List<NewOrderRequest.OrderLine> lines
+            int customerId, int districtId, int warehouseId, long orderDate, List<NewOrderRequest.OrderLine> lines
         ) {
-            this.warehouseId = warehouseId;
-            this.districtId = districtId;
             this.customerId = customerId;
+            this.districtId = districtId;
+            this.warehouseId = warehouseId;
             this.orderDate = orderDate;
 
             for (ListIterator<NewOrderRequest.OrderLine> it = lines.listIterator(); it.hasNext(); ) {
@@ -91,7 +91,7 @@ public class NewOrderResult extends TransactionResultMessage {
 
         @Override
         public boolean canBuild() {
-            return orderId != null && customerSurname != null && credit != null && discount != null &&
+            return orderId != null && customerLastName != null && credit != null && discount != null &&
                 warehouseTax != null && districtTax != null &&
                 getLines().values().stream().allMatch(OrderLineResult.Builder::canBuild);
         }
@@ -103,7 +103,7 @@ public class NewOrderResult extends TransactionResultMessage {
                 .collect(ImmutableList.toImmutableList());
 
             return new NewOrderResult(
-                warehouseId, districtId, customerId, orderDate, orderId, customerSurname, credit, discount,
+                customerId, districtId, warehouseId, orderDate, orderId, customerLastName, credit, discount,
                 warehouseTax, districtTax, lineResults
             );
         }
@@ -138,7 +138,7 @@ public class NewOrderResult extends TransactionResultMessage {
 
     public static abstract class BasePartialResult implements PartialTransactionResult {
         public Integer orderId;
-        public String customerSurname;
+        public String customerLastName;
         public Credit credit;
         public BigDecimal discount;
         public BigDecimal warehouseTax;

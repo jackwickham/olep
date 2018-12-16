@@ -59,7 +59,7 @@ public class OrderBuilder {
      * Get the NewOrder associated with this order
      */
     public NewOrder buildNewOrder() {
-        return new NewOrder(orderId, warehouseId, districtId, customerId, totalAmount);
+        return new NewOrder(orderId, districtId, warehouseId, customerId, totalAmount);
     }
 
     /**

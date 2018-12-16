@@ -72,15 +72,15 @@ public class PaymentProcessorTest {
         // Populate stores
         // Warehouse
         warehouseShared = new WarehouseShared(
-            1, "WH1", makeAddress("w"), new BigDecimal("0.15")
+            2, "WH1", makeAddress("w"), new BigDecimal("0.15")
         );
-        when(warehouseImmutableStore.getBlocking(1)).thenReturn(warehouseShared);
+        when(warehouseImmutableStore.getBlocking(2)).thenReturn(warehouseShared);
 
         // District
         districtShared = new DistrictShared(
-            2, 1, "D2", makeAddress("d"), new BigDecimal("0.077")
+            1, 2, "D2", makeAddress("d"), new BigDecimal("0.077")
         );
-        when(districtImmutableStore.getBlocking(new WarehouseSpecificKey(2, 1))).thenReturn(districtShared);
+        when(districtImmutableStore.getBlocking(new WarehouseSpecificKey(1, 2))).thenReturn(districtShared);
 
     }
 
@@ -92,7 +92,7 @@ public class PaymentProcessorTest {
     private void insertCustomer(boolean goodCredit) throws InterruptedException {
         // Customer
         customerShared = new CustomerShared(
-            3, 5, 4, "FIRST", "MIDDLE", "LAST", makeAddress("c"),
+            3, 4, 5, "FIRST", "MIDDLE", "LAST", makeAddress("c"),
             "1234", 500L, goodCredit ? Credit.GC : Credit.BC, new BigDecimal("101.01"), new BigDecimal("0.03")
         );
         customerMutable = new CustomerMutable(
@@ -189,7 +189,7 @@ public class PaymentProcessorTest {
         } else {
             newCustomerData = customerMutableStore.get(customerShared.getKey()).data;
             assertThat(newCustomerData, new CustomerDataMatcher(
-                3, 5, 4, 2, 1,
+                3, 4, 5, 1, 2,
                 new BigDecimal("67.89"), customerMutable.data
             ));
             assertEquals(newCustomerData.substring(0, 200), resultMessage.customerData);
@@ -297,6 +297,7 @@ public class PaymentProcessorTest {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void describeTo(Description description) {
             description.appendValueList(
                 "customerData(", ", ", ")",
