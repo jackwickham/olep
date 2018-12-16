@@ -25,11 +25,11 @@ public class TransactionRouter implements Processor<TransactionWarehouseKey, Tra
     @Override
     public void process(TransactionWarehouseKey key, TransactionRequestMessage value) {
         if (value instanceof NewOrderRequest) {
-            context.forward(key.transactionId, value, To.child("new-order-processor"));
+            context.forward(key, value, To.child("new-order-processor"));
         } else if (value instanceof PaymentRequest) {
-            context.forward(key.transactionId, value, To.child("payment-processor"));
+            context.forward(key, value, To.child("payment-processor"));
         } else if (value instanceof DeliveryRequest) {
-            context.forward(key.transactionId, value, To.child("delivery-processor"));
+            context.forward(key, value, To.child("delivery-processor"));
         } else {
             // Nothing more we can do here...
             throw new IllegalArgumentException("Couldn't route transaction of type " + value.getClass().getName());

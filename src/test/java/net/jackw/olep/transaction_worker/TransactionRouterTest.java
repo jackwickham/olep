@@ -32,39 +32,42 @@ public class TransactionRouterTest {
     @Test
     public void testNewOrdersRoutedToNewOrderProcessor() {
         NewOrderRequest request = new NewOrderRequest(1, 1, 1, ImmutableList.of(), 1L);
+        TransactionWarehouseKey key = new TransactionWarehouseKey(2L, 1);
 
-        router.process(new TransactionWarehouseKey(2L, 1), request);
+        router.process(key, request);
 
         List<MockProcessorContext.CapturedForward> forwardedMessages = context.forwarded();
 
         assertThat(forwardedMessages, Matchers.contains(
-            new ForwardedMessageMatcher<>("new-order-processor", 2L, request)
+            new ForwardedMessageMatcher<>("new-order-processor", key, request)
         ));
     }
 
     @Test
     public void testPaymentsRoutedToPaymentProcessor() {
         PaymentRequest request = new PaymentRequest(1, 1, 1, 1, 1, BigDecimal.TEN);
+        TransactionWarehouseKey key = new TransactionWarehouseKey(3L, 1);
 
-        router.process(new TransactionWarehouseKey(3L, 1), request);
+        router.process(key, request);
 
         List<MockProcessorContext.CapturedForward> forwardedMessages = context.forwarded();
 
         assertThat(forwardedMessages, Matchers.contains(
-            new ForwardedMessageMatcher<>("payment-processor", 3L, request)
+            new ForwardedMessageMatcher<>("payment-processor", key, request)
         ));
     }
 
     @Test
     public void testDeliveryRoutedToDeliveryProcessor() {
         DeliveryRequest request = new DeliveryRequest(1, 1, 1L);
+        TransactionWarehouseKey key = new TransactionWarehouseKey(4L, 1);
 
-        router.process(new TransactionWarehouseKey(4L, 1), request);
+        router.process(key, request);
 
         List<MockProcessorContext.CapturedForward> forwardedMessages = context.forwarded();
 
         assertThat(forwardedMessages, Matchers.contains(
-            new ForwardedMessageMatcher<>("delivery-processor", 4L, request)
+            new ForwardedMessageMatcher<>("delivery-processor", key, request)
         ));
     }
 

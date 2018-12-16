@@ -6,6 +6,7 @@ import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -14,24 +15,18 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 
-public class DeliveryProcessor extends BaseTransactionProcessor<Long, DeliveryRequest> {
-    private ProcessorContext context;
+public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest> {
     private NewOrdersStore newOrdersStore;
-
-    public DeliveryProcessor(int acceptedTransactionsPartitions) {
-        super(acceptedTransactionsPartitions);
-    }
 
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         super.init(context);
-        this.context = context;
         this.newOrdersStore = new NewOrdersStore((KeyValueStore) context.getStateStore(KafkaConfig.NEW_ORDER_STORE));
     }
 
     @Override
-    public void process(Long key, DeliveryRequest value) {
+    public void process(TransactionWarehouseKey key, DeliveryRequest value) {
         log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing delivery transaction {}", key);
         final DeliveryResult.PartialResult results = new DeliveryResult.PartialResult();
 

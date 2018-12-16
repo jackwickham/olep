@@ -8,6 +8,7 @@ import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import org.apache.kafka.streams.processor.MockProcessorContext;
@@ -34,7 +35,7 @@ public class DeliveryProcessorTest {
 
     @Before
     public void setUp() {
-        processor = new DeliveryProcessor(3);
+        processor = new DeliveryProcessor();
         context = new MockProcessorContext();
         newOrdersStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
@@ -51,7 +52,7 @@ public class DeliveryProcessorTest {
     public void testNothingDoneIfNoNewOrdersAvailable() {
         DeliveryRequest request = new DeliveryRequest(1, 1, 1L);
 
-        processor.process(1L, request);
+        processor.process(new TransactionWarehouseKey(1L, 1), request);
 
         List<MockProcessorContext.CapturedForward> forwardedMessages = context.forwarded();
 
@@ -81,7 +82,7 @@ public class DeliveryProcessorTest {
         pendingOrders3.add(new NewOrder(12, 1, 2, 1, BigDecimal.TEN));
         newOrdersStore.put(new WarehouseSpecificKey(1, 2), pendingOrdersInOtherWarehouse);
 
-        processor.process(1L, request);
+        processor.process(new TransactionWarehouseKey(1L, 1), request);
 
         List<MockProcessorContext.CapturedForward> forwardedMessages = context.forwarded();
 

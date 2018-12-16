@@ -19,6 +19,7 @@ import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import org.apache.kafka.common.serialization.Serdes;
@@ -72,7 +73,7 @@ public class NewOrderProcessorTest {
     @Before
     public void setUp() throws InterruptedException {
         processor = new NewOrderProcessor(
-            itemStore, warehouseImmutableStore, districtImmutableStore, customerImmutableStore, stockImmutableStore, 3
+            itemStore, warehouseImmutableStore, districtImmutableStore, customerImmutableStore, stockImmutableStore
         );
         context = new MockProcessorContext();
 
@@ -155,9 +156,6 @@ public class NewOrderProcessorTest {
         // Not populating the store for item 2
 
         // New orders is deliberately left empty
-
-        // Set partition for the message so warehouse 3 is associated with this processor
-        context.setPartition(0);
     }
 
     @After
@@ -173,7 +171,7 @@ public class NewOrderProcessorTest {
             new NewOrderRequest.OrderLine(0, 4, 3),
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);
-        processor.process(50L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         List<MockProcessorContext.CapturedForward> forwards = context.forwarded();
 
@@ -212,7 +210,7 @@ public class NewOrderProcessorTest {
     @Test
     public void testRemoteWarehouseDoesntAddToModificationLog() {
         NewOrderRequest request = new NewOrderRequest(5, 4, 4, ImmutableList.of(), 5L);
-        processor.process(50L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         assertThat(context.forwarded(KafkaConfig.MODIFICATION_LOG), Matchers.empty());
     }
@@ -223,7 +221,7 @@ public class NewOrderProcessorTest {
             new NewOrderRequest.OrderLine(0, 4, 3),
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);
-        processor.process(50L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         NewOrderResult.PartialResult result = (NewOrderResult.PartialResult)
             context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC).get(0).keyValue().value;
@@ -254,7 +252,7 @@ public class NewOrderProcessorTest {
             new NewOrderRequest.OrderLine(0, 3, 3),
             new NewOrderRequest.OrderLine(1, 3, 5)
         ), 5L);
-        processor.process(50L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         assertThat(context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC), Matchers.hasSize(1));
 
@@ -287,7 +285,7 @@ public class NewOrderProcessorTest {
             new NewOrderRequest.OrderLine(0, 3, 3),
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);
-        processor.process(50L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         assertThat(context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC), Matchers.hasSize(1));
 
@@ -317,7 +315,7 @@ public class NewOrderProcessorTest {
     public void orderIdIncrementedAndWrittenToStore() {
         WarehouseSpecificKey districtKey = new WarehouseSpecificKey(4, 3);
         NewOrderRequest request = new NewOrderRequest(5, 4, 3, ImmutableList.of(), 5L);
-        processor.process(50L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         NewOrderResult.PartialResult result = (NewOrderResult.PartialResult)
             context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC).get(0).keyValue().value;
@@ -325,7 +323,7 @@ public class NewOrderProcessorTest {
         assertEquals("First order id not persisted", 2, (int) nextOrderIdStore.get(districtKey));
 
         context.resetForwards();
-        processor.process(51L, request);
+        processor.process(new TransactionWarehouseKey(51L, 3), request);
 
         NewOrderResult.PartialResult result2 = (NewOrderResult.PartialResult)
             context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC).get(0).keyValue().value;
@@ -341,8 +339,8 @@ public class NewOrderProcessorTest {
             new NewOrderRequest.OrderLine(1, 4, 5)
         ), 5L);
 
-        processor.process(50L, request);
-        processor.process(51L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
+        processor.process(new TransactionWarehouseKey(51L, 3), request);
 
         ArrayDeque<NewOrder> newOrders = newOrdersStore.get(districtKey);
         assertThat(newOrders, Matchers.hasSize(2));
@@ -366,7 +364,7 @@ public class NewOrderProcessorTest {
         NewOrderRequest request = new NewOrderRequest(5, 4, 4, ImmutableList.of(
             new NewOrderRequest.OrderLine(2, 3, 3)
         ), 5L);
-        processor.process(50L, request);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         assertThat(context.forwarded(KafkaConfig.TRANSACTION_RESULT_TOPIC), Matchers.hasSize(1));
 

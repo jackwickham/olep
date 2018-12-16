@@ -8,7 +8,6 @@ import net.jackw.olep.common.SharedKeyValueStore;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerMutable;
-import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -16,6 +15,7 @@ import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import org.apache.kafka.streams.processor.MockProcessorContext;
@@ -57,7 +57,7 @@ public class PaymentProcessorTest {
 
     @Before
     public void setUp() throws InterruptedException {
-        processor = new PaymentProcessor(warehouseImmutableStore, districtImmutableStore, customerImmutableStore, 3);
+        processor = new PaymentProcessor(warehouseImmutableStore, districtImmutableStore, customerImmutableStore);
         context = new MockProcessorContext();
         customerMutableStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),
@@ -109,7 +109,7 @@ public class PaymentProcessorTest {
 
         // Run the transaction
         PaymentRequest request = new PaymentRequest(1, 2, 3, 4, 5, new BigDecimal("67.89"));
-        processor.process(10L, request);
+        processor.process(new TransactionWarehouseKey(10L, 2), request);
 
         // And test that it did the right thing
         List<MockProcessorContext.CapturedForward> forwards = context.forwarded();
@@ -123,7 +123,7 @@ public class PaymentProcessorTest {
 
         // Now we can actually run it
         PaymentRequest request = new PaymentRequest(1, 2, 3, 4, 5, new BigDecimal("67.89"));
-        processor.process(10L, request);
+        processor.process(new TransactionWarehouseKey(10L, 2), request);
 
         // And test that it did the right thing
         List<MockProcessorContext.CapturedForward> forwards = context.forwarded();
@@ -137,7 +137,7 @@ public class PaymentProcessorTest {
 
         // Now we can actually run it
         PaymentRequest request = new PaymentRequest(1, 2, "LAST", 4, 5, new BigDecimal("67.89"));
-        processor.process(10L, request);
+        processor.process(new TransactionWarehouseKey(10L, 2), request);
 
         // And test that it did the right thing
         List<MockProcessorContext.CapturedForward> forwards = context.forwarded();

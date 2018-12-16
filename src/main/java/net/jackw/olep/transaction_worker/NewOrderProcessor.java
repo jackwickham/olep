@@ -13,6 +13,7 @@ import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
+import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -27,8 +28,7 @@ import java.math.BigDecimal;
 /**
  * Process a New-Order transaction that affects this worker
  */
-public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRequest> {
-    private ProcessorContext context;
+public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest> {
     private LocalStore<WarehouseSpecificKey, Integer> nextOrderIdStore;
     private LocalStore<WarehouseSpecificKey, Integer> stockQuantityStore;
     private NewOrdersStore newOrdersStore;
@@ -46,10 +46,8 @@ public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRe
         SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore,
         SharedKeyValueStore<WarehouseSpecificKey, DistrictShared> districtImmutableStore,
         SharedKeyValueStore<DistrictSpecificKey, CustomerShared> customerImmutableStore,
-        SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore,
-        int acceptedTransactionsPartitions
+        SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore
     ) {
-        super(acceptedTransactionsPartitions);
         this.itemStore = itemStore;
         this.warehouseImmutableStore = warehouseImmutableStore;
         this.districtImmutableStore = districtImmutableStore;
@@ -61,7 +59,6 @@ public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRe
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         super.init(context);
-        this.context = context;
 
         this.nextOrderIdStore = new LocalStore<WarehouseSpecificKey, Integer>(
             (KeyValueStore) context.getStateStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE), 1
@@ -75,15 +72,13 @@ public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRe
     }
 
     @Override
-    public void process(Long key, NewOrderRequest value) {
+    public void process(TransactionWarehouseKey key, NewOrderRequest value) {
         log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing new-order transaction {}", key);
         try {
             final NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
 
-            boolean remote = true;
-            if (isProcessorForWarehouse(value.warehouseId, context)) {
-                // This worker is responsible for the home warehouse
-                remote = false;
+            if (key.warehouseId == value.warehouseId) {
+                // We need to process it for the home warehouse
 
                 WarehouseSpecificKey districtKey = new WarehouseSpecificKey(value.districtId, value.warehouseId);
 
@@ -149,7 +144,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor<Long, NewOrderRe
             for (NewOrderRequest.OrderLine line : value.lines) {
                 int lineNumber = nextLineNumber++;
 
-                if (!isProcessorForWarehouse(line.supplyingWarehouseId, context)) {
+                if (key.warehouseId != line.supplyingWarehouseId) {
                     // Not responsible for this warehouse
                     continue;
                 }
