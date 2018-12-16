@@ -38,18 +38,8 @@ public class Order extends Record<DistrictSpecificKey> {
         this.allLocal = allLocal;
     }
 
-    /**
-     * Create a copy of this order instance, but with the specified carrier ID
-     *
-     * @param carrierId The O_CARRIER_ID for this order
-     * @return A copy of this order, with carrierId set
-     */
-    public Order withCarrierId(int carrierId) {
-        return new Order(orderId, districtId, warehouseId, customerId, entryDate, carrierId, orderLines, allLocal);
-    }
-
     @Override
-    public DistrictSpecificKey getKey() {
+    protected DistrictSpecificKey makeKey() {
         return new DistrictSpecificKey(orderId, districtId, warehouseId);
     }
 }

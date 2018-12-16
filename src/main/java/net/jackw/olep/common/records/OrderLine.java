@@ -41,14 +41,4 @@ public class OrderLine {
     ) {
         this(lineNumber, itemId, supplyWarehouseId, null, quantity, amount, distInfo);
     }
-
-    /**
-     * Create a copy of this line, but with delivery date populated
-     *
-     * @param date The new delivery date
-     * @return A copy of this OrderLine, with OL_DELIVERY_D populated
-     */
-    public OrderLine withDeliveryDate(long date) {
-        return new OrderLine(lineNumber, itemId, supplyWarehouseId, date, quantity, amount, distInfo);
-    }
 }

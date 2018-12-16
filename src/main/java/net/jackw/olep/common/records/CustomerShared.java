@@ -58,13 +58,19 @@ public class CustomerShared extends Record<DistrictSpecificKey> {
         this.discount = discount;
     }
 
-    @Override @JsonIgnore
-    public DistrictSpecificKey getKey() {
+    @Override
+    protected DistrictSpecificKey makeKey() {
         return new DistrictSpecificKey(id, districtId, warehouseId);
     }
 
+    @SuppressWarnings("Immutable")
+    private CustomerNameKey nameKey = null;
+
     @JsonIgnore
     public CustomerNameKey getNameKey() {
-        return new CustomerNameKey(lastName, districtId, warehouseId);
+        if (nameKey == null) {
+            nameKey = new CustomerNameKey(lastName, districtId, warehouseId);
+        }
+        return nameKey;
     }
 }

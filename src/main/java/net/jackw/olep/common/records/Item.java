@@ -1,6 +1,5 @@
 package net.jackw.olep.common.records;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
@@ -32,8 +31,8 @@ public class Item extends Record<Integer> {
         this.data = data;
     }
 
-    @Override @JsonIgnore
-    public Integer getKey() {
+    @Override
+    protected Integer makeKey() {
         return id;
     }
 }

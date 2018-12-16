@@ -1,6 +1,5 @@
 package net.jackw.olep.common.records;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
@@ -26,8 +25,8 @@ public class WarehouseShared extends Record<Integer> {
         this.tax = tax;
     }
 
-    @Override @JsonIgnore
-    public Integer getKey() {
+    @Override
+    protected Integer makeKey() {
         return id;
     }
 }

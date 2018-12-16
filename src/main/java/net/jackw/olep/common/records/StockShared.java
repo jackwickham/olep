@@ -1,11 +1,9 @@
 package net.jackw.olep.common.records;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
 import javax.annotation.Nonnull;
-import java.util.Objects;
 
 @Immutable
 public class StockShared extends Record<WarehouseSpecificKey> {
@@ -75,8 +73,8 @@ public class StockShared extends Record<WarehouseSpecificKey> {
         }
     }
 
-    @Override @JsonIgnore
-    public WarehouseSpecificKey getKey() {
+    @Override
+    protected WarehouseSpecificKey makeKey() {
         return new WarehouseSpecificKey(itemId, warehouseId);
     }
 }

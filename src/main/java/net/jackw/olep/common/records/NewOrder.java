@@ -27,16 +27,8 @@ public class NewOrder extends Record<DistrictSpecificKey> {
         this.totalAmount = totalAmount;
     }
 
-    // Cache the key
-    @SuppressWarnings("Immutable")
-    private DistrictSpecificKey key = null;
-
-    @JsonIgnore
     @Override
-    public DistrictSpecificKey getKey() {
-        if (key == null) {
-            key = new DistrictSpecificKey(orderId, districtId, warehouseId);
-        }
-        return key;
+    protected DistrictSpecificKey makeKey() {
+        return new DistrictSpecificKey(orderId, districtId, warehouseId);
     }
 }

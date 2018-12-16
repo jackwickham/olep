@@ -1,6 +1,5 @@
 package net.jackw.olep.common.records;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.errorprone.annotations.Immutable;
 
@@ -28,8 +27,8 @@ public class DistrictShared extends Record<WarehouseSpecificKey> {
         this.tax = tax;
     }
 
-    @Override @JsonIgnore
-    public WarehouseSpecificKey getKey() {
+    @Override
+    protected WarehouseSpecificKey makeKey() {
         return new WarehouseSpecificKey(id, warehouseId);
     }
 }
