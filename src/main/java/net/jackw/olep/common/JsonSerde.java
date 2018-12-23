@@ -1,9 +1,7 @@
 package net.jackw.olep.common;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.common.serialization.Serializer;
 
 import java.util.Map;
 
@@ -38,12 +36,12 @@ public class JsonSerde<T> implements Serde<T> {
     public void close() { }
 
     @Override
-    public Serializer<T> serializer() {
+    public JsonSerializer<T> serializer() {
         return serializer;
     }
 
     @Override
-    public Deserializer<T> deserializer() {
+    public JsonDeserializer<T> deserializer() {
         return deserializer;
     }
 }

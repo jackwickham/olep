@@ -38,6 +38,10 @@ public class JsonSerializer<T> implements Serializer<T> {
      */
     @Override
     public byte[] serialize(String topic, T data) {
+        return serialize(data);
+    }
+
+    public byte[] serialize(T data) {
         try {
             return objectMapper.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
