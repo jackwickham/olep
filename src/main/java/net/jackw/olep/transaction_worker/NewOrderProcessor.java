@@ -12,6 +12,7 @@ import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.message.modification.NewOrderModification;
+import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
@@ -101,7 +102,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
                 results.districtTax = district.tax;
 
                 // Create the order builder, so we can put the line items into it
-                OrderBuilder orderBuilder = new OrderBuilder(
+                NewOrderModificationBuilder orderBuilder = new NewOrderModificationBuilder(
                     orderId, value.districtId, value.warehouseId, value.customerId, value.date
                 );
 
@@ -116,8 +117,9 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
 
                     // Add the order line to the generated order
                     BigDecimal lineAmount = item.price.multiply(new BigDecimal(line.quantity));
-                    OrderLine orderLine = new OrderLine(
+                    OrderLineModification orderLine = new OrderLineModification(
                         lineNumber, line.itemId, line.supplyingWarehouseId, line.quantity, lineAmount,
+                        stockQuantityStore.get(new WarehouseSpecificKey(item.id, warehouse.id)),
                         stockShared.getDistrictInfo(value.districtId)
                     );
 
@@ -137,7 +139,7 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
                 // Forward the transaction to the modification log
                 // We might want to add extra data to the NewOrderModification here in future, depending on what is
                 // actually used by the views, but this corresponds with the event sourcing model
-                sendModification(key, new NewOrderModification(value, orderBuilder.getLines(), orderId));
+                sendModification(key, orderBuilder.build());
             }
 
             int nextLineNumber = 0;

@@ -11,7 +11,7 @@ public class NewOrderModification implements ModificationMessage {
     public final int customerId;
     public final int warehouseId;
     public final int districtId;
-    public final ImmutableList<OrderLine> lines;
+    public final ImmutableList<OrderLineModification> lines;
     public final long date;
     public final int orderId;
 
@@ -19,7 +19,7 @@ public class NewOrderModification implements ModificationMessage {
         @JsonProperty("customerId") int customerId,
         @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,
-        @JsonProperty("lines") ImmutableList<OrderLine> lines,
+        @JsonProperty("lines") ImmutableList<OrderLineModification> lines,
         @JsonProperty("date") long date,
         @JsonProperty("orderId") int orderId
     ) {
@@ -29,9 +29,5 @@ public class NewOrderModification implements ModificationMessage {
         this.lines = lines;
         this.date = date;
         this.orderId = orderId;
-    }
-
-    public NewOrderModification(NewOrderRequest request, ImmutableList<OrderLine> lines, int orderId) {
-        this(request.customerId, request.warehouseId, request.districtId, lines, request.date, orderId);
     }
 }

@@ -11,6 +11,9 @@ import redis.clients.jedis.JedisPoolConfig;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 public class RedisAdapter extends KeyValueStoreAdapter {
     private JedisPool pool;
@@ -59,5 +62,37 @@ public class RedisAdapter extends KeyValueStoreAdapter {
             .putInt(districtId)
             .putInt(customerId);
         return buffer.array();
+    }
+
+    // TODO
+
+    @Override
+    protected int getCustomerByName(String lastName, int districtId, int warehouseId) {
+        throw new RuntimeException("Not yet implemented");
+    }
+
+    @Override
+    protected void setCustomerNameMapping(String lastName, int districtId, int warehouseId, int customerId) {
+        throw new RuntimeException("Not yet implemented");
+    }
+
+    @Override
+    protected List<Integer> getRecentItems(int districtId, int warehouseId) {
+        return null;
+    }
+
+    @Override
+    public void addOrderItems(int districtId, int warehouseId, Collection<Integer> items) {
+
+    }
+
+    @Override
+    public List<Integer> getStockLevels(List<Integer> items, int districtId, int warehouseId) {
+        return null;
+    }
+
+    @Override
+    public void updateStockLevels(int districtId, int warehouseId, Map<Integer, Integer> stockLevels) {
+
     }
 }

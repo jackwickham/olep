@@ -16,6 +16,7 @@ public class DeliveryModification implements ModificationMessage {
     public final int districtId;
     public final int warehouseId;
     public final int carrierId;
+    public final long deliveryDate;
     public final int customerId;
     public final BigDecimal orderTotal;
 
@@ -24,6 +25,7 @@ public class DeliveryModification implements ModificationMessage {
         @JsonProperty("districtId") int districtId,
         @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("carrierId") int carrierId,
+        @JsonProperty("deliveryDate") long deliveryDate,
         @JsonProperty("customerId") int customerId,
         @JsonProperty("orderTotal") BigDecimal orderTotal
     ) {
@@ -31,13 +33,14 @@ public class DeliveryModification implements ModificationMessage {
         this.districtId = districtId;
         this.warehouseId = warehouseId;
         this.carrierId = carrierId;
+        this.deliveryDate = deliveryDate;
         this.customerId = customerId;
         this.orderTotal = orderTotal;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(orderId, districtId, warehouseId, carrierId, customerId, orderTotal);
+        return Objects.hash(orderId, districtId, warehouseId, carrierId, deliveryDate, customerId, orderTotal);
     }
 
     @Override
@@ -45,7 +48,8 @@ public class DeliveryModification implements ModificationMessage {
         if (obj instanceof DeliveryModification) {
             DeliveryModification other = (DeliveryModification) obj;
             return warehouseId == other.warehouseId && districtId == other.districtId && orderId == other.orderId &&
-                carrierId == other.carrierId && customerId == other.customerId && orderTotal.equals(other.orderTotal);
+                carrierId == other.carrierId && customerId == other.customerId && orderTotal.equals(other.orderTotal) &&
+                deliveryDate == other.deliveryDate;
         } else {
             return false;
         }
@@ -58,6 +62,7 @@ public class DeliveryModification implements ModificationMessage {
             .add("districtId", districtId)
             .add("warehouseId", warehouseId)
             .add("carrierId", carrierId)
+            .add("deliveryDate", deliveryDate)
             .add("customerId", customerId)
             .add("orderTotal", orderId)
             .toString();

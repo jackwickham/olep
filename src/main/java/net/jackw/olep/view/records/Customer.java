@@ -2,6 +2,7 @@ package net.jackw.olep.view.records;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.OrderLine;
 
@@ -50,10 +51,37 @@ public class Customer {
         this.latestOrderLines = latestOrderLines;
     }
 
+    /**
+     * Create a copy of this customer with details of a different order
+     */
     public Customer withOrder(int orderId, long orderDate, Integer orderCarrierId, ImmutableList<OrderLine> orderLines) {
         return new Customer(
             id, districtId, warehouseId, firstName, middleName, lastName, balance, orderId, orderDate, orderCarrierId,
             orderLines
+        );
+    }
+
+    /**
+     * Create a copy of this customer after one of their orders has been delivered
+     */
+    public Customer afterDelivery(int orderId, long deliveryDate, int carrierId, BigDecimal orderTotal) {
+        if (orderId != latestOrderId) {
+            return this;
+        }
+
+        ImmutableList<OrderLine> updatedLines = ImmutableList.copyOf(
+            Lists.transform(latestOrderLines, line -> line.withDeliveryDate(deliveryDate))
+        );
+        return new Customer(
+            id, districtId, warehouseId, firstName, middleName, lastName, balance.add(orderTotal), latestOrderId,
+            latestOrderDate, carrierId, updatedLines
+        );
+    }
+
+    public Customer withBalance(BigDecimal balance) {
+        return new Customer(
+            id, districtId, warehouseId, firstName, middleName, lastName, balance, latestOrderId, latestOrderDate,
+            latestOrderCarrierId, latestOrderLines
         );
     }
 }

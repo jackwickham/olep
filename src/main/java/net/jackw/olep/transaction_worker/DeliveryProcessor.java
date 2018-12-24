@@ -39,8 +39,10 @@ public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest>
             }
             results.processedOrders.put(i, order.orderId);
 
+            // TODO: Balance increased by sum of order lines
+
             sendModification(key, new DeliveryModification(
-                order.orderId, i, value.warehouseId, value.carrierId, order.customerId, order.totalAmount
+                order.orderId, i, value.warehouseId, value.carrierId, value.deliveryDate, order.customerId, order.totalAmount
             ));
         }
 
