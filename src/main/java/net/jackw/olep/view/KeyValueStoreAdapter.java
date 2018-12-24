@@ -42,7 +42,7 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
         for (OrderLineModification line : modification.lines) {
             stockLevels.put(line.itemId, line.homeWarehouseStockLevel);
         }
-        updateStockLevels(modification.districtId, modification.warehouseId, stockLevels);
+        updateStockLevels(modification.warehouseId, stockLevels);
         addOrderItems(modification.districtId, modification.warehouseId, stockLevels.keySet());
     }
 
@@ -68,7 +68,7 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
 
     @Override
     public int stockLevel(int districtId, int warehouseId, int stockThreshold) {
-        List<Integer> recentStockLevels = getRecentStockLevels(districtId, warehouseId);
+        Collection<Integer> recentStockLevels = getRecentStockLevels(districtId, warehouseId);
         int belowThreshold = 0;
         for (int level : recentStockLevels) {
             if (level < stockThreshold ) {
@@ -78,8 +78,8 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
         return belowThreshold;
     }
 
-    protected List<Integer> getRecentStockLevels(int districtId, int warehouseId) {
-        return getStockLevels(getRecentItems(districtId, warehouseId), districtId, warehouseId);
+    protected Collection<Integer> getRecentStockLevels(int districtId, int warehouseId) {
+        return getStockLevels(getRecentItems(districtId, warehouseId), warehouseId);
     }
 
     @Override
@@ -116,11 +116,11 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
      */
     protected abstract void setCustomerNameMapping(String lastName, int districtId, int warehouseId, int customerId);
 
-    protected abstract List<Integer> getRecentItems(int districtId, int warehouseId);
+    protected abstract Collection<Integer> getRecentItems(int districtId, int warehouseId);
 
     public abstract void addOrderItems(int districtId, int warehouseId, Collection<Integer> items);
 
-    public abstract List<Integer> getStockLevels(List<Integer> items, int districtId, int warehouseId);
+    public abstract Collection<Integer> getStockLevels(Collection<Integer> items, int warehouseId);
 
-    public abstract void updateStockLevels(int districtId, int warehouseId, Map<Integer, Integer> stockLevels);
+    public abstract void updateStockLevels(int warehouseId, Map<Integer, Integer> stockLevels);
 }
