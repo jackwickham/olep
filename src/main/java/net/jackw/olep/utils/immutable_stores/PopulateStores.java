@@ -1,5 +1,6 @@
 package net.jackw.olep.utils.immutable_stores;
 
+import com.google.common.collect.ImmutableList;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.CustomerShared;
@@ -9,6 +10,9 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
+import net.jackw.olep.view.RedisAdapter;
+import net.jackw.olep.view.ViewWriteAdapter;
+import net.jackw.olep.view.records.Customer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -16,12 +20,14 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 
+import java.math.BigDecimal;
 import java.util.Properties;
 
 @SuppressWarnings("FutureReturnValueIgnored")
 public class PopulateStores {
     private String bootstrapServers = "localhost:9092";
     private Properties props;
+    private String redisHost = "localhost";
 
     private int itemCount = 100;
     private int warehouseCount = 100;
@@ -70,6 +76,7 @@ public class PopulateStores {
             Producer<WarehouseSpecificKey, StockShared> stockProducer = new KafkaProducer<>(
                 props, new JsonSerializer<>(), new JsonSerializer<>()
             );
+            ViewWriteAdapter viewWriteAdapter = new RedisAdapter(redisHost);
         ) {
             for (int wh = 0; wh < warehouseCount; wh++) {
                 WarehouseShared warehouse = factory.makeWarehouseShared();
@@ -84,6 +91,13 @@ public class PopulateStores {
                     for (int cust = 0; cust < customersPerDistrict; cust++) {
                         CustomerShared customer = customerFactory.makeCustomerShared();
                         customerProducer.send(new ProducerRecord<>(KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, 0, customer.getKey(), customer));
+
+                        Customer viewCustomer = new Customer(
+                            customer.id, customer.districtId, customer.warehouseId, customer.firstName, customer.middleName,
+                            customer.lastName, new BigDecimal("-10"), 0, 1, null,
+                            ImmutableList.of()
+                        );
+                        viewWriteAdapter.addCustomer(viewCustomer);
                     }
                 }
 

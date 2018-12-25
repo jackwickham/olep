@@ -51,7 +51,7 @@ import static net.jackw.olep.common.KafkaConfig.TRANSACTION_RESULT_TOPIC;
 /**
  * A connection to the OLEP database
  */
-public class DatabaseConnection implements Closeable {
+class DatabaseConnection implements Closeable {
     private final Producer<Long, TransactionRequestMessage> transactionRequestProducer;
     private final Consumer<TransactionResultKey, byte[]> transactionResultConsumer;
 
@@ -137,64 +137,12 @@ public class DatabaseConnection implements Closeable {
     }
 
     /**
-     * Send a New-Order transaction
-     */
-    public TransactionStatus<NewOrderResult> newOrder(
-        int customerId, int districtId, int warehouseId, List<NewOrderRequest.OrderLine> lines
-    ) {
-        long orderDate = new Date().getTime();
-        NewOrderRequest msgBody = new NewOrderRequest(
-            customerId, districtId, warehouseId, ImmutableList.copyOf(lines), orderDate
-        );
-        return send(msgBody, new NewOrderResult.Builder(customerId, districtId, warehouseId, orderDate, lines))
-            .getTransactionStatus();
-    }
-
-    /**
-     * Send a Payment transaction by customer ID
-     */
-    public TransactionStatus<PaymentResult> payment(
-        int districtId, int warehouseId, int customerId, int customerDistrictId, int customerWarehouseId,
-        BigDecimal amount
-    ) {
-        PaymentRequest msgBody = new PaymentRequest(
-            districtId, warehouseId, customerId, customerDistrictId, customerWarehouseId, amount
-        );
-        return send(msgBody, new PaymentResult.Builder(
-            districtId, warehouseId, customerId, customerDistrictId, customerWarehouseId
-        )).getTransactionStatus();
-    }
-
-    /**
-     * Send a Payment transaction by customer last name
-     */
-    public TransactionStatus<PaymentResult> payment(
-        int districtId, int warehouseId, String customerLastName, int customerDistrictId, int customerWarehouseId,
-        BigDecimal amount
-    ) {
-        PaymentRequest msgBody = new PaymentRequest(
-            districtId, warehouseId, customerLastName, customerDistrictId, customerWarehouseId, amount
-        );
-        return send(msgBody, new PaymentResult.Builder(
-            districtId, warehouseId, customerDistrictId, customerWarehouseId
-        )).getTransactionStatus();
-    }
-
-    /**
-     * Send a Delivery transaction
-     */
-    public TransactionStatus<DeliveryResult> delivery(int warehouseId, int carrierId) {
-        DeliveryRequest msgBody = new DeliveryRequest(warehouseId, carrierId, new Date().getTime());
-        return send(msgBody, new DeliveryResult.Builder(warehouseId, carrierId)).getTransactionStatus();
-    }
-
-    /**
      * Deliver a message to Kafka
      *
      * @param msg The message to send
      */
     @SuppressWarnings("FutureReturnValueIgnored")
-    private <T extends TransactionResultMessage, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(
+    <T extends TransactionResultMessage, B extends TransactionResultBuilder<T>> PendingTransaction<T, B> send(
         TransactionRequestMessage msg, B resultBuilder
     ) {
         long transactionId = nextTransactionId();

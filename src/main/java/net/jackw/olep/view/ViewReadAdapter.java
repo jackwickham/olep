@@ -2,9 +2,7 @@ package net.jackw.olep.view;
 
 import net.jackw.olep.view.records.Customer;
 
-import java.io.Closeable;
-
-public interface ViewReadAdapter extends Closeable {
+public interface ViewReadAdapter extends AutoCloseable {
     /**
      * Retrieve the customer details, and the details of their latest order
      *
@@ -39,5 +37,8 @@ public interface ViewReadAdapter extends Closeable {
      * @param stockThreshold The lowest permitted stock level
      * @return The number of items from the checked orders that are < stockThreshold in this warehouse
      */
-    int stockLevel(int warehouseId, int districtId, int stockThreshold) ;
+    int stockLevel(int warehouseId, int districtId, int stockThreshold);
+
+    @Override
+    void close();
 }

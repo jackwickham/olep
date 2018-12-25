@@ -64,6 +64,12 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
         setCustomerDetails(modification.customerId, modification.districtId, modification.warehouseId, newCustomer);
     }
 
+    @Override
+    public void addCustomer(Customer cust) {
+        setCustomerDetails(cust.id, cust.districtId, cust.warehouseId, cust);
+        // TODO: Name mapping
+    }
+
     // Reads
 
     @Override
@@ -79,7 +85,11 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
     }
 
     protected Collection<Integer> getRecentStockLevels(int districtId, int warehouseId) {
-        return getStockLevels(getRecentItems(districtId, warehouseId), warehouseId);
+        Collection<Integer> items = getRecentItems(districtId, warehouseId);
+        if (items.isEmpty()) {
+            return items;
+        }
+        return getStockLevels(items, warehouseId);
     }
 
     @Override
@@ -118,9 +128,9 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
 
     protected abstract Collection<Integer> getRecentItems(int districtId, int warehouseId);
 
-    public abstract void addOrderItems(int districtId, int warehouseId, Collection<Integer> items);
+    protected abstract void addOrderItems(int districtId, int warehouseId, Collection<Integer> items);
 
-    public abstract Collection<Integer> getStockLevels(Collection<Integer> items, int warehouseId);
+    protected abstract Collection<Integer> getStockLevels(Collection<Integer> items, int warehouseId);
 
-    public abstract void updateStockLevels(int warehouseId, Map<Integer, Integer> stockLevels);
+    protected abstract void updateStockLevels(int warehouseId, Map<Integer, Integer> stockLevels);
 }

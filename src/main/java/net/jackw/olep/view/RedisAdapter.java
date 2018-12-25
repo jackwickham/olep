@@ -35,7 +35,7 @@ public class RedisAdapter extends KeyValueStoreAdapter {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         pool.close();
     }
 
@@ -97,7 +97,7 @@ public class RedisAdapter extends KeyValueStoreAdapter {
     }
 
     @Override
-    public void addOrderItems(int districtId, int warehouseId, Collection<Integer> items) {
+    protected void addOrderItems(int districtId, int warehouseId, Collection<Integer> items) {
         byte[] stringifiedItems = Joiner.on(",").join(items).getBytes(UTF_8);
         byte[] key = getRecentItemsKey(districtId, warehouseId);
         try (Jedis jedis = getJedis()) {
@@ -109,7 +109,7 @@ public class RedisAdapter extends KeyValueStoreAdapter {
     }
 
     @Override
-    public Collection<Integer> getStockLevels(Collection<Integer> items, int warehouseId) {
+    protected Collection<Integer> getStockLevels(Collection<Integer> items, int warehouseId) {
         List<byte[]> rawLevels;
         // Convert the list of desired items to a stream
         byte[][] itemKeys = items.stream()
@@ -134,7 +134,7 @@ public class RedisAdapter extends KeyValueStoreAdapter {
     }
 
     @Override
-    public void updateStockLevels(int warehouseId, Map<Integer, Integer> stockLevels) {
+    protected void updateStockLevels(int warehouseId, Map<Integer, Integer> stockLevels) {
         Map<byte[], byte[]> stringifiedLevels = stockLevels.entrySet().stream()
             .collect(Collectors.toMap(
                 e -> Integer.toString(e.getKey()).getBytes(UTF_8),

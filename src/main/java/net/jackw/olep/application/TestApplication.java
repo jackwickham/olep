@@ -1,12 +1,13 @@
 package net.jackw.olep.application;
 
-import net.jackw.olep.edge.DatabaseConnection;
+import net.jackw.olep.edge.Database;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -15,29 +16,33 @@ public class TestApplication {
     private static
     final CountDownLatch complete = new CountDownLatch(12);
 
-    public static void main(String[] args) throws InterruptedException {
-        try (DatabaseConnection connection = new DatabaseConnection("localhost:9092")) {
+    public static void main(String[] args) throws InterruptedException, IOException {
+        try (Database connection = new Database("localhost:9092", "localhost")) {
             RandomDataGenerator rand = new RandomDataGenerator();
 
+            int lastItemId = 0;
             for (int i = 0; i < 3; i++) {
                 final int itemId = rand.nextInt(200);
+                lastItemId = itemId;
                 connection.newOrder(
                     10, 1, 1, List.of(new NewOrderRequest.OrderLine(itemId, 2, 3))
                 ).register(new StatusPrinter<>("New-Order"));
 
                 connection.payment(
-                    1, 1, 10, 1, 1, new BigDecimal("31.20")
+                    10, 1, 1, 1, 1, new BigDecimal("31.20")
                 ).register(new StatusPrinter<>("Payment"));
 
                 connection.payment(
-                    1, 6, CommonFieldGenerators.generateLastName(rand, rand.uniform(0, 999)),
+                    CommonFieldGenerators.generateLastName(rand, rand.uniform(0, 999)), 1, 6,
                     1, 3, new BigDecimal("31.20")
                 ).register(new StatusPrinter<>("Payment+name"));
 
                 connection.delivery(1, rand.nextInt(500)).register(new StatusPrinter<>("delivery"));
+
             }
 
             complete.await();
+            System.out.printf("Stock level %d", connection.stockLevel(1, 1, lastItemId));
         }
     }
 
