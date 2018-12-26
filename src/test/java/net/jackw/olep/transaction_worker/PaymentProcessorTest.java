@@ -108,7 +108,7 @@ public class PaymentProcessorTest {
         insertCustomer(true);
 
         // Run the transaction
-        PaymentRequest request = new PaymentRequest(1, 2, 3, 4, 5, new BigDecimal("67.89"));
+        PaymentRequest request = new PaymentRequest(3, 1, 2, 4, 5, new BigDecimal("67.89"));
         processor.process(new TransactionWarehouseKey(10L, 2), request);
 
         // And test that it did the right thing
@@ -122,7 +122,7 @@ public class PaymentProcessorTest {
         insertCustomer(false);
 
         // Now we can actually run it
-        PaymentRequest request = new PaymentRequest(1, 2, 3, 4, 5, new BigDecimal("67.89"));
+        PaymentRequest request = new PaymentRequest(3, 1, 2, 4, 5, new BigDecimal("67.89"));
         processor.process(new TransactionWarehouseKey(10L, 2), request);
 
         // And test that it did the right thing
@@ -136,7 +136,7 @@ public class PaymentProcessorTest {
         insertCustomer(true);
 
         // Now we can actually run it
-        PaymentRequest request = new PaymentRequest(1, 2, "LAST", 4, 5, new BigDecimal("67.89"));
+        PaymentRequest request = new PaymentRequest("LAST", 1, 2, 4, 5, new BigDecimal("67.89"));
         processor.process(new TransactionWarehouseKey(10L, 2), request);
 
         // And test that it did the right thing

@@ -18,6 +18,7 @@ import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.NewOrderModification;
+import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
@@ -189,22 +190,22 @@ public class NewOrderProcessorTest {
         assertEquals("default order ID should be 1", 1, modification.orderId);
 
         assertThat(modification.lines, Matchers.hasSize(2));
-        OrderLine line0 = modification.lines.get(0);
+        OrderLineModification line0 = modification.lines.get(0);
         assertEquals(0, line0.lineNumber);
         assertEquals(0, line0.itemId);
         assertEquals(4, line0.supplyWarehouseId);
-        assertNull(line0.deliveryDate);
         assertEquals(3, line0.quantity);
         assertEquals(new BigDecimal("30"), line0.amount);
         assertEquals(stock[3].dist04, line0.distInfo);
-        OrderLine line1 = modification.lines.get(1);
+        assertEquals(50, line0.homeWarehouseStockLevel);
+        OrderLineModification line1 = modification.lines.get(1);
         assertEquals(1, line1.lineNumber);
         assertEquals(1, line1.itemId);
         assertEquals(4, line1.supplyWarehouseId);
-        assertNull(line1.deliveryDate);
         assertEquals(5, line1.quantity);
         assertEquals(new BigDecimal("55.55"), line1.amount);
         assertEquals(stock[4].dist04, line1.distInfo);
+        assertEquals(11, line1.homeWarehouseStockLevel);
     }
 
     @Test

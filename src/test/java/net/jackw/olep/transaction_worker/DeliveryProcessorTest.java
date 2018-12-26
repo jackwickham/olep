@@ -95,12 +95,12 @@ public class DeliveryProcessorTest {
             new ForwardedMessageMatcher<>(
                 KafkaConfig.MODIFICATION_LOG,
                 1L,
-                new DeliveryModification(5, 3, 1, 18, 14, new BigDecimal("28.73"))
+                new DeliveryModification(5, 3, 1, 18, 1L, 14, new BigDecimal("28.73"))
             ),
             new ForwardedMessageMatcher<>(
                 KafkaConfig.MODIFICATION_LOG,
                 1L,
-                new DeliveryModification(11, 5, 1, 18, 1, new BigDecimal("11.11"))
+                new DeliveryModification(11, 5, 1, 18,  1L, 1, new BigDecimal("11.11"))
             )
         ));
     }
