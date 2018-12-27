@@ -7,7 +7,6 @@ import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -16,14 +15,12 @@ public class TestApplication {
     private static
     final CountDownLatch complete = new CountDownLatch(12);
 
-    public static void main(String[] args) throws InterruptedException, IOException {
+    public static void main(String[] args) throws InterruptedException {
         try (Database connection = new Database("localhost:9092", "localhost")) {
             RandomDataGenerator rand = new RandomDataGenerator();
 
-            int lastItemId = 0;
             for (int i = 0; i < 3; i++) {
                 final int itemId = rand.nextInt(200);
-                lastItemId = itemId;
                 connection.newOrder(
                     10, 1, 1, List.of(new NewOrderRequest.OrderLine(itemId, 2, 3))
                 ).register(new StatusPrinter<>("New-Order"));
@@ -42,7 +39,7 @@ public class TestApplication {
             }
 
             complete.await();
-            System.out.printf("Stock level %d", connection.stockLevel(1, 1, lastItemId));
+            System.out.printf("%d items are below the stock threshold\n", connection.stockLevel(1, 1, 40));
         }
     }
 

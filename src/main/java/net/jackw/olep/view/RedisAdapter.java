@@ -161,6 +161,6 @@ public class RedisAdapter extends KeyValueStoreAdapter {
     }
 
     private byte[] getStockKey(int warehouseId) {
-        return String.format("STOCK:%s", warehouseId).getBytes(UTF_8);
+        return String.format("STOCK:%d", warehouseId).getBytes(UTF_8);
     }
 }

@@ -1,19 +1,12 @@
 package net.jackw.olep.edge;
 
-import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.LRUSet;
 import net.jackw.olep.common.TransactionResultPartitioner;
-import net.jackw.olep.message.transaction_result.DeliveryResult;
-import net.jackw.olep.message.transaction_result.NewOrderResult;
-import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
-import net.jackw.olep.message.transaction_request.DeliveryRequest;
-import net.jackw.olep.message.transaction_request.NewOrderRequest;
-import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -33,10 +26,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.Closeable;
-import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;

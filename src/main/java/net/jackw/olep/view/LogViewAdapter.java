@@ -1,6 +1,7 @@
 package net.jackw.olep.view;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationMessage;
@@ -12,17 +13,19 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
 public class LogViewAdapter implements AutoCloseable {
     private final ViewWriteAdapter viewAdapter;
-    private final Consumer<Integer, ModificationMessage> logConsumer;
+    private final Consumer<Long, ModificationMessage> logConsumer;
 
-    public LogViewAdapter(Consumer<Integer, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter) {
+    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter) {
         this.viewAdapter = viewAdapter;
         this.logConsumer = logConsumer;
     }
@@ -35,8 +38,8 @@ public class LogViewAdapter implements AutoCloseable {
     public void run() {
         while (true) {
             try {
-                ConsumerRecords<Integer, ModificationMessage> records = logConsumer.poll(Duration.ofHours(6));
-                for (ConsumerRecord<Integer, ModificationMessage> record : records) {
+                ConsumerRecords<Long, ModificationMessage> records = logConsumer.poll(Duration.ofHours(6));
+                for (ConsumerRecord<Long, ModificationMessage> record : records) {
                     processModification(record.key(), record.value());
                 }
             } catch (WakeupException e) {
@@ -45,7 +48,8 @@ public class LogViewAdapter implements AutoCloseable {
         }
     }
 
-    private void processModification(int key, ModificationMessage message) {
+    private void processModification(long key, ModificationMessage message) {
+        log.debug("Processing modification for transaction {}", key);
         if (message instanceof NewOrderModification) {
             viewAdapter.newOrder((NewOrderModification) message);
         } else if (message instanceof DeliveryModification) {
@@ -65,11 +69,15 @@ public class LogViewAdapter implements AutoCloseable {
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "view-consumer");
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
-        KafkaConsumer<Integer, ModificationMessage> consumer = null;
+        KafkaConsumer<Long, ModificationMessage> consumer = null;
         ViewWriteAdapter viewAdapter = null;
 
         try {
-            consumer = new KafkaConsumer<>(consumerProps);
+            consumer = new KafkaConsumer<>(
+                consumerProps,
+                Serdes.Long().deserializer(),
+                new JsonDeserializer<>(ModificationMessage.class)
+            );
             consumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG));
 
             viewAdapter = new RedisAdapter(viewServer);
@@ -99,4 +107,6 @@ public class LogViewAdapter implements AutoCloseable {
             ViewWriteAdapter v = viewAdapter
         ) { }
     }
+
+    private static Logger log = LogManager.getLogger();
 }

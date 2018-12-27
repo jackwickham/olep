@@ -40,7 +40,7 @@ public class ClusterCreator {
         try (AdminClient adminClient = AdminClient.create(adminClientConfig)) {
             // See which of the topics we care about are already present in Kafka
             Set<String> existingTopics = adminClient.listTopics().names().get();
-            existingTopics.retainAll(dbTopics);
+            //existingTopics.retainAll(dbTopics);
             // Then delete all of those topics, to remove all the items and state about them
             DeleteTopicsResult deleteResult = adminClient.deleteTopics(existingTopics);
 
