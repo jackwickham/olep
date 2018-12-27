@@ -7,6 +7,7 @@ import net.jackw.olep.utils.immutable_stores.PopulateStores;
 import net.jackw.olep.verifier.VerifierApp;
 import org.apache.kafka.streams.KafkaStreams;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ public abstract class BaseIntegrationTest {
         storePopulator.populate();
     }
 
-    protected String getEventBoostrapServers() {
+    protected String getEventBootsrapServers() {
         return "127.0.0.1:9092";
     }
 
@@ -34,18 +35,20 @@ public abstract class BaseIntegrationTest {
     private List<KafkaStreams> workerStreams = new ArrayList<>();
 
     protected void startVerifier() {
-        VerifierApp verifier = new VerifierApp(getEventBoostrapServers());
+        VerifierApp verifier = new VerifierApp(getEventBootsrapServers());
         verifierStreams.add(startStreamsApp(verifier));
     }
 
     protected void startWorker() {
-        WorkerApp worker = new WorkerApp(getEventBoostrapServers());
+        WorkerApp worker = new WorkerApp(getEventBootsrapServers());
         workerStreams.add(startStreamsApp(worker));
     }
 
     private KafkaStreams startStreamsApp(StreamsApp app) {
         app.setup();
         KafkaStreams streams = app.getStreams();
+        // Remove any existing state
+        streams.cleanUp();
         streams.start();
         return streams;
     }
