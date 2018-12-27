@@ -17,7 +17,7 @@ import org.apache.kafka.streams.Topology;
 public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
 
-    private VerifierApp(String bootstrapServers) {
+    public VerifierApp(String bootstrapServers) {
         super(bootstrapServers);
 
         // Consume from items so we can check the transactions
@@ -36,7 +36,7 @@ public class VerifierApp extends StreamsApp {
     }
 
     @Override
-    protected void setup() {
+    public void setup() {
         itemConsumer.start();
     }
 

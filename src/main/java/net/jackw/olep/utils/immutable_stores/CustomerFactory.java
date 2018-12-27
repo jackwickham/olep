@@ -37,8 +37,10 @@ public class CustomerFactory {
 
     /**
      * Make a new customer, populating fields randomly per the TPC-C spec, section 4.3.3.1
+     *
+     * @param customerNameRange The number of distinct surnames to generate
      */
-    public CustomerShared makeCustomerShared() {
+    public CustomerShared makeCustomerShared(int customerNameRange) {
         // C_ID unique within [3,000]
         int id = nextId++;
         // C_D_ID = D_ID
@@ -49,7 +51,7 @@ public class CustomerFactory {
         // 1,000 customers, and generating a non-uniform random number using the function NURand(255, 0, 999) for each
         // of the remaining 2,000 customers
         String last = CommonFieldGenerators.generateLastName(
-            rand, id <= 1000 ? id -1 : rand.nuRand(255, 0, 999)
+            rand, id <= customerNameRange ? id -1 : rand.nuRand(255, 0, customerNameRange - 1)
         );
         // C_MIDDLE = "OE"
         String middle = "OE";
@@ -69,5 +71,9 @@ public class CustomerFactory {
         // balance, ytd_payment, payment_cnt, delivery_cnt and data are not included in the shared object
 
         return new CustomerShared(id, dId, wId, first, middle, last, address, phone, since, credit, creditLim, discount);
+    }
+
+    public CustomerShared makeCustomerShared() {
+        return makeCustomerShared(1000);
     }
 }

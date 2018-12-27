@@ -29,20 +29,31 @@ public class PopulateStores {
     private Properties props;
     private String redisHost = "localhost";
 
-    private int itemCount = 100;
-    private int warehouseCount = 100;
-    private int districtsPerWarehouse = 10;
-    private int customersPerDistrict = 1000;
+    private int itemCount;
+    private int warehouseCount;
+    private int districtsPerWarehouse;
+    private int customersPerDistrict;
+    private int customerNameRange;
 
-    public PopulateStores() {
+    public PopulateStores(int itemCount, int warehouseCount, int districtsPerWarehouse, int customersPerDistrict, int customerNameRange) {
+        this.itemCount = itemCount;
+        this.warehouseCount = warehouseCount;
+        this.districtsPerWarehouse = districtsPerWarehouse;
+        this.customersPerDistrict = customersPerDistrict;
+        this.customerNameRange = customerNameRange;
+
         props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     }
 
     public static void main(String[] args) {
-        PopulateStores i = new PopulateStores();
-        i.populateItems();
-        i.populateWarehouses();
+        PopulateStores i = new PopulateStores(20, 100, 10, 100, 20);
+        i.populate();
+    }
+
+    public void populate() {
+        populateItems();
+        populateWarehouses();
     }
 
     private void populateItems() {
@@ -89,7 +100,7 @@ public class PopulateStores {
 
                     CustomerFactory customerFactory = CustomerFactory.instanceFor(district);
                     for (int cust = 0; cust < customersPerDistrict; cust++) {
-                        CustomerShared customer = customerFactory.makeCustomerShared();
+                        CustomerShared customer = customerFactory.makeCustomerShared(customerNameRange);
                         customerProducer.send(new ProducerRecord<>(KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, 0, customer.getKey(), customer));
 
                         Customer viewCustomer = new Customer(

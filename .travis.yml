@@ -1,3 +1,17 @@
 language: java
 jdk:
   - oraclejdk11
+
+dist: trusty
+
+# Dependencies - we need redis and kafka
+services:
+  - redis-server
+
+before_install:
+  - wget "https://www.apache.org/dyn/mirrors/mirrors.cgi?filename=/kafka/2.0.0/kafka_2.11-2.0.0.tgz&action=download" -O kafka.tgz
+  - tar -xzf kafka_2.11-2.0.0.tgz
+  - cd kafka_2.11-2.0.0
+  - nohup bin/zookeeper-server-start.sh config/zookeeper.properties &
+  - nohup bin/kafka-server-start.sh config/server.properties &
+  - sleep 5 # Give Kafka a chance to start

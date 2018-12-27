@@ -35,7 +35,7 @@ public abstract class StreamsApp {
         this.bootstrapServers = bootstrapServers;
     }
 
-    protected KafkaStreams getStreams() {
+    public KafkaStreams getStreams() {
         // Set up the properties of this application
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, getApplicationID());
@@ -54,7 +54,7 @@ public abstract class StreamsApp {
      *
      * Classes can override this to perform some initial setup, such as consuming from immutable logs
      */
-    protected void setup() { }
+    public void setup() { }
 
     /**
      * Get the stream processor topology

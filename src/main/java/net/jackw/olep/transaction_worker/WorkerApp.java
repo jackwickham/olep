@@ -44,7 +44,7 @@ public class WorkerApp extends StreamsApp {
      */
     private Consumer<byte[], byte[]> pseudoConsumer;
 
-    private WorkerApp(String bootstrapServers) {
+    public WorkerApp(String bootstrapServers) {
         super(bootstrapServers);
 
         // Consume from all the shared stores to make them accessible to workers
@@ -95,7 +95,7 @@ public class WorkerApp extends StreamsApp {
     }
 
     @Override
-    protected void setup() {
+    public void setup() {
         itemConsumer.start();
         warehouseConsumer.start();
         districtConsumer.start();
