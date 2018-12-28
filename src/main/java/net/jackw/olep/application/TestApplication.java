@@ -30,7 +30,7 @@ public class TestApplication {
                 ).register(new StatusPrinter<>("Payment"));
 
                 connection.payment(
-                    CommonFieldGenerators.generateLastName(rand, rand.uniform(0, 999)), 1, 6,
+                    CommonFieldGenerators.generateLastName(rand.uniform(0, 999)), 1, 6,
                     1, 3, new BigDecimal("31.20")
                 ).register(new StatusPrinter<>("Payment+name"));
 

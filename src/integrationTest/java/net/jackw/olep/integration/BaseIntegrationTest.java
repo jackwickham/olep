@@ -7,7 +7,6 @@ import net.jackw.olep.utils.immutable_stores.PopulateStores;
 import net.jackw.olep.verifier.VerifierApp;
 import org.apache.kafka.streams.KafkaStreams;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.util.ArrayList;
@@ -19,8 +18,9 @@ public abstract class BaseIntegrationTest {
     public static void resetTopics() throws InterruptedException, ExecutionException {
         ClusterCreator.create(false);
 
-        PopulateStores storePopulator = new PopulateStores(10, 10, 5, 20, 5);
-        storePopulator.populate();
+        try (PopulateStores storePopulator = new PopulateStores(10, 10, 5, 20, getCustomerNameRange(), true)) {
+            storePopulator.populate();
+        }
     }
 
     protected String getEventBootsrapServers() {
@@ -29,6 +29,10 @@ public abstract class BaseIntegrationTest {
 
     protected String getViewBootstrapServers() {
         return "127.0.0.1";
+    }
+
+    protected static int getCustomerNameRange() {
+        return 5;
     }
 
     private List<KafkaStreams> verifierStreams = new ArrayList<>();
