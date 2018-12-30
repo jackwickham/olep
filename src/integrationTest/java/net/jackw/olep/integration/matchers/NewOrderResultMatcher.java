@@ -5,9 +5,11 @@ import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class NewOrderResultMatcher extends TypeSafeDiagnosingMatcher<NewOrderResult> {
     private final int customerId;
@@ -110,12 +112,9 @@ public class NewOrderResultMatcher extends TypeSafeDiagnosingMatcher<NewOrderRes
 
     @Override
     public void describeTo(Description description) {
-        description.appendText("NewOrderResult(")
-            .appendValue(customerId)
-            .appendText(", ")
-            .appendValue(districtId)
-            .appendText(", ")
-            .appendValue(warehouseId)
-            .appendText(")");
+        description.appendList("NewOrderResult(", ", ", ")", List.of(
+            Matchers.equalTo(customerId), Matchers.equalTo(districtId), Matchers.equalTo(warehouseId), orderDate,
+            orderId, customerLastName, credit, discount, warehouseTax, districtTax, lines
+        ));
     }
 }

@@ -3,9 +3,11 @@ package net.jackw.olep.integration.matchers;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class OrderLineResultMatcher extends TypeSafeDiagnosingMatcher<OrderLineResult> {
     private final int supplyWarehouseId;
@@ -78,6 +80,9 @@ public class OrderLineResultMatcher extends TypeSafeDiagnosingMatcher<OrderLineR
 
     @Override
     public void describeTo(Description description) {
-        description.appendValueList("OrderLine(", ", ", ")", supplyWarehouseId, itemId);
+        description.appendList("OrderLine(", ", ", ")", List.of(
+            Matchers.equalTo(supplyWarehouseId), Matchers.equalTo(itemId), itemName, Matchers.equalTo(quantity),
+            stockQuantity, itemPrice, lineAmount
+        ));
     }
 }

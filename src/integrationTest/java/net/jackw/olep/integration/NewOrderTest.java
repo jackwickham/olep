@@ -25,7 +25,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 
-public class WriteTransactionResponsesTest extends BaseIntegrationTest {
+public class NewOrderTest extends BaseIntegrationTest {
     @Before
     public void startListeners() {
         startVerifier();
@@ -33,7 +33,7 @@ public class WriteTransactionResponsesTest extends BaseIntegrationTest {
     }
 
     @Test
-    public void newOrderTest() throws Throwable {
+    public void testSingleWarehouse() throws Throwable {
         PredictableItemFactory itemFactory = PredictableItemFactory.getInstance();
         PredictableWarehouseFactory warehouseFactory = PredictableWarehouseFactory.getInstance();
         PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
@@ -60,7 +60,44 @@ public class WriteTransactionResponsesTest extends BaseIntegrationTest {
             TransactionStatus<NewOrderResult> status = db.newOrder(3, 2, 1, orderLines);
 
             status.register(resultHandler.successListener(new NewOrderResultMatcher(
-                3, 2, 1, new DateMatcher(startTime), is(1), equalTo(customer.lastName),
+                3, 2, 1, new DateMatcher(startTime), equalTo(1), equalTo(customer.lastName),
+                equalTo(customer.credit), equalTo(customer.discount), equalTo(warehouseFactory.getWarehouseShared(1).tax),
+                equalTo(districtFactory.getDistrictShared(2).tax), contains(lineResultMatchers)
+            )));
+
+            resultHandler.await();
+        }
+    }
+
+    @Test
+    public void testMultipleWarehouses() throws Throwable {
+        PredictableItemFactory itemFactory = PredictableItemFactory.getInstance();
+        PredictableWarehouseFactory warehouseFactory = PredictableWarehouseFactory.getInstance();
+        PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
+        PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getCustomerNameRange());
+
+        try (Database db = new Database(getEventBootsrapServers(), getViewBootstrapServers())) {
+            TransactionResultHandler resultHandler = new TransactionResultHandler();
+
+            List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
+
+            List<Matcher<? super OrderLineResult>> lineResultMatchers = new ArrayList<>(5);
+            for (int i = 1; i <= 5; i++) {
+                orderLines.add(new NewOrderRequest.OrderLine(i, i, i));
+                Item item = itemFactory.getItem(i);
+                lineResultMatchers.add(new OrderLineResultMatcher(
+                    i, i, equalTo(item.name), i, any(Integer.class), equalTo(item.price),
+                    equalTo(item.price.multiply(new BigDecimal(i)))
+                ));
+            }
+
+            CustomerShared customer = customerFactory.getCustomerShared(3);
+
+            long startTime = System.currentTimeMillis();
+            TransactionStatus<NewOrderResult> status = db.newOrder(3, 2, 1, orderLines);
+
+            status.register(resultHandler.successListener(new NewOrderResultMatcher(
+                3, 2, 1, new DateMatcher(startTime), equalTo(1), equalTo(customer.lastName),
                 equalTo(customer.credit), equalTo(customer.discount), equalTo(warehouseFactory.getWarehouseShared(1).tax),
                 equalTo(districtFactory.getDistrictShared(2).tax), contains(lineResultMatchers)
             )));
