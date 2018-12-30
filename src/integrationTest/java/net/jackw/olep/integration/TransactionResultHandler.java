@@ -1,5 +1,6 @@
 package net.jackw.olep.integration;
 
+import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.hamcrest.Description;
@@ -44,6 +45,14 @@ public class TransactionResultHandler {
     }
 
     /**
+     * Get a new transaction status listener which is waiting for the transaction to be rejected
+     */
+    public <T extends TransactionResultMessage> TransactionStatusListener<T> rejectedListener() {
+        listeners++;
+        return new TransactionRejectedListener<>();
+    }
+
+    /**
      * TransactionStatusListener that verifies that the transaction completed successfully
      */
     private class TransactionSuccessListener<T extends TransactionResultMessage> implements TransactionStatusListener<T> {
@@ -66,6 +75,32 @@ public class TransactionResultHandler {
             } catch (Throwable e) {
                 reportFailure(e);
             }
+        }
+
+        private void reportFailure(Throwable t) {
+            failure = t;
+            while (latch.getCount() > 0) {
+                latch.countDown();
+            }
+        }
+    }
+
+    /**
+     * TransactionStatusListener that verifies that the transaction was rejected by the verifier
+     */
+    private class TransactionRejectedListener<T extends TransactionResultMessage> implements TransactionStatusListener<T> {
+        @Override
+        public void rejectedHandler(Throwable t) {
+            if (t instanceof TransactionRejectedException) {
+                latch.countDown();
+            } else {
+                reportFailure(t);
+            }
+        }
+
+        @Override
+        public void completeHandler(T result) {
+            reportFailure(new AssertionError("Transaction should not have completed"));
         }
 
         private void reportFailure(Throwable t) {

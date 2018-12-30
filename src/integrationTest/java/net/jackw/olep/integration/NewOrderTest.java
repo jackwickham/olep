@@ -1,6 +1,5 @@
 package net.jackw.olep.integration;
 
-import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.edge.Database;
@@ -101,6 +100,25 @@ public class NewOrderTest extends BaseIntegrationTest {
                 equalTo(customer.credit), equalTo(customer.discount), equalTo(warehouseFactory.getWarehouseShared(1).tax),
                 equalTo(districtFactory.getDistrictShared(2).tax), contains(lineResultMatchers)
             )));
+
+            resultHandler.await();
+        }
+    }
+
+    @Test
+    public void testInvalidItem() throws Throwable {
+        try (Database db = new Database(getEventBootsrapServers(), getViewBootstrapServers())) {
+            TransactionResultHandler resultHandler = new TransactionResultHandler();
+
+            List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
+
+            for (int i = 1; i <= 5; i++) {
+                orderLines.add(new NewOrderRequest.OrderLine(1000, i, i));
+            }
+
+            TransactionStatus<NewOrderResult> status = db.newOrder(3, 2, 1, orderLines);
+
+            status.register(resultHandler.rejectedListener());
 
             resultHandler.await();
         }
