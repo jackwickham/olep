@@ -103,6 +103,43 @@ public class TransactionStatusTest {
         verify(deliveredHandler, times(1)).run();
     }
 
+    @Test public void testDeliveryFailedHandlerCalledWithExceptionThatItWasRejectedWith() {
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+
+        Exception e = new Exception();
+        Consumer<Throwable> deliveredFailedHandler = mock(Consumer.class);
+        transactionStatus.addDeliveryFailedHandler(deliveredFailedHandler);
+
+        transactionDeliveredFuture.completeExceptionally(e);
+
+        verify(deliveredFailedHandler).accept(e);
+    }
+
+    @Test public void testRejectedHandlerCalledWithDeliveryFailedException() {
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+
+        Exception e = new Exception();
+        Consumer<Throwable> rejectedHandler = mock(Consumer.class);
+        transactionStatus.addRejectedHandler(rejectedHandler);
+
+        transactionDeliveredFuture.completeExceptionally(e);
+
+        verify(rejectedHandler).accept(e);
+    }
+
+    @Test public void testRejectedHandlerCalledWitTransactionRejectedException() {
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+
+        Exception e = new Exception();
+        Consumer<Throwable> rejectedHandler = mock(Consumer.class);
+        transactionStatus.addRejectedHandler(rejectedHandler);
+
+        transactionDeliveredFuture.complete(null);
+        transactionAcceptedFuture.completeExceptionally(e);
+
+        verify(rejectedHandler).accept(e);
+    }
+
     private void assertHandlersCalled(TransactionStatus<TransactionResultMessage> transactionStatus, int handlers) {
         VerificationMode once = times(1);
         Runnable deliveredHandler = mock(Runnable.class);

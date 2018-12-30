@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 /**
@@ -83,7 +84,7 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      */
     public void addDeliveryFailedHandler(final Consumer<Throwable> handler) {
         writtenToLog.exceptionally(ex -> {
-            handleExceptions(() -> handler.accept(ex));
+            handleExceptions(() -> handler.accept(unwrapExceptionalResult(ex)));
             return null;
         });
     }
@@ -113,7 +114,7 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      */
     public void addRejectedHandler(final Consumer<Throwable> handler) {
         accepted.exceptionally(throwable -> {
-            handleExceptions(() -> handler.accept(throwable));
+            handleExceptions(() -> handler.accept(unwrapExceptionalResult(throwable)));
             return null;
         });
     }
@@ -144,6 +145,18 @@ public class TransactionStatus<T extends TransactionResultMessage> {
         } catch (Throwable e) {
             log.error("Transaction event handler threw an exception", e);
         }
+    }
+
+    /**
+     * Unwrap the underlying cause of the exception, removing as many nested wrapping CompletionExceptions as needed
+     *
+     * https://stackoverflow.com/questions/27430255/surprising-behavior-of-java-8-completablefuture-exceptionally-method
+     */
+    private Throwable unwrapExceptionalResult(Throwable exception) {
+        while (exception instanceof CompletionException) {
+            exception = exception.getCause();
+        }
+        return exception;
     }
 
     private static Logger log = LogManager.getLogger();
