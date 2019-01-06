@@ -8,10 +8,9 @@ import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.Item;
-import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
-import net.jackw.olep.message.modification.NewOrderModification;
+import net.jackw.olep.message.modification.RemoteStockModification;
 import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
@@ -76,12 +75,15 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
     public void process(TransactionWarehouseKey key, NewOrderRequest value) {
         log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing new-order transaction {}", key);
         try {
+            boolean local = false;
             final NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
+            WarehouseSpecificKey districtKey = new WarehouseSpecificKey(value.districtId, value.warehouseId);
+
+            NewOrderModificationBuilder orderBuilder = null;
 
             if (key.warehouseId == value.warehouseId) {
                 // We need to process it for the home warehouse
-
-                WarehouseSpecificKey districtKey = new WarehouseSpecificKey(value.districtId, value.warehouseId);
+                local = true;
 
                 // Load values from the immutable stores
                 WarehouseShared warehouse = warehouseImmutableStore.getBlocking(value.warehouseId);
@@ -102,25 +104,53 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
                 results.districtTax = district.tax;
 
                 // Create the order builder, so we can put the line items into it
-                NewOrderModificationBuilder orderBuilder = new NewOrderModificationBuilder(
+                orderBuilder = new NewOrderModificationBuilder(
                     orderId, value.districtId, value.warehouseId, value.customerId, value.date
                 );
+            }
 
-                int nextLineNumber = 0;
-                for (NewOrderRequest.OrderLine line : value.lines) {
-                    int lineNumber = nextLineNumber++;
-                    WarehouseSpecificKey stockKey = new WarehouseSpecificKey(line.itemId, line.supplyingWarehouseId);
+            int nextLineNumber = 0;
+            for (NewOrderRequest.OrderLine line : value.lines) {
+                int lineNumber = nextLineNumber++;
 
-                    // Load the item and stock data for this line
-                    Item item = itemStore.getBlocking(line.itemId);
-                    StockShared stockShared = stockImmutableStore.getBlocking(stockKey);
+                Item item = itemStore.getBlocking(line.itemId);
+
+                WarehouseSpecificKey dispatchingWarehouseStockKey = new WarehouseSpecificKey(line.itemId, line.supplyingWarehouseId);
+
+                // Stock can never actually be < 0, so use this as a placeholder value
+                // Alternative is null or Option, but both are ugly in the JVM
+                int stockQuantity = -1;
+
+                if (key.warehouseId == line.supplyingWarehouseId) {
+                    // The line comes from a warehouse that we are responsible for, so decrease the stock level
+                    stockQuantity = stockQuantityStore.get(dispatchingWarehouseStockKey);
+                    int excessStock = stockQuantity - line.quantity;
+                    if (excessStock < 10) {
+                        stockQuantity += 91;
+                    }
+                    stockQuantity -= line.quantity;
+                    stockQuantityStore.put(dispatchingWarehouseStockKey, stockQuantity);
+
+                    results.addLine(lineNumber, new OrderLineResult.PartialResult(stockQuantity));
+                }
+
+                if (local) {
+                    // If this is a local order, we need to give the user most of the results, and send a modification
+                    // message with the order details
+
+                    // Load the stock data for this line
+                    StockShared stockShared = stockImmutableStore.getBlocking(dispatchingWarehouseStockKey);
+                    if (stockQuantity == -1) {
+                        // dispatchingWarehouseStockKey is incorrect here, because we want the home warehouse level
+                        stockQuantity = stockQuantityStore.get(new WarehouseSpecificKey(line.itemId, value.warehouseId));
+                    }
 
                     // Add the order line to the generated order
                     BigDecimal lineAmount = item.price.multiply(new BigDecimal(line.quantity));
+                    String distInfo = stockShared.getDistrictInfo(value.districtId);
                     OrderLineModification orderLine = new OrderLineModification(
-                        lineNumber, line.itemId, line.supplyingWarehouseId, line.quantity, lineAmount,
-                        stockQuantityStore.get(new WarehouseSpecificKey(item.id, warehouse.id)),
-                        stockShared.getDistrictInfo(value.districtId)
+                        lineNumber, line.itemId, line.supplyingWarehouseId, line.quantity, lineAmount, stockQuantity,
+                        distInfo
                     );
 
                     orderBuilder.addOrderLine(orderLine);
@@ -128,45 +158,16 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
                     results.addLine(lineNumber, new OrderLineResult.PartialResult(
                         item.name, item.price, lineAmount
                     ));
+                } else {
+                    // It's remote, so we just need to update the views with details about the new stock level
+                    sendModification(key, new RemoteStockModification(item.id, line.supplyingWarehouseId, stockQuantity));
                 }
-
-                newOrdersStore.add(districtKey, orderBuilder.buildNewOrder());
-
-                //Order order = orderBuilder.build();
-                // We don't actually need to build the order at all
-                // TODO: If it isn't needed anywhere, we can remove it entirely
-
-                // Forward the transaction to the modification log
-                // We might want to add extra data to the NewOrderModification here in future, depending on what is
-                // actually used by the views, but this corresponds with the event sourcing model
-                sendModification(key, orderBuilder.build());
             }
 
-            int nextLineNumber = 0;
-            for (NewOrderRequest.OrderLine line : value.lines) {
-                int lineNumber = nextLineNumber++;
-
-                if (key.warehouseId != line.supplyingWarehouseId) {
-                    // Not responsible for this warehouse
-                    continue;
-                }
-
-                Item item = itemStore.getBlocking(line.itemId);
-
-                WarehouseSpecificKey stockKey = new WarehouseSpecificKey(item.id, line.supplyingWarehouseId);
-
-                int stockQuantity = stockQuantityStore.get(stockKey);
-                int excessStock = stockQuantity - line.quantity;
-                if (excessStock < 10) {
-                    stockQuantity += 91;
-                }
-                stockQuantity -= line.quantity;
-                stockQuantityStore.put(stockKey, stockQuantity);
-
-                // The other changes are performed in the view if needed, based on the event that is sent by the worker
-                // for the owning warehouse
-
-                results.addLine(lineNumber, new OrderLineResult.PartialResult(stockQuantity));
+            if (local) {
+                newOrdersStore.add(districtKey, orderBuilder.buildNewOrder());
+                // Forward the transaction to the modification log
+                sendModification(key, orderBuilder.build());
             }
 
             sendResults(key, results);
@@ -176,6 +177,8 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
             throw new InterruptException(e);
         }
     }
+
+
 
     private static Logger log = LogManager.getLogger();
 }

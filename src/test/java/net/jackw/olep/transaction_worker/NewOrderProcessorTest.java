@@ -19,6 +19,7 @@ import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.OrderLineModification;
+import net.jackw.olep.message.modification.RemoteStockModification;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
@@ -209,11 +210,54 @@ public class NewOrderProcessorTest {
     }
 
     @Test
-    public void testRemoteWarehouseDoesntAddToModificationLog() {
+    public void testRemoteWarehouseWithNoItemsDoesntAddToModificationLog() {
         NewOrderRequest request = new NewOrderRequest(5, 4, 4, ImmutableList.of(), 5L);
         processor.process(new TransactionWarehouseKey(50L, 3), request);
 
         assertThat(context.forwarded(KafkaConfig.MODIFICATION_LOG), Matchers.empty());
+    }
+
+    @Test
+    public void testRemoteWarehouseItemNewStockLevelsAreAddedToModificationLog() {
+        NewOrderRequest request = new NewOrderRequest(5, 4, 4, ImmutableList.of(
+            new NewOrderRequest.OrderLine(0, 3, 3),
+            new NewOrderRequest.OrderLine(1, 3, 5)
+        ), 5L);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
+
+        List<MockProcessorContext.CapturedForward> forwards = context.forwarded(KafkaConfig.MODIFICATION_LOG);
+        assertThat(forwards, Matchers.hasSize(2));
+
+        assertThat(forwards.get(0).keyValue().value, Matchers.instanceOf(RemoteStockModification.class));
+        RemoteStockModification modification0 = (RemoteStockModification) forwards.get(0).keyValue().value;
+        assertEquals(3, modification0.warehouseId);
+        assertEquals(0, modification0.itemId);
+        assertEquals(47, modification0.stockLevel);
+
+        assertThat(forwards.get(1).keyValue().value, Matchers.instanceOf(RemoteStockModification.class));
+        RemoteStockModification modification1 = (RemoteStockModification) forwards.get(1).keyValue().value;
+        assertEquals(3, modification1.warehouseId);
+        assertEquals(1, modification1.itemId);
+        assertEquals(97, modification1.stockLevel);
+    }
+
+    @Test
+    public void testHomeWarehouseSetsHomeStockAfterModification() {
+        NewOrderRequest request = new NewOrderRequest(5, 4, 3, ImmutableList.of(
+            new NewOrderRequest.OrderLine(0, 3, 3)
+        ), 5L);
+        processor.process(new TransactionWarehouseKey(50L, 3), request);
+
+        List<MockProcessorContext.CapturedForward> forwards = context.forwarded(KafkaConfig.MODIFICATION_LOG);
+        assertThat(forwards, Matchers.hasSize(1));
+
+        assertThat(forwards.get(0).keyValue().value, Matchers.instanceOf(NewOrderModification.class));
+        NewOrderModification modification = (NewOrderModification) forwards.get(0).keyValue().value;
+        assertEquals(3, modification.warehouseId);
+
+        assertThat(modification.lines, Matchers.hasSize(1));
+        OrderLineModification line = modification.lines.get(0);
+        assertEquals(47, line.homeWarehouseStockLevel);
     }
 
     @Test

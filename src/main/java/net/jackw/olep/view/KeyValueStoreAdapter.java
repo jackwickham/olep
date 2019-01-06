@@ -6,6 +6,7 @@ import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.modification.PaymentModification;
+import net.jackw.olep.message.modification.RemoteStockModification;
 import net.jackw.olep.view.records.Customer;
 
 import java.util.Collection;
@@ -68,6 +69,11 @@ public abstract class KeyValueStoreAdapter implements ViewReadAdapter, ViewWrite
     public void addCustomer(Customer cust) {
         setCustomerDetails(cust.id, cust.districtId, cust.warehouseId, cust);
         // TODO: Name mapping
+    }
+
+    @Override
+    public void remoteStock(RemoteStockModification modification) {
+        // TODO
     }
 
     // Reads
