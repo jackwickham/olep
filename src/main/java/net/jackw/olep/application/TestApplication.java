@@ -20,9 +20,10 @@ public class TestApplication {
             RandomDataGenerator rand = new RandomDataGenerator();
 
             for (int i = 0; i < 3; i++) {
-                final int itemId = rand.nextInt(200);
+                final int itemId = rand.nextInt(20);
+                NewOrderRequest.OrderLine line = new NewOrderRequest.OrderLine(itemId, 1, 5);
                 connection.newOrder(
-                    10, 1, 1, List.of(new NewOrderRequest.OrderLine(itemId, 2, 3))
+                    10, 1, 1, List.of(line, line, line, line, line, line, line, line, line, line, line)
                 ).register(new StatusPrinter<>("New-Order"));
 
                 connection.payment(
@@ -30,7 +31,7 @@ public class TestApplication {
                 ).register(new StatusPrinter<>("Payment"));
 
                 connection.payment(
-                    CommonFieldGenerators.generateLastName(rand.uniform(0, 999)), 1, 6,
+                    CommonFieldGenerators.generateLastName(rand.uniform(0, 19)), 1, 6,
                     1, 3, new BigDecimal("31.20")
                 ).register(new StatusPrinter<>("Payment+name"));
 
@@ -39,7 +40,7 @@ public class TestApplication {
             }
 
             complete.await();
-            System.out.printf("%d items are below the stock threshold\n", connection.stockLevel(1, 1, 40));
+            System.out.printf("%d items are below the stock threshold\n", connection.stockLevel(1, 1, 80));
         }
     }
 

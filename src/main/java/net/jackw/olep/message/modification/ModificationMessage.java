@@ -19,7 +19,8 @@ import net.jackw.olep.message.transaction_request.PaymentRequest;
 @JsonSubTypes({
     @JsonSubTypes.Type(value = NewOrderModification.class, name = "neworder"),
     @JsonSubTypes.Type(value = PaymentModification.class, name = "payment"),
-    @JsonSubTypes.Type(value = DeliveryModification.class, name = "delivery")
+    @JsonSubTypes.Type(value = DeliveryModification.class, name = "delivery"),
+    @JsonSubTypes.Type(value = RemoteStockModification.class, name="remote-stock")
 })
 @Immutable
 public interface ModificationMessage {}

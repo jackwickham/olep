@@ -2,7 +2,10 @@ package net.jackw.olep.view;
 
 import net.jackw.olep.view.records.Customer;
 
-public interface ViewReadAdapter extends AutoCloseable {
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface ViewReadAdapter extends Remote {
     /**
      * Retrieve the customer details, and the details of their latest order
      *
@@ -11,7 +14,7 @@ public interface ViewReadAdapter extends AutoCloseable {
      * @param warehouseId Customer's warehouse
      * @return The Customer view
      */
-    Customer orderStatus(int customerId, int districtId, int warehouseId);
+    Customer orderStatus(int customerId, int districtId, int warehouseId) throws RemoteException;
 
     /**
      * Retrieve the customer details, and the details of their latest order
@@ -21,7 +24,7 @@ public interface ViewReadAdapter extends AutoCloseable {
      * @param warehouseId Customer's warehouse
      * @return The Customer view
      */
-    Customer orderStatus(String customerLastName, int districtId, int warehouseId);
+    Customer orderStatus(String customerLastName, int districtId, int warehouseId) throws RemoteException;
 
     /**
      * Retrieve the stock-level transaction using the data from this view
@@ -32,13 +35,13 @@ public interface ViewReadAdapter extends AutoCloseable {
      *
      * TODO: This should be some form of future
      *
-     * @param warehouseId The warehouse to check the stock for
      * @param districtId The district to look at orders from
+     * @param warehouseId The warehouse to check the stock for
      * @param stockThreshold The lowest permitted stock level
      * @return The number of items from the checked orders that are < stockThreshold in this warehouse
      */
-    int stockLevel(int warehouseId, int districtId, int stockThreshold);
+    int stockLevel(int districtId, int warehouseId, int stockThreshold) throws RemoteException;
 
-    @Override
-    void close();
+    /*@Override
+    void close();*/
 }

@@ -7,6 +7,7 @@ import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.PaymentModification;
+import net.jackw.olep.message.modification.RemoteStockModification;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -17,17 +18,34 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
 public class LogViewAdapter implements AutoCloseable {
+    private final InMemoryRMIWrapper viewWrapper;
     private final ViewWriteAdapter viewAdapter;
     private final Consumer<Long, ModificationMessage> logConsumer;
 
-    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter) {
-        this.viewAdapter = viewAdapter;
+    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, InMemoryRMIWrapper viewWrapper) {
+        this.viewWrapper = viewWrapper;
+        this.viewAdapter = viewWrapper.getAdapter();
         this.logConsumer = logConsumer;
+
+        // Add a shutdown listener to gracefully handle Ctrl+C
+        Runtime.getRuntime().addShutdownHook(new Thread("view-adapter-shutdown-hook") {
+            @Override
+            public void run() {
+                try {
+                    close();
+                } catch (Exception e) {
+                    log.error(e);
+                }
+            }
+        });
     }
 
     /**
@@ -49,13 +67,15 @@ public class LogViewAdapter implements AutoCloseable {
     }
 
     private void processModification(long key, ModificationMessage message) {
-        log.debug("Processing modification for transaction {}", key);
+        log.debug("Processing {} for transaction {}", message.getClass(), key);
         if (message instanceof NewOrderModification) {
             viewAdapter.newOrder((NewOrderModification) message);
         } else if (message instanceof DeliveryModification) {
             viewAdapter.delivery((DeliveryModification) message);
         } else if (message instanceof PaymentModification) {
             viewAdapter.payment((PaymentModification) message);
+        } else if (message instanceof RemoteStockModification) {
+            viewAdapter.remoteStock((RemoteStockModification) message);
         } else {
             throw new IllegalArgumentException("Unrecognised message type " + message.getClass().getName());
         }
@@ -63,14 +83,14 @@ public class LogViewAdapter implements AutoCloseable {
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public static LogViewAdapter init(String bootstrapServers, String viewServer) {
+    public static LogViewAdapter init(String bootstrapServers, String registryServer) throws RemoteException, AlreadyBoundException, NotBoundException {
         Properties consumerProps = new Properties();
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "view-consumer");
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         KafkaConsumer<Long, ModificationMessage> consumer = null;
-        ViewWriteAdapter viewAdapter = null;
+        InMemoryRMIWrapper viewWrapper = null;
 
         try {
             consumer = new KafkaConsumer<>(
@@ -80,31 +100,31 @@ public class LogViewAdapter implements AutoCloseable {
             );
             consumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG));
 
-            viewAdapter = new RedisAdapter(viewServer);
+            viewWrapper = new InMemoryRMIWrapper(registryServer);
 
-            return new LogViewAdapter(consumer, viewAdapter);
+            return new LogViewAdapter(consumer, viewWrapper);
         } catch (Exception e) {
             try (
                 Consumer c = consumer;
-                ViewWriteAdapter v = viewAdapter;
+                InMemoryRMIWrapper v = viewWrapper;
             ) { }
 
             throw e;
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException {
         try (LogViewAdapter adapter = init("localhost:9092", "localhost")) {
             adapter.run();
         }
     }
 
     @Override
-    public void close() {
+    public void close() throws RemoteException, NotBoundException {
         // Use try-with-resources to ensure they both get safely closed
         try (
             Consumer c = logConsumer;
-            ViewWriteAdapter v = viewAdapter
+            InMemoryRMIWrapper v = viewWrapper
         ) { }
     }
 

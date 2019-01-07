@@ -14,6 +14,10 @@ import net.jackw.olep.view.records.Customer;
 
 import java.io.Closeable;
 import java.math.BigDecimal;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
 import java.util.Date;
 import java.util.List;
 
@@ -25,12 +29,16 @@ public class Database implements Closeable {
     @SuppressWarnings("MustBeClosedChecker")
     public Database(String eventBootstrapServers, String viewServer) {
         try {
-            viewAdapter = new RedisAdapter(viewServer);
+            viewAdapter = loadViewAdapter(viewServer);
             eventConnection = new DatabaseConnection(eventBootstrapServers);
         } catch (Exception e) {
             close();
-            throw e;
+            throw new RuntimeException(e);
         }
+    }
+
+    private ViewReadAdapter loadViewAdapter(String server) throws RemoteException, NotBoundException {
+        return (ViewReadAdapter) LocateRegistry.getRegistry(server).lookup("view/TODO_PARTITION_NUMBER");
     }
 
 
@@ -87,15 +95,27 @@ public class Database implements Closeable {
     }
 
     public int stockLevel(int warehouseId, int districtId, int stockThreshold) {
-        return viewAdapter.stockLevel(warehouseId, districtId, stockThreshold);
+        try {
+            return viewAdapter.stockLevel(districtId, warehouseId, stockThreshold);
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Customer orderStatus(int customerId, int districtId, int warehouseId) {
-        return viewAdapter.orderStatus(customerId, districtId, warehouseId);
+        try {
+            return viewAdapter.orderStatus(customerId, districtId, warehouseId);
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Customer orderStatus(String customerLastName, int districtId, int warehouseId) {
-        return viewAdapter.orderStatus(customerLastName, districtId, warehouseId);
+        try {
+            return viewAdapter.orderStatus(customerLastName, districtId, warehouseId);
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -103,7 +123,7 @@ public class Database implements Closeable {
         // Use try-with-resources to ensure that they are closed
         try (
             DatabaseConnection d = eventConnection;
-            ViewReadAdapter v = viewAdapter;
+            //ViewReadAdapter v = viewAdapter;
         ) { }
     }
 }
