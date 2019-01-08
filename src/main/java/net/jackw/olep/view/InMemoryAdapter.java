@@ -3,44 +3,57 @@ package net.jackw.olep.view;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import net.jackw.olep.common.SharedCustomerStore;
+import net.jackw.olep.common.records.CustomerNameKey;
+import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.modification.RemoteStockModification;
-import net.jackw.olep.view.records.Customer;
+import net.jackw.olep.view.records.OrderStatusResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdapter, ViewWriteAdapter {
     private Map<WarehouseSpecificKey, WarehouseItemStock> stockMap;
     private Map<WarehouseSpecificKey, Queue<Set<WarehouseItemStock>>> recentOrders;
+    private Map<DistrictSpecificKey, CustomerState> customerState;
+    private SharedCustomerStore customerSharedStore;
 
-    public InMemoryAdapter() throws RemoteException {
+    public InMemoryAdapter(SharedCustomerStore customerSharedStore) throws RemoteException {
         super();
         stockMap = new MapMaker().initialCapacity(1000).weakValues().makeMap();
-        recentOrders = new HashMap<>();
+        recentOrders = new ConcurrentHashMap<>();
+        customerState = new ConcurrentHashMap<>();
+        this.customerSharedStore = customerSharedStore;
     }
 
     ///// Reads /////
 
     @Override
-    public Customer orderStatus(int customerId, int districtId, int warehouseId) {
-        return null;
+    public OrderStatusResult orderStatus(int customerId, int districtId, int warehouseId) {
+        DistrictSpecificKey customerKey = new DistrictSpecificKey(customerId, districtId, warehouseId);
+        CustomerShared customerShared = customerSharedStore.get(customerKey);
+        return customerState.get(customerKey).intoOrderStatusResult(customerShared);
     }
 
     @Override
-    public Customer orderStatus(String customerLastName, int districtId, int warehouseId) {
-        return null;
+    public OrderStatusResult orderStatus(String customerLastName, int districtId, int warehouseId) {
+        CustomerShared customerShared = customerSharedStore.get(new CustomerNameKey(customerLastName, districtId, warehouseId));
+        return customerState.get(new DistrictSpecificKey(customerShared.id, districtId, warehouseId))
+            .intoOrderStatusResult(customerShared);
     }
 
     @Override
@@ -99,17 +112,43 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
         synchronized (queue) {
             queue.add(itemStocks);
         }
-        log.debug("new order insert - {}", queue);
+        // Also update the customer's latest order
+        DistrictSpecificKey customerKey = new DistrictSpecificKey(modification.customerId, modification.districtId, modification.warehouseId);
+        boolean replaced;
+        do {
+            CustomerState oldState = customerState.get(customerKey);
+            CustomerState newState;
+            if (oldState == null) {
+                // TODO: Balance needs to be populated when the mutable fields are generated
+                newState = new CustomerState(new BigDecimal("10.00"), modification.orderId, modification.date, null, modification.lines);
+            } else {
+                newState = oldState.withLatestOrder(modification.orderId, modification.date, null, modification.lines);
+            }
+            replaced = customerState.replace(customerKey, oldState, newState);
+        } while (!replaced);
     }
 
     @Override
     public void delivery(DeliveryModification modification) {
-
+        DistrictSpecificKey key = new DistrictSpecificKey(modification.customerId, modification.districtId, modification.warehouseId);
+        boolean replaced;
+        do {
+            CustomerState state = customerState.get(key);
+            replaced = customerState.replace(
+                key, state,
+                state.withDelivery(modification.orderId, modification.deliveryDate, modification.carrierId, modification.orderTotal)
+            );
+        } while (!replaced);
     }
 
     @Override
     public void payment(PaymentModification modification) {
-
+        DistrictSpecificKey key = new DistrictSpecificKey(modification.customerId, modification.districtId, modification.warehouseId);
+        boolean replaced;
+        do {
+            CustomerState state = customerState.get(key);
+            replaced = customerState.replace(key, state, state.withPayment(modification.amount));
+        } while (!replaced);
     }
 
     @Override
@@ -118,7 +157,8 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     }
 
     @Override
-    public void addCustomer(Customer cust) {
+    @Deprecated
+    public void addCustomer(OrderStatusResult cust) {
 
     }
 

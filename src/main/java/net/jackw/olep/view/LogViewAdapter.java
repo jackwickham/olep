@@ -3,6 +3,7 @@ package net.jackw.olep.view;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.modification.NewOrderModification;
@@ -29,6 +30,7 @@ public class LogViewAdapter implements AutoCloseable {
     private final InMemoryRMIWrapper viewWrapper;
     private final ViewWriteAdapter viewAdapter;
     private final Consumer<Long, ModificationMessage> logConsumer;
+    private SharedCustomerStoreConsumer customerStoreConsumer;
 
     public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, InMemoryRMIWrapper viewWrapper) {
         this.viewWrapper = viewWrapper;
@@ -83,7 +85,7 @@ public class LogViewAdapter implements AutoCloseable {
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public static LogViewAdapter init(String bootstrapServers, String registryServer) throws RemoteException, AlreadyBoundException, NotBoundException {
+    public static LogViewAdapter init(String bootstrapServers, String registryServer) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException {
         Properties consumerProps = new Properties();
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "view-consumer");
@@ -91,6 +93,7 @@ public class LogViewAdapter implements AutoCloseable {
 
         KafkaConsumer<Long, ModificationMessage> consumer = null;
         InMemoryRMIWrapper viewWrapper = null;
+        SharedCustomerStoreConsumer customerStoreConsumer = null;
 
         try {
             consumer = new KafkaConsumer<>(
@@ -100,31 +103,35 @@ public class LogViewAdapter implements AutoCloseable {
             );
             consumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG));
 
-            viewWrapper = new InMemoryRMIWrapper(registryServer);
+            customerStoreConsumer = new SharedCustomerStoreConsumer(bootstrapServers, "view-adapter-TODO_PARTITION_ID");
+
+            viewWrapper = new InMemoryRMIWrapper(registryServer, customerStoreConsumer.getStore());
 
             return new LogViewAdapter(consumer, viewWrapper);
         } catch (Exception e) {
             try (
                 Consumer c = consumer;
                 InMemoryRMIWrapper v = viewWrapper;
+                SharedCustomerStoreConsumer scs = customerStoreConsumer;
             ) { }
 
             throw e;
         }
     }
 
-    public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException {
+    public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException {
         try (LogViewAdapter adapter = init("localhost:9092", "localhost")) {
             adapter.run();
         }
     }
 
     @Override
-    public void close() throws RemoteException, NotBoundException {
-        // Use try-with-resources to ensure they both get safely closed
+    public void close() throws RemoteException, NotBoundException, InterruptedException {
+        // Use try-with-resources to ensure they all get safely closed
         try (
             Consumer c = logConsumer;
-            InMemoryRMIWrapper v = viewWrapper
+            InMemoryRMIWrapper v = viewWrapper;
+            SharedCustomerStoreConsumer scs = customerStoreConsumer;
         ) { }
     }
 

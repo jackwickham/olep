@@ -15,7 +15,7 @@ public class Order extends Record<DistrictSpecificKey> {
     public final int customerId;
     public final long entryDate;
     @Nullable public final Integer carrierId;
-    @Nonnull public final ImmutableList<OrderLine> orderLines;
+    @Nonnull public final ImmutableList<? extends OrderLine> orderLines;
     public final boolean allLocal;
 
     public Order(
@@ -25,7 +25,7 @@ public class Order extends Record<DistrictSpecificKey> {
         @JsonProperty("customerId") int customerId,
         @JsonProperty("entryDate") long entryDate,
         @JsonProperty("carrierId") @Nullable Integer carrierId,
-        @JsonProperty("orderLines") @Nonnull ImmutableList<OrderLine> orderLines,
+        @JsonProperty("orderLines") @Nonnull ImmutableList<? extends OrderLine> orderLines,
         @JsonProperty("allLocal") boolean allLocal
     ) {
         this.orderId = orderId;

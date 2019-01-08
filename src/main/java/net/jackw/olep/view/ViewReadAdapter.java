@@ -1,6 +1,6 @@
 package net.jackw.olep.view;
 
-import net.jackw.olep.view.records.Customer;
+import net.jackw.olep.view.records.OrderStatusResult;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -14,7 +14,7 @@ public interface ViewReadAdapter extends Remote {
      * @param warehouseId Customer's warehouse
      * @return The Customer view
      */
-    Customer orderStatus(int customerId, int districtId, int warehouseId) throws RemoteException;
+    OrderStatusResult orderStatus(int customerId, int districtId, int warehouseId) throws RemoteException;
 
     /**
      * Retrieve the customer details, and the details of their latest order
@@ -24,7 +24,7 @@ public interface ViewReadAdapter extends Remote {
      * @param warehouseId Customer's warehouse
      * @return The Customer view
      */
-    Customer orderStatus(String customerLastName, int districtId, int warehouseId) throws RemoteException;
+    OrderStatusResult orderStatus(String customerLastName, int districtId, int warehouseId) throws RemoteException;
 
     /**
      * Retrieve the stock-level transaction using the data from this view

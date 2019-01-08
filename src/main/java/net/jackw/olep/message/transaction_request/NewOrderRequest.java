@@ -15,14 +15,14 @@ public class NewOrderRequest extends TransactionRequestMessage {
     public final int customerId;
     public final int districtId;
     public final int warehouseId;
-    public final ImmutableList<OrderLine> lines;
+    public final ImmutableList<? extends OrderLine> lines;
     public final long date;
 
     public NewOrderRequest(
         @JsonProperty("customerId") int customerId,
         @JsonProperty("districtId") int districtId,
         @JsonProperty("warehouseId") int warehouseId,
-        @JsonProperty("items") ImmutableList<OrderLine> lines,
+        @JsonProperty("items") ImmutableList<? extends OrderLine> lines,
         @JsonProperty("date") long date
     ) {
         this.customerId = customerId;

@@ -1,6 +1,7 @@
 package net.jackw.olep.view;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import net.jackw.olep.common.SharedCustomerStore;
 
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -14,10 +15,10 @@ public class InMemoryRMIWrapper implements AutoCloseable {
     private final String name = "view/TODO_PARTITION_NUMBER";
 
     @MustBeClosed
-    public InMemoryRMIWrapper(String registryServer) throws RemoteException, AlreadyBoundException {
+    public InMemoryRMIWrapper(String registryServer, SharedCustomerStore customerStore) throws RemoteException, AlreadyBoundException {
         super();
 
-        adapter = new InMemoryAdapter();
+        adapter = new InMemoryAdapter(customerStore);
 
         registry = LocateRegistry.getRegistry(registryServer);
         registry.bind(name, adapter);

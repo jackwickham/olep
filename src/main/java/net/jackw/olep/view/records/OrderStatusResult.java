@@ -12,8 +12,8 @@ import java.math.BigDecimal;
  * A denormalised customer view
  */
 @Immutable
-public class Customer {
-    public final int id;
+public class OrderStatusResult {
+    public final int customerId;
     public final int districtId;
     public final int warehouseId;
     public final String firstName;
@@ -23,10 +23,10 @@ public class Customer {
     public final int latestOrderId;
     public final long latestOrderDate;
     public final Integer latestOrderCarrierId;
-    public final ImmutableList<OrderLine> latestOrderLines;
+    public final ImmutableList<? extends OrderLine> latestOrderLines;
 
-    public Customer(
-        @JsonProperty("id") int id,
+    public OrderStatusResult(
+        @JsonProperty("id") int customerId,
         @JsonProperty("districtId") int districtId,
         @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("firstName") String firstName,
@@ -36,9 +36,9 @@ public class Customer {
         @JsonProperty("latestOrderId") int latestOrderId,
         @JsonProperty("latestOrderDate") long latestOrderDate,
         @JsonProperty("latestOrderCarrierId") Integer latestOrderCarrierId,
-        @JsonProperty("latestOrderLines") ImmutableList<OrderLine> latestOrderLines
+        @JsonProperty("latestOrderLines") ImmutableList<? extends OrderLine> latestOrderLines
     ) {
-        this.id = id;
+        this.customerId = customerId;
         this.districtId = districtId;
         this.warehouseId = warehouseId;
         this.firstName = firstName;
@@ -49,39 +49,5 @@ public class Customer {
         this.latestOrderDate = latestOrderDate;
         this.latestOrderCarrierId = latestOrderCarrierId;
         this.latestOrderLines = latestOrderLines;
-    }
-
-    /**
-     * Create a copy of this customer with details of a different order
-     */
-    public Customer withOrder(int orderId, long orderDate, Integer orderCarrierId, ImmutableList<OrderLine> orderLines) {
-        return new Customer(
-            id, districtId, warehouseId, firstName, middleName, lastName, balance, orderId, orderDate, orderCarrierId,
-            orderLines
-        );
-    }
-
-    /**
-     * Create a copy of this customer after one of their orders has been delivered
-     */
-    public Customer afterDelivery(int orderId, long deliveryDate, int carrierId, BigDecimal orderTotal) {
-        if (orderId != latestOrderId) {
-            return this;
-        }
-
-        ImmutableList<OrderLine> updatedLines = ImmutableList.copyOf(
-            Lists.transform(latestOrderLines, line -> line.withDeliveryDate(deliveryDate))
-        );
-        return new Customer(
-            id, districtId, warehouseId, firstName, middleName, lastName, balance.add(orderTotal), latestOrderId,
-            latestOrderDate, carrierId, updatedLines
-        );
-    }
-
-    public Customer withBalance(BigDecimal balance) {
-        return new Customer(
-            id, districtId, warehouseId, firstName, middleName, lastName, balance, latestOrderId, latestOrderDate,
-            latestOrderCarrierId, latestOrderLines
-        );
     }
 }

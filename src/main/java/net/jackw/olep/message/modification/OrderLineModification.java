@@ -8,16 +8,8 @@ import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 
 @Immutable
-public class OrderLineModification {
-    public final int lineNumber;
-    public final int itemId;
-    public final int supplyWarehouseId;
-    public final int quantity;
-    @Nonnull
-    public final BigDecimal amount;
+public class OrderLineModification extends OrderLine {
     public final int homeWarehouseStockLevel;
-    @Nonnull
-    public final String distInfo;
 
     public OrderLineModification(
         @JsonProperty("lineNumber") int lineNumber,
@@ -28,16 +20,7 @@ public class OrderLineModification {
         @JsonProperty("homeWarehouseStockLevel") int homeWarehouseStockLevel,
         @JsonProperty("distInfo") @Nonnull String distInfo
     ) {
-        this.lineNumber = lineNumber;
-        this.itemId = itemId;
-        this.supplyWarehouseId = supplyWarehouseId;
-        this.quantity = quantity;
-        this.amount = amount;
+        super(lineNumber, itemId, supplyWarehouseId, quantity, amount, distInfo);
         this.homeWarehouseStockLevel = homeWarehouseStockLevel;
-        this.distInfo = distInfo;
-    }
-
-    public OrderLine toOrderLine() {
-        return new OrderLine(lineNumber, itemId, supplyWarehouseId, null, quantity, amount, distInfo);
     }
 }

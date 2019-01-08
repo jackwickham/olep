@@ -8,13 +8,11 @@ import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.PaymentResult;
-import net.jackw.olep.view.RedisAdapter;
 import net.jackw.olep.view.ViewReadAdapter;
-import net.jackw.olep.view.records.Customer;
+import net.jackw.olep.view.records.OrderStatusResult;
 
 import java.io.Closeable;
 import java.math.BigDecimal;
-import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -102,7 +100,7 @@ public class Database implements Closeable {
         }
     }
 
-    public Customer orderStatus(int customerId, int districtId, int warehouseId) {
+    public OrderStatusResult orderStatus(int customerId, int districtId, int warehouseId) {
         try {
             return viewAdapter.orderStatus(customerId, districtId, warehouseId);
         } catch (RemoteException e) {
@@ -110,7 +108,7 @@ public class Database implements Closeable {
         }
     }
 
-    public Customer orderStatus(String customerLastName, int districtId, int warehouseId) {
+    public OrderStatusResult orderStatus(String customerLastName, int districtId, int warehouseId) {
         try {
             return viewAdapter.orderStatus(customerLastName, districtId, warehouseId);
         } catch (RemoteException e) {

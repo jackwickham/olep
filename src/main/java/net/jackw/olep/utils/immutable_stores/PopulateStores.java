@@ -11,9 +11,8 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
-import net.jackw.olep.view.RedisAdapter;
 import net.jackw.olep.view.ViewWriteAdapter;
-import net.jackw.olep.view.records.Customer;
+import net.jackw.olep.view.records.OrderStatusResult;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -61,7 +60,7 @@ public class PopulateStores implements AutoCloseable {
         districtProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
         customerProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
         stockProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
-        viewWriteAdapter = new RedisAdapter(redisHost);
+        //viewWriteAdapter = new RedisAdapter(redisHost);
     }
 
     public static void main(String[] args) {
@@ -139,12 +138,12 @@ public class PopulateStores implements AutoCloseable {
             CustomerShared customer = customerFactory.makeCustomerShared();
             customerProducer.send(new ProducerRecord<>(KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, 0, customer.getKey(), customer));
 
-            Customer viewCustomer = new Customer(
+            OrderStatusResult viewCustomer = new OrderStatusResult(
                 customer.id, customer.districtId, customer.warehouseId, customer.firstName, customer.middleName,
                 customer.lastName, new BigDecimal("-10"), 0, 1, null,
                 ImmutableList.of()
             );
-            viewWriteAdapter.addCustomer(viewCustomer);
+            //viewWriteAdapter.addCustomer(viewCustomer);
         }
     }
 

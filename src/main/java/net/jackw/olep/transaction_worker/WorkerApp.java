@@ -71,8 +71,7 @@ public class WorkerApp extends StreamsApp {
         );
         customerConsumer = new SharedCustomerStoreConsumer(
             getBootstrapServers(),
-            getApplicationID() + "-" + getNodeID(),
-            KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC
+            getApplicationID() + "-" + getNodeID()
         );
         stockConsumer = new SharedStoreConsumer<>(
             getBootstrapServers(),

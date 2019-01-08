@@ -11,8 +11,8 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
      * @param nodeID            The ID of this node. It should be unique between all consumers of this log.
      * @param topic             The changelog topic corresponding to this store
      */
-    public SharedCustomerStoreConsumer(String bootstrapServers, String nodeID, String topic) {
-        super(bootstrapServers, nodeID, topic, DistrictSpecificKey.class, CustomerShared.class);
+    public SharedCustomerStoreConsumer(String bootstrapServers, String nodeID) {
+        super(bootstrapServers, nodeID, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, DistrictSpecificKey.class, CustomerShared.class);
     }
 
     /**
