@@ -4,6 +4,8 @@ jdk:
 
 dist: trusty
 
+services: redis-server
+
 # Need kafka for integration tests
 before_install:
   - wget "https://www.apache.org/dyn/mirrors/mirrors.cgi?filename=/kafka/2.0.0/kafka_2.11-2.0.0.tgz&action=download" -O kafka.tgz
