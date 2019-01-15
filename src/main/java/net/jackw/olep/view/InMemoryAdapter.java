@@ -13,7 +13,7 @@ import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.modification.RemoteStockModification;
-import net.jackw.olep.view.records.OrderStatusResult;
+import net.jackw.olep.common.records.OrderStatusResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -154,12 +154,6 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     @Override
     public void remoteStock(RemoteStockModification modification) {
         getStockObject(new WarehouseSpecificKey(modification.itemId, modification.warehouseId), modification.stockLevel);
-    }
-
-    @Override
-    @Deprecated
-    public void addCustomer(OrderStatusResult cust) {
-
     }
 
     ///// Utils /////

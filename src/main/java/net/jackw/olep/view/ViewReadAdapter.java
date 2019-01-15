@@ -1,6 +1,6 @@
 package net.jackw.olep.view;
 
-import net.jackw.olep.view.records.OrderStatusResult;
+import net.jackw.olep.common.records.OrderStatusResult;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;

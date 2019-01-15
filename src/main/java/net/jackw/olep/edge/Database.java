@@ -9,7 +9,7 @@ import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.view.ViewReadAdapter;
-import net.jackw.olep.view.records.OrderStatusResult;
+import net.jackw.olep.common.records.OrderStatusResult;
 
 import java.io.Closeable;
 import java.math.BigDecimal;

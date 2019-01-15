@@ -1,4 +1,4 @@
-package net.jackw.olep.view.records;
+package net.jackw.olep.common.records;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;

@@ -5,7 +5,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.OrderLine;
-import net.jackw.olep.view.records.OrderStatusResult;
+import net.jackw.olep.common.records.OrderStatusResult;
 
 import java.math.BigDecimal;
 
