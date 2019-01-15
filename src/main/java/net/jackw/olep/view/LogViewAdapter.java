@@ -14,6 +14,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.logging.log4j.LogManager;
@@ -30,7 +31,6 @@ public class LogViewAdapter implements AutoCloseable {
     private final InMemoryRMIWrapper viewWrapper;
     private final ViewWriteAdapter viewAdapter;
     private final Consumer<Long, ModificationMessage> logConsumer;
-    private SharedCustomerStoreConsumer customerStoreConsumer;
 
     public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, InMemoryRMIWrapper viewWrapper) {
         this.viewWrapper = viewWrapper;
@@ -89,7 +89,7 @@ public class LogViewAdapter implements AutoCloseable {
         Properties consumerProps = new Properties();
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "view-consumer");
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         KafkaConsumer<Long, ModificationMessage> consumer = null;
         InMemoryRMIWrapper viewWrapper = null;
@@ -101,7 +101,10 @@ public class LogViewAdapter implements AutoCloseable {
                 Serdes.Long().deserializer(),
                 new JsonDeserializer<>(ModificationMessage.class)
             );
-            consumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG));
+            // TODO: support partitioning
+            List<TopicPartition> partitions = List.of(new TopicPartition(KafkaConfig.MODIFICATION_LOG, 0));
+            consumer.assign(partitions);
+            consumer.seekToBeginning(partitions);
 
             customerStoreConsumer = new SharedCustomerStoreConsumer(bootstrapServers, "view-adapter-TODO_PARTITION_ID");
             customerStoreConsumer.start();
@@ -127,12 +130,11 @@ public class LogViewAdapter implements AutoCloseable {
     }
 
     @Override
-    public void close() throws RemoteException, NotBoundException, InterruptedException {
+    public void close() throws RemoteException, NotBoundException {
         // Use try-with-resources to ensure they all get safely closed
         try (
             Consumer c = logConsumer;
             InMemoryRMIWrapper v = viewWrapper;
-            SharedCustomerStoreConsumer scs = customerStoreConsumer;
         ) { }
     }
 

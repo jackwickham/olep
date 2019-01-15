@@ -29,6 +29,7 @@ public class NewOrderTest extends BaseIntegrationTest {
     public void startListeners() {
         startVerifier();
         startWorker();
+        startView();
     }
 
     @Test

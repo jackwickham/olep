@@ -198,7 +198,7 @@ public class PopulateStores implements AutoCloseable {
     private void populateOrders(DistrictShared district, int[] stockQuantities) {
         OrderFactory orderFactory;
         if (predictable) {
-            orderFactory = PredictableOrderFactory.instanceFor(district);
+            orderFactory = PredictableOrderFactory.instanceFor(district, itemCount);
         } else {
             orderFactory = RandomOrderFactory.instanceFor(district, itemCount);
             Collections.shuffle(customerIds);

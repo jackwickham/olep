@@ -1,15 +1,3 @@
-import redis.clients.jedis.Jedis
-
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        // Make jedis available within the gradle script
-        classpath group: 'redis.clients', name: 'jedis', version: '3.0.0'
-    }
-}
-
 plugins {
     // Apply the java plugin to add support for Java
     id 'java'
@@ -127,16 +115,6 @@ task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     shouldRunAfter test
-}
-
-integrationTest.onlyIf {
-    try {
-        new Jedis("localhost").get("INVALIDKEY")
-        return true;
-    } catch (Exception e) {
-        logger.warn("Integration tests skipped because redis is unavailable")
-        return false;
-    }
 }
 
 check.dependsOn integrationTest

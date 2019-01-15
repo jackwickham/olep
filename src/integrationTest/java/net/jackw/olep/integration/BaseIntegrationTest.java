@@ -5,19 +5,22 @@ import net.jackw.olep.transaction_worker.WorkerApp;
 import net.jackw.olep.utils.ClusterCreator;
 import net.jackw.olep.utils.immutable_stores.PopulateStores;
 import net.jackw.olep.verifier.VerifierApp;
+import net.jackw.olep.view.LogViewAdapter;
+import net.jackw.olep.view.StandaloneRegistry;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.DeleteTopicsResult;
+import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.KafkaStreams;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 public abstract class BaseIntegrationTest {
@@ -38,6 +41,11 @@ public abstract class BaseIntegrationTest {
         ClusterCreator.resetTransactionTopics();
     }
 
+    @BeforeClass
+    public static void ensureRegistryRunning() {
+        StandaloneRegistry.start();
+    }
+
     protected String getEventBootsrapServers() {
         return "127.0.0.1:9092";
     }
@@ -52,6 +60,9 @@ public abstract class BaseIntegrationTest {
 
     private List<KafkaStreams> verifierStreams = new ArrayList<>();
     private List<KafkaStreams> workerStreams = new ArrayList<>();
+    private Thread viewThread = null;
+
+    private volatile RuntimeException remoteThreadException = null;
 
     /**
      * Start a verifier instance, with a fresh state store
@@ -96,13 +107,49 @@ public abstract class BaseIntegrationTest {
         return streams;
     }
 
+    protected void startView() {
+        final CountDownLatch latch = new CountDownLatch(1);
+        viewThread = new Thread(() -> {
+            try {
+                try (LogViewAdapter adapter = LogViewAdapter.init(
+                    getEventBootsrapServers(),
+                    getViewBootstrapServers()
+                )) {
+                    latch.countDown();
+                    adapter.run();
+                }
+            } catch (InterruptedException | InterruptException e) {
+                // pass
+            } catch (Exception e) {
+                remoteThreadException = new RuntimeException(e);
+            }
+            if (latch.getCount() > 0) {
+                latch.countDown();
+            }
+        });
+        viewThread.start();
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @After
-    public void stopWorkers() {
+    public void stopWorkers() throws InterruptedException {
         for (KafkaStreams streams : verifierStreams) {
             streams.close();
         }
         for (KafkaStreams streams : workerStreams) {
             streams.close();
+        }
+        if (viewThread != null && viewThread.isAlive()) {
+            viewThread.interrupt();
+            viewThread.join();
+        }
+
+        if (remoteThreadException != null) {
+            throw remoteThreadException;
         }
     }
 }

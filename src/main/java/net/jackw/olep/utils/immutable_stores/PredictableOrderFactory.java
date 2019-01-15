@@ -17,23 +17,25 @@ public class PredictableOrderFactory implements OrderFactory {
     private int nextId;
     private int warehouseId;
     private int districtId;
+    private int numItems;
 
     private static Map<WarehouseSpecificKey, PredictableOrderFactory> instances = new HashMap<>();
 
-    private PredictableOrderFactory(int districtId, int warehouseId) {
+    private PredictableOrderFactory(int districtId, int warehouseId, int numItems) {
         nextId = 1;
         this.warehouseId = warehouseId;
         this.districtId = districtId;
+        this.numItems = numItems;
     }
 
-    public static PredictableOrderFactory instanceFor(DistrictShared district) {
-        return instanceFor(district.id, district.warehouseId);
+    public static PredictableOrderFactory instanceFor(DistrictShared district, int numItems) {
+        return instanceFor(district.id, district.warehouseId, numItems);
     }
 
-    public static PredictableOrderFactory instanceFor(int districtId, int warehouseId) {
+    public static PredictableOrderFactory instanceFor(int districtId, int warehouseId, int numItems) {
         WarehouseSpecificKey key = new WarehouseSpecificKey(districtId, warehouseId);
         if (!instances.containsKey(key)) {
-            instances.put(key, new PredictableOrderFactory(districtId, warehouseId));
+            instances.put(key, new PredictableOrderFactory(districtId, warehouseId, numItems));
         }
         return instances.get(key);
     }
@@ -71,6 +73,9 @@ public class PredictableOrderFactory implements OrderFactory {
 
     public OrderLineModification getOrderLine(int orderId, int lineNumber, boolean includeAmount, StockProvider stockProvider) {
         int itemId = orderId * 10 + lineNumber;
+        while (itemId > numItems) {
+            itemId -= numItems;
+        }
         int quantity = 5;
         BigDecimal amount;
         if (includeAmount) {
