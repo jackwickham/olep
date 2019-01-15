@@ -93,12 +93,12 @@ task runApplication(type: JavaExec, dependsOn: 'classes') {
 
 task runWorker(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
-    main = "net.jackw.olep.transaction_worker.WorkerApp"
+    main = "net.jackw.olep.worker.WorkerApp"
 }
 
 task populateStores(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
-    main = "net.jackw.olep.utils.immutable_stores.PopulateStores"
+    main = "net.jackw.olep.utils.populate.PopulateStores"
 }
 
 task createTopics(type: JavaExec, dependsOn: 'classes') {

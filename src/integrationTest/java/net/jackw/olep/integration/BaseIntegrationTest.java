@@ -1,9 +1,9 @@
 package net.jackw.olep.integration;
 
 import net.jackw.olep.common.StreamsApp;
-import net.jackw.olep.transaction_worker.WorkerApp;
+import net.jackw.olep.worker.WorkerApp;
 import net.jackw.olep.utils.ClusterCreator;
-import net.jackw.olep.utils.immutable_stores.PopulateStores;
+import net.jackw.olep.utils.populate.PopulateStores;
 import net.jackw.olep.verifier.VerifierApp;
 import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.StandaloneRegistry;
