@@ -104,6 +104,7 @@ public class LogViewAdapter implements AutoCloseable {
             consumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG));
 
             customerStoreConsumer = new SharedCustomerStoreConsumer(bootstrapServers, "view-adapter-TODO_PARTITION_ID");
+            customerStoreConsumer.start();
 
             viewWrapper = new InMemoryRMIWrapper(registryServer, customerStoreConsumer.getStore());
 

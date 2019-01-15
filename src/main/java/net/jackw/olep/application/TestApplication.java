@@ -41,7 +41,8 @@ public class TestApplication {
 
             complete.await();
             System.out.printf("%d items are below the stock threshold\n", connection.stockLevel(1, 1, 80));
-            System.out.printf("Customer 10's latest order is %s\n", connection.orderStatus(10, 1, 1));
+            System.out.printf("Customer 10's balance is %s\n", connection.orderStatus(10, 1, 1).balance);
+            System.out.printf("Selecting by name, customer balance is %s\n", connection.orderStatus("BARBAREING", 1, 1).balance);
         }
     }
 

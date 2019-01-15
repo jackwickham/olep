@@ -5,10 +5,11 @@ import com.google.errorprone.annotations.Immutable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Immutable
-public class OrderLine {
+public class OrderLine implements Serializable {
     public final int lineNumber;
     public final int itemId;
     public final int supplyWarehouseId;

@@ -54,7 +54,7 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
     }
 
     /**
-     * Helper constructor for when they key is a value with provided deserializer and the value is a class
+     * Helper constructor for when the key is a value with provided deserializer and the value is a class
      *
      * @see SharedStoreConsumer(String, String, String, Deserializer, Deserializer)
      */
@@ -63,7 +63,7 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
     }
 
     /**
-     * Helper constructor for when they key and value are both classes
+     * Helper constructor for when the key and value are both classes
      *
      * @see SharedStoreConsumer(String, String, String, Deserializer, Deserializer)
      */

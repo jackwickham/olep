@@ -6,13 +6,14 @@ import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.OrderLine;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * A denormalised customer view
+ * The result of an OrderStatus transaction
  */
 @Immutable
-public class OrderStatusResult {
+public class OrderStatusResult implements Serializable {
     public final int customerId;
     public final int districtId;
     public final int warehouseId;

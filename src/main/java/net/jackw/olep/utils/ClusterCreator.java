@@ -32,7 +32,7 @@ public class ClusterCreator {
     );
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        resetKnownTopics();
+        resetAll();
     }
 
     public static void resetAll() throws InterruptedException, ExecutionException {
