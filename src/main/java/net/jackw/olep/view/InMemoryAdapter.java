@@ -119,12 +119,12 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
             CustomerState oldState = customerState.get(customerKey);
             CustomerState newState;
             if (oldState == null) {
-                // TODO: Balance needs to be populated when the mutable fields are generated
-                newState = new CustomerState(new BigDecimal("10.00"), modification.orderId, modification.date, null, modification.lines);
+                newState = new CustomerState(new BigDecimal("-100.00"), modification.orderId, modification.date, null, modification.lines);
+                replaced = customerState.putIfAbsent(customerKey, newState) == null;
             } else {
                 newState = oldState.withLatestOrder(modification.orderId, modification.date, null, modification.lines);
+                replaced = customerState.replace(customerKey, oldState, newState);
             }
-            replaced = customerState.replace(customerKey, oldState, newState);
         } while (!replaced);
     }
 

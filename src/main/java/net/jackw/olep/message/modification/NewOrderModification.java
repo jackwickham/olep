@@ -9,23 +9,23 @@ import net.jackw.olep.message.transaction_request.NewOrderRequest;
 @Immutable
 public class NewOrderModification implements ModificationMessage {
     public final int customerId;
-    public final int warehouseId;
     public final int districtId;
+    public final int warehouseId;
     public final ImmutableList<OrderLineModification> lines;
     public final long date;
     public final int orderId;
 
     public NewOrderModification(
         @JsonProperty("customerId") int customerId,
-        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("districtId") int districtId,
+        @JsonProperty("warehouseId") int warehouseId,
         @JsonProperty("lines") ImmutableList<OrderLineModification> lines,
         @JsonProperty("date") long date,
         @JsonProperty("orderId") int orderId
     ) {
         this.customerId = customerId;
-        this.warehouseId = warehouseId;
         this.districtId = districtId;
+        this.warehouseId = warehouseId;
         this.lines = lines;
         this.date = date;
         this.orderId = orderId;

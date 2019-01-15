@@ -1,5 +1,6 @@
 package net.jackw.olep.utils.immutable_stores;
 
+import net.jackw.olep.common.records.Stock;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -27,11 +28,16 @@ public class RandomStockFactory implements StockFactory {
         return instances.get(warehouse.id);
     }
 
+    @Override
+    public Stock makeStock() {
+        int stockQuantity = rand.uniform(10, 100);
+        return new Stock(makeStockShared(), stockQuantity);
+    }
+
     /**
      * Make a new stock record, populating fields randomly per the TPC-C spec, section 4.3.3.1
      */
-    @Override
-    public StockShared makeStockShared() {
+    private StockShared makeStockShared() {
         // S_I_ID unique within [100,000]
         int iId = nextItemId++;
         // S_W_ID = W_ID

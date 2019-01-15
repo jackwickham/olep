@@ -1,5 +1,6 @@
 package net.jackw.olep.utils.immutable_stores;
 
+import net.jackw.olep.common.records.Stock;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 
@@ -28,14 +29,16 @@ public class PredictableStockFactory implements StockFactory {
         return instances.get(warehouseId);
     }
 
+    @Override
+    public Stock makeStock() {
+        int itemId = nextItemId++;
+        return new Stock(getStockShared(itemId), getStockQuantity(itemId));
+    }
+
+
     /**
      * Make a new stock record, populating fields randomly per the TPC-C spec, section 4.3.3.1
      */
-    @Override
-    public StockShared makeStockShared() {
-        return getStockShared(nextItemId++);
-    }
-
     public StockShared getStockShared(int id) {
         String[] distXX = new String[10];
         for (int i = 0; i < 10; i++) {
@@ -47,5 +50,9 @@ public class PredictableStockFactory implements StockFactory {
 
         return new StockShared(id, warehouseId, distXX[0], distXX[1], distXX[2], distXX[3], distXX[4], distXX[5],
             distXX[6], distXX[7], distXX[8], distXX[9], data);
+    }
+
+    public int getStockQuantity(int id) {
+        return (id % 90) + 10;
     }
 }

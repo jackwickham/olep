@@ -2,9 +2,10 @@ package net.jackw.olep.utils.immutable_stores;
 
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
+import net.jackw.olep.common.records.Customer;
+import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
-import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -42,13 +43,17 @@ public class RandomCustomerFactory implements CustomerFactory {
         return instances.get(key);
     }
 
+    @Override
+    public Customer makeCustomer() {
+        // C_ID unique within [3,000]
+        int id = nextId++;
+        return new Customer(makeCustomerShared(id), makeCustomerMutable(id));
+    }
+
     /**
      * Make a new customer, populating fields randomly per the TPC-C spec, section 4.3.3.1
      */
-    @Override
-    public CustomerShared makeCustomerShared() {
-        // C_ID unique within [3,000]
-        int id = nextId++;
+    private CustomerShared makeCustomerShared(int id) {
         // C_D_ID = D_ID
         int dId = districtId;
         // C_W_ID = D_W_ID
@@ -77,5 +82,14 @@ public class RandomCustomerFactory implements CustomerFactory {
         // balance, ytd_payment, payment_cnt, delivery_cnt and data are not included in the shared object
 
         return new CustomerShared(id, dId, wId, first, middle, last, address, phone, since, credit, creditLim, discount);
+    }
+
+    private CustomerMutable makeCustomerMutable(int id) {
+        // C_BALANCE = -100
+        BigDecimal balance = new BigDecimal("-100");
+        // C_DATA rangom a-string [300 .. 500]
+        String data = rand.aString(300, 500);
+
+        return new CustomerMutable(balance, data);
     }
 }

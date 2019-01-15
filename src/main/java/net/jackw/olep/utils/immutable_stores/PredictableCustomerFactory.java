@@ -1,7 +1,10 @@
 package net.jackw.olep.utils.immutable_stores;
 
+import com.google.common.base.Strings;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
+import net.jackw.olep.common.records.Customer;
+import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -39,8 +42,9 @@ public class PredictableCustomerFactory implements CustomerFactory {
     }
 
     @Override
-    public CustomerShared makeCustomerShared() {
-        return getCustomerShared(nextId++);
+    public Customer makeCustomer() {
+        int id = nextId++;
+        return new Customer(getCustomerShared(id), getCustomerMutable(id));
     }
 
     public CustomerShared getCustomerShared(int id) {
@@ -57,5 +61,14 @@ public class PredictableCustomerFactory implements CustomerFactory {
         BigDecimal discount = new BigDecimal(String.format("0.%d", id % 6));
 
         return new CustomerShared(id, dId, wId, first, middle, last, address, phone, since, credit, creditLim, discount);
+    }
+
+    public CustomerMutable getCustomerMutable(int id) {
+        BigDecimal balance = new BigDecimal("-100");
+        String data = Strings.padEnd(
+            String.format("Customer %d from warehouse %d, district %d", id, warehouseId, districtId),
+            500, '*'
+        );
+        return new CustomerMutable(balance, data);
     }
 }

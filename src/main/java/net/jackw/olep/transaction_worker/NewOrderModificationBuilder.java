@@ -64,7 +64,7 @@ public class NewOrderModificationBuilder {
      */
     public NewOrderModification build() {
         return new NewOrderModification(
-            customerId, warehouseId, districtId, ImmutableList.copyOf(orderLines), entryDate, orderId
+            customerId, districtId, warehouseId, ImmutableList.copyOf(orderLines), entryDate, orderId
         );
     }
 }
