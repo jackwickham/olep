@@ -59,7 +59,6 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     @Override
     public int stockLevel(int districtId, int warehouseId, int stockThreshold) {
         log.debug("Processing stock level for {}.{} - threshold {}", districtId, warehouseId, stockThreshold);
-        log.debug(stockMap);
         Queue<Set<WarehouseItemStock>> queue = recentOrders.get(
             new WarehouseSpecificKey(districtId, warehouseId)
         );
