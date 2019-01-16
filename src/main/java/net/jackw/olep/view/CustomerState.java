@@ -37,15 +37,21 @@ public class CustomerState {
     }
 
     public CustomerState withDelivery(int orderId, long deliveryDate, int carrierId, BigDecimal orderTotal) {
+        ImmutableList<? extends OrderLine> lines;
+        Integer resultingCarrierId;
         if (orderId == latestOrderId) {
             ImmutableList.Builder<OrderLine> lineBuilder = ImmutableList.builder();
             for (OrderLine line : latestOrderLines) {
                 lineBuilder.add(line.withDeliveryDate(deliveryDate));
             }
-            return new CustomerState(balance.add(orderTotal), latestOrderId, latestOrderDate, carrierId, lineBuilder.build());
+            lines = lineBuilder.build();
+            resultingCarrierId = carrierId;
         } else {
-            return this;
+            // Not the latest order, so just update the customer's balance
+            lines = latestOrderLines;
+            resultingCarrierId = latestOrderCarrierId;
         }
+        return new CustomerState(balance.add(orderTotal), latestOrderId, latestOrderDate, resultingCarrierId, lines);
     }
 
     public OrderStatusResult intoOrderStatusResult(CustomerShared shared) {

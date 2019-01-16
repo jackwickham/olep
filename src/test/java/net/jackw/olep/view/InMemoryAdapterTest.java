@@ -2,21 +2,39 @@ package net.jackw.olep.view;
 
 import com.google.common.collect.ImmutableList;
 import net.jackw.olep.common.SharedCustomerStore;
+import net.jackw.olep.common.records.Address;
+import net.jackw.olep.common.records.Credit;
+import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.OrderLine;
+import net.jackw.olep.common.records.OrderStatusResult;
+import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.modification.RemoteStockModification;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
+@RunWith(MockitoJUnitRunner.class)
 public class InMemoryAdapterTest {
     @Mock
     private SharedCustomerStore customerImmutableStore;
+
+    private CustomerShared customer = new CustomerShared(
+        1, 1, 1, "FN", "MN", "LN",
+        new Address("s1", "s2", "c", "s", "z"), "1234", 10L, Credit.GC,
+        BigDecimal.TEN, BigDecimal.ZERO
+    );
 
     private InMemoryAdapter adapter;
 
@@ -179,5 +197,102 @@ public class InMemoryAdapterTest {
         }
 
         assertEquals(20, adapter.stockLevel(1, 1, 25));
+    }
+
+
+
+    @Test
+    public void testOrderStatusGetsCustomersOrder() {
+        when(customerImmutableStore.get(new DistrictSpecificKey(1, 1, 1))).thenReturn(customer);
+        String distInfo = "distinfo";
+        ImmutableList<OrderLineModification> lines = ImmutableList.of(
+            new OrderLineModification(
+                0, 5, 1, 1, BigDecimal.TEN, 10, distInfo
+            )
+        );
+        NewOrderModification newOrder = new NewOrderModification(
+            1, 1, 1, lines, 12L, 15
+        );
+        adapter.newOrder(newOrder);
+
+        OrderStatusResult result = adapter.orderStatus(1, 1, 1);
+        assertEquals(1, result.customerId);
+        assertEquals(1, result.districtId);
+        assertEquals(1, result.warehouseId);
+        assertEquals(customer.firstName, result.firstName);
+        assertEquals(customer.middleName, result.middleName);
+        assertEquals(customer.lastName, result.lastName);
+        assertEquals(new BigDecimal("-10.00"), result.balance);
+        assertEquals(newOrder.orderId, result.latestOrderId);
+        assertEquals(newOrder.date, result.latestOrderDate);
+        assertNull(result.latestOrderCarrierId);
+
+        assertThat(result.latestOrderLines, Matchers.hasSize(1));
+        OrderLine line = result.latestOrderLines.get(0);
+        assertEquals(0, line.lineNumber);
+        assertEquals(5, line.itemId);
+        assertEquals(1, line.supplyWarehouseId);
+        assertNull(line.deliveryDate);
+        assertEquals(1, line.quantity);
+        assertEquals(BigDecimal.TEN, line.amount);
+        assertEquals(distInfo, line.distInfo);
+    }
+
+    @Test
+    public void testOrderStatusIsUpdatedAfterDelivery() {
+        when(customerImmutableStore.get(new DistrictSpecificKey(1, 1, 1))).thenReturn(customer);
+
+        ImmutableList<OrderLineModification> lines = ImmutableList.of(
+            new OrderLineModification(
+                0, 5, 1, 1, new BigDecimal("12.50"), 10, ""
+            )
+        );
+        NewOrderModification newOrder = new NewOrderModification(
+            1, 1, 1, lines, 12L, 15
+        );
+        adapter.newOrder(newOrder);
+
+        DeliveryModification delivery = new DeliveryModification(
+            15, 1, 1, 6, 25L, 1, new BigDecimal("12.50")
+        );
+        adapter.delivery(delivery);
+
+        OrderStatusResult result = adapter.orderStatus(1, 1, 1);
+
+        assertEquals(new BigDecimal("2.50"), result.balance);
+        assertEquals(6, (int) result.latestOrderCarrierId);
+        assertEquals(25L, (long) result.latestOrderLines.get(0).deliveryDate);
+    }
+
+    @Test
+    public void testOrderStatusUsesLatestOrderButUpdatesBalanceForOthers() {
+        when(customerImmutableStore.get(new DistrictSpecificKey(1, 1, 1))).thenReturn(customer);
+
+        for (int i = 0; i < 2; i++) {
+            ImmutableList<OrderLineModification> lines = ImmutableList.of(
+                new OrderLineModification(
+                    0, 5+i, 1, 1, new BigDecimal("12.50"), 10, ""
+                )
+            );
+            NewOrderModification newOrder = new NewOrderModification(
+                1, 1, 1, lines, 12L+i, 15+i
+            );
+            adapter.newOrder(newOrder);
+        }
+
+        // Deliver the first order
+        DeliveryModification delivery = new DeliveryModification(
+            15, 1, 1, 6, 25L, 1, new BigDecimal("12.50")
+        );
+        adapter.delivery(delivery);
+
+        OrderStatusResult result = adapter.orderStatus(1, 1, 1);
+
+        assertEquals(new BigDecimal("2.50"), result.balance);
+        assertNull(result.latestOrderCarrierId);
+        assertNull(result.latestOrderLines.get(0).deliveryDate);
+        assertEquals(16, result.latestOrderId);
+        assertEquals(6, result.latestOrderLines.get(0).itemId);
+        assertNull(result.latestOrderLines.get(0).deliveryDate);
     }
 }
