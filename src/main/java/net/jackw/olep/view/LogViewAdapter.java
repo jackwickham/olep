@@ -27,7 +27,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
-public class LogViewAdapter implements AutoCloseable {
+public class LogViewAdapter extends Thread implements AutoCloseable {
     private final InMemoryRMIWrapper viewWrapper;
     private final ViewWriteAdapter viewAdapter;
     private final Consumer<Long, ModificationMessage> logConsumer;
@@ -55,6 +55,7 @@ public class LogViewAdapter implements AutoCloseable {
      *
      * This method blocks this thread until it's interrupted
      */
+    @Override
     public void run() {
         while (true) {
             try {
@@ -125,7 +126,8 @@ public class LogViewAdapter implements AutoCloseable {
 
     public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException {
         try (LogViewAdapter adapter = init("localhost:9092", "localhost")) {
-            adapter.run();
+            adapter.start();
+            adapter.join();
         }
     }
 
@@ -135,7 +137,9 @@ public class LogViewAdapter implements AutoCloseable {
         try (
             Consumer c = logConsumer;
             InMemoryRMIWrapper v = viewWrapper;
-        ) { }
+        ) {
+            logConsumer.wakeup();
+        }
     }
 
     private static Logger log = LogManager.getLogger();

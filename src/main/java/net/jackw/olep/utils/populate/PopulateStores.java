@@ -200,8 +200,8 @@ public class PopulateStores implements AutoCloseable {
         int processedCustomers = 0;
         List<NewOrder> newOrders = new ArrayList<>(customersPerDistrict / 3);
         for (int customerId : customerIds) {
-            if (processedCustomers++ < customersPerDistrict * 2 / 3) {
-                // For 2/3 of the customers, the order has been delivered already
+            if (processedCustomers++ < customersPerDistrict * 7 / 10) {
+                // For 7/10 of the customers, the order has been delivered already
                 OrderFactory.DeliveredOrder order = orderFactory.makeDeliveredOrder(customerId, stockProvider);
                 modificationLogProducer.send(new ProducerRecord<>(
                     KafkaConfig.MODIFICATION_LOG, 0, ++transactionId, order.newOrderModification
@@ -210,7 +210,7 @@ public class PopulateStores implements AutoCloseable {
                     KafkaConfig.MODIFICATION_LOG, 0, ++transactionId, order.deliveryModification
                 ));
             } else {
-                // For the remaining 1/3, the order is still outstanding, so we add it as a NewOrder too
+                // For the remaining 3/10, the order is still outstanding, so we add it as a NewOrder too
                 OrderFactory.UndeliveredOrder order = orderFactory.makeUndeliveredOrder(customerId, stockProvider);
                 modificationLogProducer.send(new ProducerRecord<>(
                     KafkaConfig.MODIFICATION_LOG, 0, ++transactionId, order.newOrderModification

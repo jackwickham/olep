@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class ClusterCreator {
     private static Set<String> transactionTopics = ImmutableSet.of(
@@ -62,7 +64,12 @@ public class ClusterCreator {
 
         try (AdminClient adminClient = AdminClient.create(adminClientConfig)) {
             // See which of the topics we care about are already present in Kafka
-            Set<String> existingTopics = adminClient.listTopics().names().get();
+            Set<String> existingTopics;
+            try {
+                 existingTopics = adminClient.listTopics().names().get(20, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                throw new RuntimeException("Timeout when trying to connect to Kafka", e);
+            }
             if (!resetOtherTopics) {
                 Set<String> dbTopics = new HashSet<>();
                 if (resetTransactionTopics) {

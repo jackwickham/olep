@@ -13,6 +13,7 @@ public class InMemoryRMIWrapper implements AutoCloseable {
     private InMemoryAdapter adapter;
     private Registry registry;
     private final String name = "view/TODO_PARTITION_NUMBER";
+    private boolean closed = false;
 
     @MustBeClosed
     public InMemoryRMIWrapper(String registryServer, SharedCustomerStore customerStore) throws RemoteException, AlreadyBoundException {
@@ -26,8 +27,11 @@ public class InMemoryRMIWrapper implements AutoCloseable {
 
     @Override
     public void close() throws RemoteException, NotBoundException {
-        registry.unbind(name);
-        adapter.close();
+        if (!closed) {
+            registry.unbind(name);
+            adapter.close();
+            closed = true;
+        }
     }
 
     public InMemoryAdapter getAdapter() {

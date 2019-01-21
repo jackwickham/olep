@@ -139,9 +139,6 @@ public class WorkerApp extends StreamsApp {
             Serdes.Integer()
         );
 
-        final int acceptedTransactionsPartitions = pseudoConsumer.partitionsFor(KafkaConfig.ACCEPTED_TRANSACTION_TOPIC)
-            .size();
-
         Topology topology = new Topology();
 
         topology
@@ -167,7 +164,7 @@ public class WorkerApp extends StreamsApp {
             .addStateStore(nextOrderIdStoreBuilder, "new-order-processor")
             .addStateStore(stockQuantityStoreBuilder, "new-order-processor")
             .addStateStore(newOrdersStoreBuilder, "new-order-processor", "delivery-processor")
-            .addStateStore(customerMutableStoreBuilder, "payment-processor")
+            .addStateStore(customerMutableStoreBuilder, "payment-processor", "delivery-processor")
             // The processors will write to the result and modification logs
             .addSink(
                 KafkaConfig.MODIFICATION_LOG,

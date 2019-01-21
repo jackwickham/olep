@@ -2,6 +2,8 @@ package net.jackw.olep.worker;
 
 import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.records.CustomerMutable;
+import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.DeliveryModification;
@@ -17,12 +19,14 @@ import java.util.HashMap;
 
 public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest> {
     private NewOrdersStore newOrdersStore;
+    private KeyValueStore<DistrictSpecificKey, CustomerMutable> customerMutableStore;
 
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         super.init(context);
         this.newOrdersStore = new NewOrdersStore((KeyValueStore) context.getStateStore(KafkaConfig.NEW_ORDER_STORE));
+        this.customerMutableStore = (KeyValueStore) context.getStateStore(KafkaConfig.CUSTOMER_MUTABLE_STORE);
     }
 
     @Override
@@ -39,7 +43,10 @@ public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest>
             }
             results.processedOrders.put(i, order.orderId);
 
-            // TODO: Balance increased by sum of order lines
+            DistrictSpecificKey customerKey = new DistrictSpecificKey(order.customerId, i, value.warehouseId);
+            CustomerMutable oldCustomer = customerMutableStore.get(customerKey);
+            CustomerMutable newCustomer = new CustomerMutable(oldCustomer.balance.add(order.totalAmount), oldCustomer.data);
+            customerMutableStore.put(customerKey, newCustomer);
 
             sendModification(key, new DeliveryModification(
                 order.orderId, i, value.warehouseId, value.carrierId, value.deliveryDate, order.customerId, order.totalAmount

@@ -10,17 +10,18 @@ import net.jackw.olep.view.StandaloneRegistry;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.DeleteTopicsResult;
-import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.KafkaStreams;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 public abstract class BaseIntegrationTest {
@@ -38,7 +39,7 @@ public abstract class BaseIntegrationTest {
 
     @Before
     public void resetTransactionTopics() throws InterruptedException, ExecutionException {
-        ClusterCreator.resetTransactionTopics();
+        //ClusterCreator.resetTransactionTopics();
     }
 
     @BeforeClass
@@ -60,9 +61,7 @@ public abstract class BaseIntegrationTest {
 
     private List<KafkaStreams> verifierStreams = new ArrayList<>();
     private List<KafkaStreams> workerStreams = new ArrayList<>();
-    private Thread viewThread = null;
-
-    private volatile RuntimeException remoteThreadException = null;
+    private LogViewAdapter logViewAdapter = null;
 
     /**
      * Start a verifier instance, with a fresh state store
@@ -108,48 +107,28 @@ public abstract class BaseIntegrationTest {
     }
 
     protected void startView() {
-        final CountDownLatch latch = new CountDownLatch(1);
-        viewThread = new Thread(() -> {
-            try {
-                try (LogViewAdapter adapter = LogViewAdapter.init(
-                    getEventBootsrapServers(),
-                    getViewBootstrapServers()
-                )) {
-                    latch.countDown();
-                    adapter.run();
-                }
-            } catch (InterruptedException | InterruptException e) {
-                // pass
-            } catch (Exception e) {
-                remoteThreadException = new RuntimeException(e);
-            }
-            if (latch.getCount() > 0) {
-                latch.countDown();
-            }
-        });
-        viewThread.start();
         try {
-            latch.await();
-        } catch (InterruptedException e) {
+            logViewAdapter = LogViewAdapter.init(getEventBootsrapServers(), getViewBootstrapServers());
+            logViewAdapter.start();
+        } catch (InterruptedException | RemoteException | AlreadyBoundException | NotBoundException e) {
             throw new RuntimeException(e);
         }
     }
 
     @After
-    public void stopWorkers() throws InterruptedException {
+    public void stopWorkers() {
         for (KafkaStreams streams : verifierStreams) {
             streams.close();
         }
         for (KafkaStreams streams : workerStreams) {
             streams.close();
         }
-        if (viewThread != null && viewThread.isAlive()) {
-            viewThread.interrupt();
-            viewThread.join();
-        }
-
-        if (remoteThreadException != null) {
-            throw remoteThreadException;
+        if (logViewAdapter != null) {
+            try {
+                logViewAdapter.close();
+            } catch (RemoteException | NotBoundException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
