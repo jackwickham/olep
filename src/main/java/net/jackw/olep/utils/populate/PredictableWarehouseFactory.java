@@ -37,4 +37,8 @@ public class PredictableWarehouseFactory implements WarehouseFactory {
 
         return new WarehouseShared(id, name, address, tax);
     }
+
+    public static void resetInstance() {
+        instance = null;
+    }
 }

@@ -41,4 +41,8 @@ public class RandomWarehouseFactory implements WarehouseFactory {
 
         return new WarehouseShared(id, name, address, tax);
     }
+
+    public static void resetInstance() {
+        instance = null;
+    }
 }

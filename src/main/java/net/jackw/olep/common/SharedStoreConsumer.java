@@ -37,6 +37,7 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
      * @param valueDeserializer The deserializer for the store values
      */
     SharedStoreConsumer(String bootstrapServers, String nodeID, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
+        super("Shared store consumer - " + topic + " (" + nodeID + ")");
         store = createStore();
 
         Properties itemConsumerProps = new Properties();

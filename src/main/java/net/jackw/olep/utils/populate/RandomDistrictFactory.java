@@ -48,4 +48,8 @@ public class RandomDistrictFactory implements DistrictFactory {
 
         return new DistrictShared(id, wId, name, address, tax);
     }
+
+    public static void resetInstances() {
+        instances = new HashMap<>();
+    }
 }

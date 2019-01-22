@@ -1,21 +1,17 @@
 package net.jackw.olep.integration.matchers;
 
-import net.jackw.olep.message.transaction_result.DeliveryResult;
 import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class MapEntryMatcher<K, V> extends TypeSafeDiagnosingMatcher<Map.Entry<K, V>> {
     public final K key;
     public final V value;
 
     public MapEntryMatcher(K key, V value) {
-        super(DeliveryResult.class);
+        super();
 
         this.key = key;
         this.value = value;

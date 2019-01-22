@@ -55,4 +55,8 @@ public class PredictableStockFactory implements StockFactory {
     public int getStockQuantity(int id) {
         return (id % 90) + 10;
     }
+
+    public static void resetInstances() {
+        instances = new HashMap<>();
+    }
 }

@@ -108,4 +108,8 @@ public class PredictableOrderFactory implements OrderFactory {
         BigDecimal amount = new BigDecimal(orderId).multiply(new BigDecimal(lineCount));
         return amount.add(new BigDecimal(lineCount * (lineCount + 1) / 2).movePointLeft(2));
     }
+
+    public static void resetInstances() {
+        instances = new HashMap<>();
+    }
 }

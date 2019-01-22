@@ -58,4 +58,8 @@ public class RandomStockFactory implements StockFactory {
         return new StockShared(iId, wId, distXX[0], distXX[1], distXX[2], distXX[3], distXX[4], distXX[5], distXX[6],
             distXX[7], distXX[8], distXX[9], data);
     }
+
+    public static void resetInstances() {
+        instances = new HashMap<>();
+    }
 }

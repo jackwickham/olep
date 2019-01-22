@@ -92,4 +92,8 @@ public class RandomCustomerFactory implements CustomerFactory {
 
         return new CustomerMutable(balance, data);
     }
+
+    public static void resetInstances() {
+        instances = new HashMap<>();
+    }
 }

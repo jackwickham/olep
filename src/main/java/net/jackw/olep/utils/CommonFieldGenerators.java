@@ -1,5 +1,6 @@
 package net.jackw.olep.utils;
 
+import com.google.common.base.Strings;
 import net.jackw.olep.common.records.Address;
 
 public class CommonFieldGenerators {
@@ -24,7 +25,7 @@ public class CommonFieldGenerators {
         String street2 = String.format(template, "street2", type, id);
         String city = String.format(template, "city", type, id);
         String state = Integer.toString(id % 100);
-        String zip = Integer.toString(id % 10000) + "11111";
+        String zip = Strings.padStart(Integer.toString(id % 10000), 4, '0') + "11111";
         return new Address(street1, street2, city, state, zip);
     }
 

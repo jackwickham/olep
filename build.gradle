@@ -96,14 +96,9 @@ task runWorker(type: JavaExec, dependsOn: 'classes') {
     main = "net.jackw.olep.worker.WorkerApp"
 }
 
-task populateStores(type: JavaExec, dependsOn: 'classes') {
+task reset(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
-    main = "net.jackw.olep.utils.populate.PopulateStores"
-}
-
-task createTopics(type: JavaExec, dependsOn: 'classes') {
-    classpath = sourceSets.main.runtimeClasspath
-    main = "net.jackw.olep.utils.ClusterCreator"
+    main = "net.jackw.olep.utils.Resetter"
 }
 
 

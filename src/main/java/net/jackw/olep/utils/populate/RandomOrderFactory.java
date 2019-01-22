@@ -118,4 +118,8 @@ public class RandomOrderFactory implements OrderFactory {
         }
         return totalAmount;
     }
+
+    public static void resetInstances() {
+        instances = new HashMap<>();
+    }
 }

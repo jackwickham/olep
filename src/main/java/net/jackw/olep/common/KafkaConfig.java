@@ -20,5 +20,14 @@ public class KafkaConfig {
     public static final String NEW_ORDER_STORE = "new-orders";
     public static final String CUSTOMER_MUTABLE_STORE = "customer-mutable";
 
+    public static final String DISTRICT_NEXT_ORDER_ID_CHANGELOG = workerChangelog(DISTRICT_NEXT_ORDER_ID_STORE);
+    public static final String STOCK_QUANTITY_CHANGELOG = workerChangelog(STOCK_QUANTITY_STORE);
+    public static final String NEW_ORDER_CHANGELOG = workerChangelog(NEW_ORDER_STORE);
+    public static final String CUSTOMER_MUTABLE_CHANGELOG = workerChangelog(CUSTOMER_MUTABLE_STORE);
+
     private KafkaConfig() { }
+
+    private static String workerChangelog(String store) {
+        return "worker-" + store + "-changelog";
+    }
 }

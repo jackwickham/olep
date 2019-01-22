@@ -16,7 +16,6 @@ import java.util.concurrent.CountDownLatch;
 public class DeliveryTest extends BaseIntegrationTest {
     @Before
     public void startProcessors() {
-        // Workers start with no state (TODO: we want no New-Orders, but they also have no other state)
         startVerifier();
         startWorker();
         startView();

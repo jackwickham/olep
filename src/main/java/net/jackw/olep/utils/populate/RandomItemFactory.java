@@ -46,4 +46,8 @@ public class RandomItemFactory implements ItemFactory {
 
         return new Item(id, imId, name, price, data);
     }
+
+    public static void resetInstance() {
+        instance = null;
+    }
 }

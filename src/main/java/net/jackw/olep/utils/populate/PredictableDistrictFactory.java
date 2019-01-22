@@ -46,4 +46,8 @@ public class PredictableDistrictFactory implements DistrictFactory {
         BigDecimal tax = new BigDecimal(id % 20).movePointLeft(2);
         return new DistrictShared(id, wId, name, address, tax);
     }
+
+    public static void resetInstances() {
+        instances = new HashMap<>();
+    }
 }

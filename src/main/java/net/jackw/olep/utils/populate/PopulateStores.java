@@ -54,19 +54,27 @@ public class PopulateStores implements AutoCloseable {
     private int customerNameRange;
     private boolean predictable;
 
+    private boolean populateImmutableStores;
+    private boolean populateMutableStores;
+
     private ArrayList<Integer> customerIds;
 
     private long transactionId = 0;
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public PopulateStores(int itemCount, int warehouseCount, int districtsPerWarehouse, int customersPerDistrict, int customerNameRange, boolean predictable) {
+    public PopulateStores(
+        int itemCount, int warehouseCount, int districtsPerWarehouse, int customersPerDistrict, int customerNameRange,
+        boolean predictable, boolean populateImmutableStores, boolean populateMutableStores
+    ) {
         this.itemCount = itemCount;
         this.warehouseCount = warehouseCount;
         this.districtsPerWarehouse = districtsPerWarehouse;
         this.customersPerDistrict = customersPerDistrict;
         this.customerNameRange = customerNameRange;
         this.predictable = predictable;
+        this.populateImmutableStores = populateImmutableStores;
+        this.populateMutableStores = populateMutableStores;
 
         props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -82,22 +90,33 @@ public class PopulateStores implements AutoCloseable {
         newOrderStoreProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
         stockQuantityStoreProducer = new KafkaProducer<>(props, new JsonSerializer<>(), Serdes.Integer().serializer());
 
-        storePartitions = nextOrderIdStoreProducer.partitionsFor(changelog(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE)).size();
+        storePartitions = nextOrderIdStoreProducer.partitionsFor(KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG).size();
 
         modificationLogProducer = new KafkaProducer<>(props, Serdes.Long().serializer(), new JsonSerializer<>());
 
         customerIds = IntStream.range(1, customersPerDistrict+1).boxed().collect(Collectors.toCollection(ArrayList::new));
     }
 
-    public static void main(String[] args) {
-        try (PopulateStores i = new PopulateStores(20, 100, 10, 100, 20, false)) {
-            i.populate();
-        }
-    }
-
     public void populate() {
+        resetIds();
         populateItems();
         populateWarehouses();
+    }
+
+
+    private void resetIds() {
+        PredictableCustomerFactory.resetInstances();
+        PredictableDistrictFactory.resetInstances();
+        PredictableItemFactory.resetInstance();
+        PredictableOrderFactory.resetInstances();
+        PredictableStockFactory.resetInstances();
+        PredictableWarehouseFactory.resetInstance();
+        RandomCustomerFactory.resetInstances();
+        RandomDistrictFactory.resetInstances();
+        RandomItemFactory.resetInstance();
+        RandomOrderFactory.resetInstances();
+        RandomStockFactory.resetInstances();
+        RandomWarehouseFactory.resetInstance();
     }
 
     private void populateItems() {
@@ -110,7 +129,9 @@ public class PopulateStores implements AutoCloseable {
 
         for (int i = 0; i < itemCount; i++) {
             Item item = factory.makeItem();
-            itemProducer.send(new ProducerRecord<>(KafkaConfig.ITEM_IMMUTABLE_TOPIC, 0, item.id, item));
+            if (populateImmutableStores) {
+                itemProducer.send(new ProducerRecord<>(KafkaConfig.ITEM_IMMUTABLE_TOPIC, 0, item.id, item));
+            }
         }
         itemProducer.flush();
     }
@@ -125,7 +146,9 @@ public class PopulateStores implements AutoCloseable {
 
         for (int wh = 0; wh < warehouseCount; wh++) {
             WarehouseShared warehouse = factory.makeWarehouseShared();
-            warehouseProducer.send(new ProducerRecord<>(KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC, 0, warehouse.id, warehouse));
+            if (populateImmutableStores) {
+                warehouseProducer.send(new ProducerRecord<>(KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC, 0, warehouse.id, warehouse));
+            }
 
             int[] stockQuantities = populateStock(warehouse);
             populateDistricts(warehouse, stockQuantities);
@@ -142,10 +165,14 @@ public class PopulateStores implements AutoCloseable {
         }
         for (int dst = 0; dst < districtsPerWarehouse; dst++) {
             DistrictShared district = districtFactory.makeDistrictShared();
-            districtProducer.send(new ProducerRecord<>(KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, 0, district.getKey(), district));
+            if (populateImmutableStores) {
+                districtProducer.send(new ProducerRecord<>(KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, 0, district.getKey(), district));
+            }
 
             populateCustomers(district);
-            populateOrders(district, stockQuantities);
+            if (populateMutableStores) {
+                populateOrders(district, stockQuantities);
+            }
         }
     }
 
@@ -158,12 +185,16 @@ public class PopulateStores implements AutoCloseable {
         }
         for (int cust = 0; cust < customersPerDistrict; cust++) {
             Customer customer = customerFactory.makeCustomer();
-            customerProducer.send(new ProducerRecord<>(
-                KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, 0, customer.getKey(), customer.customerShared
-            ));
-            customerMutableStoreProducer.send(new ProducerRecord<>(
-                changelog(KafkaConfig.CUSTOMER_MUTABLE_STORE), storePartition(district.warehouseId), customer.getKey(), customer.customerMutable
-            ));
+            if (populateImmutableStores) {
+                customerProducer.send(new ProducerRecord<>(
+                    KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, 0, customer.getKey(), customer.customerShared
+                ));
+            }
+            if (populateMutableStores) {
+                customerMutableStoreProducer.send(new ProducerRecord<>(
+                    KafkaConfig.CUSTOMER_MUTABLE_CHANGELOG, storePartition(district.warehouseId), customer.getKey(), customer.customerMutable
+                ));
+            }
         }
     }
 
@@ -177,12 +208,16 @@ public class PopulateStores implements AutoCloseable {
         int[] stockQuantities = new int[itemCount];
         for (int item = 0; item < itemCount; item++) {
             Stock stock = stockFactory.makeStock();
-            stockProducer.send(new ProducerRecord<>(
-                KafkaConfig.STOCK_IMMUTABLE_TOPIC, 0, stock.getKey(), stock.stockShared)
-            );
-            stockQuantityStoreProducer.send(new ProducerRecord<>(
-                changelog(KafkaConfig.STOCK_QUANTITY_STORE), storePartition(warehouse.id), stock.getKey(), stock.stockQuantity
-            ));
+            if (populateImmutableStores) {
+                stockProducer.send(new ProducerRecord<>(
+                    KafkaConfig.STOCK_IMMUTABLE_TOPIC, 0, stock.getKey(), stock.stockShared)
+                );
+            }
+            if (populateMutableStores) {
+                stockQuantityStoreProducer.send(new ProducerRecord<>(
+                    KafkaConfig.STOCK_QUANTITY_CHANGELOG, storePartition(warehouse.id), stock.getKey(), stock.stockQuantity
+                ));
+            }
             stockQuantities[item] = stock.stockQuantity;
         }
         return stockQuantities;
@@ -200,8 +235,9 @@ public class PopulateStores implements AutoCloseable {
         int processedCustomers = 0;
         List<NewOrder> newOrders = new ArrayList<>(customersPerDistrict / 3);
         for (int customerId : customerIds) {
-            if (processedCustomers++ < customersPerDistrict * 7 / 10) {
-                // For 7/10 of the customers, the order has been delivered already
+            if (predictable || processedCustomers++ < customersPerDistrict * 7 / 10) {
+                // For 7/10 of the customers, the order has been delivered already (and to simplify testing, predictable
+                // mode doesn't create any pending orders, so they have to be created manually)
                 OrderFactory.DeliveredOrder order = orderFactory.makeDeliveredOrder(customerId, stockProvider);
                 modificationLogProducer.send(new ProducerRecord<>(
                     KafkaConfig.MODIFICATION_LOG, 0, ++transactionId, order.newOrderModification
@@ -218,7 +254,7 @@ public class PopulateStores implements AutoCloseable {
                 newOrders.add(order.newOrder);
             }
         }
-        newOrderStoreProducer.send(new ProducerRecord<>(changelog(KafkaConfig.NEW_ORDER_STORE), storePartition(district.warehouseId), district.getKey(), newOrders));
+        newOrderStoreProducer.send(new ProducerRecord<>(KafkaConfig.NEW_ORDER_CHANGELOG, storePartition(district.warehouseId), district.getKey(), newOrders));
     }
 
     @Override
@@ -232,10 +268,6 @@ public class PopulateStores implements AutoCloseable {
         customerMutableStoreProducer.close();
         newOrderStoreProducer.close();
         stockQuantityStoreProducer.close();
-    }
-
-    private String changelog(String storeName) {
-        return "worker-" + storeName + "-changelog";
     }
 
     private int storePartition(int warehouseId) {
