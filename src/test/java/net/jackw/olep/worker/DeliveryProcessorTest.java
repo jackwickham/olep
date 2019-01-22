@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import net.jackw.olep.ForwardedMessageMatcher;
 import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.records.CustomerMutable;
+import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.DeliveryModification;
@@ -32,6 +34,7 @@ public class DeliveryProcessorTest {
     private DeliveryProcessor processor;
     private MockProcessorContext context;
     private KeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrdersStore;
+    private KeyValueStore<DistrictSpecificKey, CustomerMutable> customerMutableStore;
 
     @Before
     public void setUp() {
@@ -44,6 +47,14 @@ public class DeliveryProcessorTest {
         ).withLoggingDisabled().build();
         newOrdersStore.init(context, newOrdersStore);
         context.register(newOrdersStore, null);
+
+        customerMutableStore = Stores.keyValueStoreBuilder(
+            Stores.inMemoryKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),
+            new JsonSerde<>(DistrictSpecificKey.class),
+            new JsonSerde<>(CustomerMutable.class)
+        ).withLoggingDisabled().build();
+        customerMutableStore.init(context, customerMutableStore);
+        context.register(customerMutableStore, null);
 
         processor.init(context);
     }
@@ -68,6 +79,10 @@ public class DeliveryProcessorTest {
     @Test
     public void testDequeuesOrdersAndNotifiesViewsThatTheyHaveBeenDelivered() {
         DeliveryRequest request = new DeliveryRequest(1, 18, 1L);
+
+        CustomerMutable customer = new CustomerMutable(new BigDecimal("5.55"), "datum");
+        customerMutableStore.put(new DistrictSpecificKey(14, 3, 1), customer);
+        customerMutableStore.put(new DistrictSpecificKey(1, 5, 1), customer);
 
         ArrayDeque<NewOrder> pendingOrders3 = new ArrayDeque<>(2);
         pendingOrders3.add(new NewOrder(5, 3, 1, 14, new BigDecimal("28.73")));
@@ -103,6 +118,35 @@ public class DeliveryProcessorTest {
                 new DeliveryModification(11, 5, 1, 18,  1L, 1, new BigDecimal("11.11"))
             )
         ));
+    }
+
+    @Test
+    public void testCustomerDataUpdated() {
+        DeliveryRequest request = new DeliveryRequest(1, 18, 1L);
+
+        CustomerMutable customerDistrict3 = new CustomerMutable(new BigDecimal("5.55"), "datum");
+        customerMutableStore.put(new DistrictSpecificKey(14, 3, 1), customerDistrict3);
+
+        CustomerMutable customerDistrict5 = new CustomerMutable(new BigDecimal("-24.95"), "customerData5");
+        customerMutableStore.put(new DistrictSpecificKey(1, 5, 1), customerDistrict5);
+
+        ArrayDeque<NewOrder> pendingOrders3 = new ArrayDeque<>(2);
+        pendingOrders3.add(new NewOrder(5, 3, 1, 14, new BigDecimal("28.73")));
+        newOrdersStore.put(new WarehouseSpecificKey(3, 1), pendingOrders3);
+
+        ArrayDeque<NewOrder> pendingOrders5 = new ArrayDeque<>(1);
+        pendingOrders5.add(new NewOrder(11, 5, 1, 1, new BigDecimal("11.11")));
+        newOrdersStore.put(new WarehouseSpecificKey(5, 1), pendingOrders5);
+
+        processor.process(new TransactionWarehouseKey(1L, 1), request);
+
+        CustomerMutable customer3Result = customerMutableStore.get(new DistrictSpecificKey(14, 3, 1));
+        assertEquals(new BigDecimal("34.28"), customer3Result.balance);
+        assertEquals("datum", customer3Result.data);
+
+        CustomerMutable customer5Result = customerMutableStore.get(new DistrictSpecificKey(1, 5, 1));
+        assertEquals(new BigDecimal("-13.84"), customer5Result.balance);
+        assertEquals("customerData5", customer5Result.data);
     }
 
     private static class PartialDeliveryResultMatcher extends TypeSafeDiagnosingMatcher<DeliveryResult.PartialResult> {
