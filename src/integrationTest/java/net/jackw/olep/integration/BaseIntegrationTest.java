@@ -47,8 +47,8 @@ public abstract class BaseIntegrationTest {
         return 5;
     }
 
-    private List<KafkaStreams> verifierStreams = new ArrayList<>();
-    private List<KafkaStreams> workerStreams = new ArrayList<>();
+    private List<VerifierApp> verifierInstances = new ArrayList<>();
+    private List<WorkerApp> workerInstances = new ArrayList<>();
     private LogViewAdapterStub logViewAdapter = null;
 
     /**
@@ -56,19 +56,16 @@ public abstract class BaseIntegrationTest {
      */
     protected void startVerifier() {
         VerifierApp verifier = new VerifierApp(getEventBootsrapServers());
-        verifierStreams.add(startStreamsApp(verifier));
+        verifierInstances.add(verifier);
+        verifier.setup();
+        verifier.start();
     }
 
     protected void startWorker() {
         WorkerApp worker = new WorkerApp(getEventBootsrapServers());
-        workerStreams.add(startStreamsApp(worker));
-    }
-
-    private KafkaStreams startStreamsApp(StreamsApp app) {
-        app.setup();
-        KafkaStreams streams = app.getStreams();
-        streams.start();
-        return streams;
+        workerInstances.add(worker);
+        worker.setup();
+        worker.start();
     }
 
     @SuppressWarnings("MustBeClosedChecker")
@@ -77,15 +74,21 @@ public abstract class BaseIntegrationTest {
     }
 
     @After
-    public void stopWorkers() {
-        for (KafkaStreams streams : verifierStreams) {
-            streams.close();
-            streams.cleanUp();
+    public void stopWorkers() throws InterruptedException {
+        for (VerifierApp verifier : verifierInstances) {
+            verifier.close();
         }
-        for (KafkaStreams streams : workerStreams) {
-            streams.close();
-            streams.cleanUp();
+        if (!verifierInstances.isEmpty()) {
+            verifierInstances.get(0).cleanup();
         }
+
+        for (WorkerApp worker : workerInstances) {
+            worker.close();
+        }
+        if (!workerInstances.isEmpty()) {
+            workerInstances.get(0).cleanup();
+        }
+
         if (logViewAdapter != null) {
             logViewAdapter.close();
         }

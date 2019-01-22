@@ -14,7 +14,7 @@ import org.apache.logging.log4j.Logger;
 /**
  * Abstract application for stream processors
  */
-public abstract class StreamsApp {
+public abstract class StreamsApp implements AutoCloseable {
     /**
      * A latch to catch when the application is shutting down
      */
@@ -82,13 +82,17 @@ public abstract class StreamsApp {
         return nodeId;
     }
 
+    public void start() {
+        streams = getStreams();
+        streams.start();
+    }
+
     /**
      * Run the Kafka application
      */
     public void run() {
         // Set up the streams
         setup();
-        streams = getStreams();
 
         try {
             // Add a shutdown listener to gracefully handle Ctrl+C
@@ -100,14 +104,14 @@ public abstract class StreamsApp {
             });
 
             // Run forever
-            streams.start();
+            start();
             appShutdownLatch.await();
             log.info("Shutting down");
-            shutdown();
+            close();
         } catch (Throwable e) {
             log.error(e);
             try {
-                shutdown();
+                close();
             } catch (Throwable e2) {
                 // Nothing we can do now
                 log.error("Uncaught exception while shutting down", e);
@@ -117,8 +121,13 @@ public abstract class StreamsApp {
     }
 
     @OverridingMethodsMustInvokeSuper
-    protected void shutdown() throws InterruptedException {
+    @Override
+    public void close() throws InterruptedException {
         streams.close();
+    }
+
+    public void cleanup() {
+        getStreams().cleanUp();
     }
 
     protected String getBootstrapServers() {

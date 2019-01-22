@@ -41,8 +41,8 @@ public class VerifierApp extends StreamsApp {
     }
 
     @Override
-    protected void shutdown() throws InterruptedException {
-        super.shutdown();
+    public void close() throws InterruptedException {
+        super.close();
         itemConsumer.close();
     }
 
