@@ -29,8 +29,8 @@ configurations {
 sourceCompatibility = 11
 targetCompatibility = 11
 
-// Define the main class for the application
-mainClassName = 'net.jackw.olep.application.TestApplication'
+// Define the main class for the application (other entry points are defined below)
+mainClassName = 'net.jackw.olep.application.App'
 
 dependencies {
     // Guava for lots of utilities
@@ -52,8 +52,9 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.11.1'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
     compile group: 'org.slf4j', name: 'slf4j-ext', version: '1.7.25'
-    // Redis client library for the views - https://github.com/xetorthio/jedis
-    compile group: 'redis.clients', name: 'jedis', version: '3.0.0'
+    // Akka for the application
+    compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.19'
+    testCompile group: 'com.typesafe.akka', name: 'akka-testkit_2.12', version: '2.5.19'
 
     // Expose the errorprone client library to the application
     compile group: 'com.google.errorprone', name: 'error_prone_core', version: '2.3.2'
@@ -88,7 +89,7 @@ task runVerifier(type: JavaExec, dependsOn: 'classes') {
 
 task runApplication(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
-    main = "net.jackw.olep.application.TestApplication"
+    main = "net.jackw.olep.application.App"
 }
 
 task runWorker(type: JavaExec, dependsOn: 'classes') {
