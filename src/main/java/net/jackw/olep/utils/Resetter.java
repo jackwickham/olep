@@ -53,35 +53,10 @@ public class Resetter implements AutoCloseable {
     private boolean resetMutableTopics;
     private boolean populate;
 
-    private int itemCount;
-    private int warehouseCount;
-    private int districtsPerWarehouse;
-    private int customersPerDistrict;
-    private int customerNameRange;
-    private boolean predictable;
-
-    public Resetter(boolean resetImmutableTopics, boolean resetMutableTopics) {
+    public Resetter(boolean resetImmutableTopics, boolean resetMutableTopics, boolean populate) {
         this.resetImmutableTopics = resetImmutableTopics;
         this.resetMutableTopics = resetMutableTopics;
-        this.populate = false;
-
-        Properties adminClientConfig = new Properties();
-        adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-
-        adminClient = AdminClient.create(adminClientConfig);
-    }
-
-    public Resetter(boolean resetImmutableTopics, boolean resetMutableTopics, int itemCount, int warehouseCount,
-                    int districtsPerWarehouse, int customersPerDistrict, int customerNameRange, boolean predictable) {
-        this.resetImmutableTopics = resetImmutableTopics;
-        this.resetMutableTopics = resetMutableTopics;
-        this.populate = true;
-        this.itemCount = itemCount;
-        this.warehouseCount = warehouseCount;
-        this.districtsPerWarehouse = districtsPerWarehouse;
-        this.customersPerDistrict = customersPerDistrict;
-        this.customerNameRange = customerNameRange;
-        this.predictable = predictable;
+        this.populate = populate;
 
         Properties adminClientConfig = new Properties();
         adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
@@ -90,8 +65,7 @@ public class Resetter implements AutoCloseable {
     }
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        new Resetter(true, true, 20, 100, 10,
-            100, 20, false).reset();
+        new Resetter(true, true, true).reset();
     }
 
     public void reset() throws InterruptedException, ExecutionException {
@@ -199,8 +173,9 @@ public class Resetter implements AutoCloseable {
     }
 
     private void populateTopics() {
-        try (PopulateStores populateStores = new PopulateStores(itemCount, warehouseCount, districtsPerWarehouse,
-            customersPerDistrict, customerNameRange, predictable, resetImmutableTopics, resetMutableTopics)
+        try (PopulateStores populateStores = new PopulateStores(KafkaConfig.itemCount(), KafkaConfig.warehouseCount(),
+            KafkaConfig.districtsPerWarehouse(), KafkaConfig.customersPerDistrict(), KafkaConfig.customerNameRange(),
+            KafkaConfig.predictableData(), resetImmutableTopics, resetMutableTopics)
         ) {
             populateStores.populate();
         }

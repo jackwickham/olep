@@ -1,0 +1,5 @@
+itemCount: 100000
+warehouseCount: 2000 # TODO: This is what affects the benchmark, and should be changed accordingly
+districtsPerWarehouse: 10
+customersPerDistrict: 3000
+customerNameRange: 1000

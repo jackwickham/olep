@@ -1,0 +1,6 @@
+itemCount: 10
+warehouseCount: 10
+districtsPerWarehouse: 5
+customersPerDistrict: 10
+customerNameRange: 5
+predictableData: true

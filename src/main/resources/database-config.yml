@@ -1,0 +1,5 @@
+itemCount: 20
+warehouseCount: 200
+districtsPerWarehouse: 10
+customersPerDistrict: 100
+customerNameRange: 20

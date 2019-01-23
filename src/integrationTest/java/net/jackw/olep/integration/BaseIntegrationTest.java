@@ -20,14 +20,12 @@ public abstract class BaseIntegrationTest {
      */
     @BeforeClass
     public static void resetImmutableTopics() throws InterruptedException, ExecutionException {
-        new Resetter(true, false, 10, 10, 5,
-            20, getCustomerNameRange(), true).reset();
+        new Resetter(true, false, true).reset();
     }
 
     @Before
     public void resetMutableTopics() throws InterruptedException, ExecutionException {
-        new Resetter(false, true, 10, 10, 5,
-            20, getCustomerNameRange(), true).reset();
+        new Resetter(false, true, true).reset();
     }
 
     @BeforeClass

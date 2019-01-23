@@ -3,6 +3,7 @@ package net.jackw.olep.application;
 import akka.actor.AbstractActorWithTimers;
 import akka.actor.Props;
 import com.google.common.collect.ImmutableList;
+import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.Database;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
@@ -77,15 +78,13 @@ public class Terminal extends AbstractActorWithTimers {
 
     /**
      * Perform a New-Order transaction, generating data as specified by TPC-C §2.4.1
-     *
-     * TODO: some numbers need to be abstracted away so they match the values that it was populated with
      */
     private void performNewOrder() {
         System.out.println("Performing a new order");
         // The district number (D_ID) is randomly selected within [1 .. 10]
-        int districtId = rand.uniform(1, 10);
+        int districtId = rand.uniform(1, KafkaConfig.districtsPerWarehouse());
         // The non-uniform random customer number (C_ID) is selected from the NURand(1023, 1, 3000) function
-        int customerId = rand.nuRand(1023, 1, 100/*3000*/);
+        int customerId = rand.nuRand(1023, 1, KafkaConfig.customersPerDistrict());
         // The number of items in the order (ol_cnt) is randomly selected within [5 .. 15]
         int orderLineCount = rand.uniform(5, 15);
         // A fixed 1% of the New-Order transactions are chosen at random to simulate user data entry errors
@@ -99,13 +98,13 @@ public class Terminal extends AbstractActorWithTimers {
             if (rollback && i == orderLineCount - 1) {
                 itemId = Integer.MAX_VALUE;
             } else {
-                itemId = rand.nuRand(8191, 1, 20/*100000*/);
+                itemId = rand.nuRand(8191, 1, KafkaConfig.itemCount());
             }
             // A supplying warehouse number (OL_SUPPLY_W_ID) is selected as the home warehouse 99% of the time and as a
             // remote warehouse 1% of the time
             int supplyWarehouseId;
             if (rand.choice(1)) {
-                supplyWarehouseId = rand.uniform(1, 20); // TODO: Need to know how many warehouses
+                supplyWarehouseId = rand.uniform(1, KafkaConfig.warehouseCount());
             } else {
                 supplyWarehouseId = warehouseId;
             }
