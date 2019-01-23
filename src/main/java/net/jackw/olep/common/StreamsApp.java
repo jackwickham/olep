@@ -94,6 +94,8 @@ public abstract class StreamsApp implements AutoCloseable {
         // Set up the streams
         setup();
 
+        boolean error = false;
+
         try {
             // Add a shutdown listener to gracefully handle Ctrl+C
             Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
@@ -107,15 +109,20 @@ public abstract class StreamsApp implements AutoCloseable {
             start();
             appShutdownLatch.await();
             log.info("Shutting down");
-            close();
         } catch (Throwable e) {
-            log.error(e);
+            log.fatal(e);
+            error = true;
+        } finally {
             try {
                 close();
-            } catch (Throwable e2) {
+            } catch (InterruptedException e) {
                 // Nothing we can do now
-                log.error("Uncaught exception while shutting down", e);
+                log.fatal("Uncaught exception while shutting down", e);
+                error = true;
             }
+        }
+
+        if (error) {
             System.exit(1);
         }
     }

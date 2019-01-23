@@ -102,6 +102,12 @@ task reset(type: JavaExec, dependsOn: 'classes') {
     main = "net.jackw.olep.utils.Resetter"
 }
 
+task runDatabase(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.utils.RunDatabase"
+    mustRunAfter reset
+}
+
 
 // Integration tests task configuration
 task integrationTest(type: Test) {

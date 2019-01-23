@@ -1,11 +1,9 @@
 package net.jackw.olep.integration;
 
-import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.worker.WorkerApp;
 import net.jackw.olep.utils.Resetter;
 import net.jackw.olep.verifier.VerifierApp;
 import net.jackw.olep.view.StandaloneRegistry;
-import org.apache.kafka.streams.KafkaStreams;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
