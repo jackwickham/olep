@@ -67,7 +67,7 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
         this.accepted = new CompletableFuture<>();
         this.complete = new CompletableFuture<>();
 
-        this.transactionStatus = new TransactionStatus<>(writtenToLog, accepted, complete);
+        this.transactionStatus = new TransactionStatus<>(transactionId, writtenToLog, accepted, complete);
     }
 
     /**

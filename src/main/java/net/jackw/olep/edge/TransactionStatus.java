@@ -22,6 +22,7 @@ import java.util.function.Consumer;
  */
 @SuppressWarnings("FutureReturnValueIgnored")
 public class TransactionStatus<T extends TransactionResultMessage> {
+    private long transactionId;
     private CompletableFuture<Void> writtenToLog;
     private CompletableFuture<Void> accepted;
     private CompletableFuture<T> complete;
@@ -37,10 +38,12 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      *                 from the database system, and will never complete exceptionally.
      */
     TransactionStatus(
+        long transactionId,
         CompletableFuture<?> writtenToLog,
         CompletableFuture<Void> accepted,
         CompletableFuture<T> complete
     ) {
+        this.transactionId = transactionId;
         // Convert writtenToLog to a CompletableFuture<Void>
         this.writtenToLog = writtenToLog.thenApply(_a -> null);
         // Convert accepted to a future that only completes once writtenToLog and accepted have completed
@@ -129,6 +132,13 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      */
     public void addCompleteHandler(final Consumer<T> handler) {
         complete.thenAccept(v -> handleExceptions(() -> handler.accept(v)));
+    }
+
+    /**
+     * Get the internal ID for this transaction
+     */
+    public long getTransactionId() {
+        return transactionId;
     }
 
     /**

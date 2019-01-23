@@ -1,6 +1,6 @@
 package net.jackw.olep.application;
 
-public enum PerformTransactionEvent {
+public enum TransactionType {
     NEW_ORDER    (18, 12),
     PAYMENT      (3, 12),
     DELIVERY     (2, 5),
@@ -10,7 +10,7 @@ public enum PerformTransactionEvent {
     public final double keyingTime;
     public final double thinkTime;
 
-    private PerformTransactionEvent(double keyingTime, double thinkTime) {
+    private TransactionType(double keyingTime, double thinkTime) {
         this.keyingTime = keyingTime;
         this.thinkTime = thinkTime;
     }

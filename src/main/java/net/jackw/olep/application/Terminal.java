@@ -12,7 +12,8 @@ import net.jackw.olep.utils.RandomDataGenerator;
 import java.time.Duration;
 
 public class Terminal extends AbstractActorWithTimers {
-    private static final Object TIMER_KEY = "TerminalTimer";
+    private static final Object NEXT_TRANSACTION_TIMER_KEY = "NextTransactionTimer";
+    private static final Object TRANSACTION_TIMEOUT_TIMER_KEY = "TransactionTimeoutTimer";
 
     private int warehouseId;
     private Database db;
@@ -29,19 +30,22 @@ public class Terminal extends AbstractActorWithTimers {
         return receiveBuilder()
             .match(TransactionCompleteMessage.class, msg -> {
                 System.out.printf("Received message %s\n", msg);
+                getTimers().cancel(TRANSACTION_TIMEOUT_TIMER_KEY);
                 nextTransaction();
             })
-            .matchEquals(PerformTransactionEvent.NEW_ORDER, _msg -> performNewOrder())
-            .match(PerformTransactionEvent.class, ev -> {
+            .matchEquals(TransactionType.NEW_ORDER, _msg -> performNewOrder())
+            .match(TransactionType.class, ev -> {
                 System.out.printf("Received transaction event %s\n", ev);
                 nextTransaction();
+            })
+            .match(InProgressTransaction.class, msg -> {
+                throw new RuntimeException("Violation: failed to receive response to " + msg + " in time");
             })
             .build();
     }
 
-    @SuppressWarnings("MustBeClosedChecker")
-    public static Props props(int warehouseId) {
-        return Props.create(Terminal.class, () -> new Terminal(warehouseId, new Database("localhost:9092", "localhost")));
+    public static Props props(int warehouseId, Database db) {
+        return Props.create(Terminal.class, () -> new Terminal(warehouseId, db));
     }
 
     @Override
@@ -49,32 +53,26 @@ public class Terminal extends AbstractActorWithTimers {
         nextTransaction();
     }
 
-    @Override
-    public void postStop() {
-        // TODO: shouldn't be here
-        db.close();
-    }
-
     private void nextTransaction() {
         // Choose which transaction should be sent next, according to TPC-C §5.2.3
-        PerformTransactionEvent event;
+        TransactionType event;
         float n = rand.nextFloat() * 100;
         if (n < 4.2) {
-            event = PerformTransactionEvent.STOCK_LEVEL;
+            event = TransactionType.STOCK_LEVEL;
         } else if (n < 8.4) {
-            event = PerformTransactionEvent.ORDER_STATUS;
+            event = TransactionType.ORDER_STATUS;
         } else if (n < 12.6) {
-            event = PerformTransactionEvent.DELIVERY;
+            event = TransactionType.DELIVERY;
         } else if (n < 55.8) {
-            event = PerformTransactionEvent.PAYMENT;
+            event = TransactionType.PAYMENT;
         } else {
-            event = PerformTransactionEvent.NEW_ORDER;
+            event = TransactionType.NEW_ORDER;
         }
         // Compute the time until that transaction should be sent, according to TPC-C §5.2.5.4
         double thinkTime = -Math.log(rand.nextDouble()) * event.thinkTime;
         double totalDelay = thinkTime + event.keyingTime;
 
-        getTimers().startSingleTimer(TIMER_KEY, event, Duration.ofMillis((long)(totalDelay * 1000.0)));
+        getTimers().startSingleTimer(NEXT_TRANSACTION_TIMER_KEY, event, Duration.ofMillis((long)(totalDelay * 1000.0)));
     }
 
     /**
@@ -107,11 +105,11 @@ public class Terminal extends AbstractActorWithTimers {
             // remote warehouse 1% of the time
             int supplyWarehouseId;
             if (rand.choice(1)) {
-                supplyWarehouseId = rand.uniform(0, 20); // TODO: Need to know how many warehouses
+                supplyWarehouseId = rand.uniform(1, 20); // TODO: Need to know how many warehouses
             } else {
                 supplyWarehouseId = warehouseId;
             }
-            // A quantity (OL_QUANTITY) is randomly selected wtihin [1 .. 10]
+            // A quantity (OL_QUANTITY) is randomly selected within [1 .. 10]
             int quantity = rand.uniform(1, 10);
 
             linesBuilder.add(new NewOrderRequest.OrderLine(itemId, supplyWarehouseId, quantity));
@@ -119,5 +117,11 @@ public class Terminal extends AbstractActorWithTimers {
 
         TransactionStatus<NewOrderResult> status = db.newOrder(customerId, districtId, warehouseId, linesBuilder.build());
         status.register(new AkkaTransactionStatusListener<>(getSelf()));
+
+        startTimeoutTimer(new InProgressTransaction(status.getTransactionId(), TransactionType.NEW_ORDER));
+    }
+
+    private void startTimeoutTimer(InProgressTransaction tx) {
+        getTimers().startSingleTimer(TRANSACTION_TIMEOUT_TIMER_KEY, tx, Duration.ofSeconds(5));
     }
 }
