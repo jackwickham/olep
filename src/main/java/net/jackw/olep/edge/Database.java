@@ -92,7 +92,7 @@ public class Database implements Closeable {
         return eventConnection.send(msgBody, new DeliveryResult.Builder(warehouseId, carrierId)).getTransactionStatus();
     }
 
-    public int stockLevel(int warehouseId, int districtId, int stockThreshold) {
+    public int stockLevel(int districtId, int warehouseId, int stockThreshold) {
         try {
             return viewAdapter.stockLevel(districtId, warehouseId, stockThreshold);
         } catch (RemoteException e) {
