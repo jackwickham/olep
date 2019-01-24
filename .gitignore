@@ -51,3 +51,4 @@ gradle-app.setting
 .idea/
 /out/
 .attach_pid*
+/results/
