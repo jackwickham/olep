@@ -6,18 +6,24 @@ import com.codahale.metrics.MetricRegistry;
 import net.jackw.olep.common.KafkaConfig;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         MetricRegistry registry = new MetricRegistry();
+
+        File resultsDir = new File(String.format("results/%d-%d/", KafkaConfig.warehouseCount(), new Date().getTime()));
+        Files.createDirectory(resultsDir.toPath());
 
         CsvReporter reporter = CsvReporter.forRegistry(registry)
             .formatFor(Locale.UK)
             .convertRatesTo(TimeUnit.SECONDS)
             .convertDurationsTo(TimeUnit.MILLISECONDS)
-            .build(new File("results/"));
+            .build(resultsDir);
         // Wait a minute for the system to warm up, then collect metrics every 30s
         reporter.start(60L, 30L, TimeUnit.SECONDS);
 

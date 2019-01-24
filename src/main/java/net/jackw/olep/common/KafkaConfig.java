@@ -48,7 +48,7 @@ public class KafkaConfig {
     @JsonProperty(required = true)
     private int customerNameRange;
     @JsonProperty
-    private boolean predictableData = true;
+    private boolean predictableData = false;
 
 
     private KafkaConfig() { }
@@ -107,7 +107,8 @@ public class KafkaConfig {
                 // If we're running a test, use that database config. This takes precedence over everything else
                 configFile = KafkaConfig.class.getClassLoader().getResource("test-database-config.yml");
                 if (configFile == null) {
-                    if (System.getenv("PRODUCTION") == null) {
+                    String prodEnv = System.getenv("PRODUCTION");
+                    if (prodEnv == null || prodEnv.equals("") || prodEnv.equals("0")) {
                         // Normally use the default config file
                         configFile = KafkaConfig.class.getClassLoader().getResource("database-config.yml");
                     } else {
