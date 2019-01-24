@@ -2,22 +2,17 @@ package net.jackw.olep.application.transaction;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import akka.actor.Cancellable;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.common.collect.ImmutableList;
+import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
-import net.jackw.olep.application.TransactionTimeoutMessage;
-import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.Database;
 import net.jackw.olep.edge.TransactionStatus;
-import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.utils.RandomDataGenerator;
-
-import java.time.Duration;
 
 /**
  * Perform a New-Order transaction, generating data as specified by TPC-C §2.4.1
@@ -30,8 +25,8 @@ public class NewOrderDispatcher {
     private final RandomDataGenerator rand;
 
     private final Timer acceptedTimer;
-    private final Timer successTimer;
-    private final Timer failureTimer;
+    private final Timer completeTimer;
+    private final Timer rejectedTimer;
 
     public NewOrderDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
@@ -44,8 +39,8 @@ public class NewOrderDispatcher {
         this.rand = rand;
 
         acceptedTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "accepted"));
-        successTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "success"));
-        failureTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "failure"));
+        completeTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "success"));
+        rejectedTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "failure"));
     }
 
     public void dispatch() {
@@ -84,33 +79,26 @@ public class NewOrderDispatcher {
             linesBuilder.add(new NewOrderRequest.OrderLine(itemId, supplyWarehouseId, quantity));
         }
 
-        ResultHandler handler = new ResultHandler();
+        BaseResultHandler<NewOrderResult> handler;
+        if (rollback) {
+            handler = new FailureResultHandler();
+        } else {
+            handler = new SuccessResultHandler();
+        }
+
         TransactionStatus<NewOrderResult> status = db.newOrder(customerId, districtId, warehouseId, linesBuilder.build());
         handler.attach(status);
     }
 
-    private class ResultHandler implements TransactionStatusListener<NewOrderResult> {
+    private class SuccessResultHandler extends BaseResultHandler<NewOrderResult> {
         private final Timer.Context acceptedTimerContext;
-        private final Timer.Context successTimerContext;
-        private final Timer.Context failureTimerContext;
+        private final Timer.Context completeTimerContext;
 
-        private Cancellable scheduledTimeoutMessage;
+        public SuccessResultHandler() {
+            super(actorSystem, actor);
 
-        public ResultHandler() {
             acceptedTimerContext = acceptedTimer.time();
-            successTimerContext = successTimer.time();
-            failureTimerContext = failureTimer.time();
-        }
-
-        public void attach(TransactionStatus<NewOrderResult> status) {
-            // Add a timeout, if we don't receive a message in time
-            TransactionTimeoutMessage timeoutMessage = new TransactionTimeoutMessage(
-                status.getTransactionId(), TransactionType.NEW_ORDER
-            );
-            scheduledTimeoutMessage = actorSystem.scheduler().scheduleOnce(
-                Duration.ofSeconds(8), actor, timeoutMessage, null, ActorRef.noSender()
-            );
-            status.register(this);
+            completeTimerContext = completeTimer.time();
         }
 
         @Override
@@ -119,24 +107,37 @@ public class NewOrderDispatcher {
         }
 
         @Override
+        public void completeHandler(NewOrderResult result) {
+            completeTimerContext.stop();
+
+            done(new TransactionCompleteMessage());
+        }
+    }
+
+    private class FailureResultHandler extends BaseResultHandler<NewOrderResult> {
+        private final Timer.Context rejectedTimerContext;
+
+        public FailureResultHandler() {
+            super(actorSystem, actor);
+
+            rejectedTimerContext = rejectedTimer.time();
+        }
+
+        @Override
+        public void acceptedHandler() {
+            done(new IllegalTransactionResponseException("transaction accepted incorrectly"));
+        }
+
+        @Override
         public void rejectedHandler(Throwable t) {
-            failureTimerContext.stop();
+            rejectedTimerContext.stop();
 
             done(new TransactionCompleteMessage());
         }
 
         @Override
         public void completeHandler(NewOrderResult result) {
-            successTimerContext.stop();
-
-            done(new TransactionCompleteMessage());
-        }
-
-        private void done(TransactionCompleteMessage msg) {
-            // Stop the timeout message from being sent
-            scheduledTimeoutMessage.cancel();
-
-            actor.tell(msg, ActorRef.noSender());
+            done(new IllegalTransactionResponseException("transaction completed incorrectly"));
         }
     }
 }
