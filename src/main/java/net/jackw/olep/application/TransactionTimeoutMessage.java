@@ -1,10 +1,10 @@
 package net.jackw.olep.application;
 
-public class InProgressTransaction {
+public class TransactionTimeoutMessage {
     private long transactionId;
     private TransactionType transactionType;
 
-    public InProgressTransaction(long transactionId, TransactionType transactionType) {
+    public TransactionTimeoutMessage(long transactionId, TransactionType transactionType) {
         this.transactionId = transactionId;
         this.transactionType = transactionType;
     }

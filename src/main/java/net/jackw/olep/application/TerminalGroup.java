@@ -2,6 +2,7 @@ package net.jackw.olep.application;
 
 import akka.actor.AbstractActor;
 import akka.actor.Props;
+import com.codahale.metrics.MetricRegistry;
 import net.jackw.olep.edge.Database;
 
 /**
@@ -10,12 +11,14 @@ import net.jackw.olep.edge.Database;
 public class TerminalGroup extends AbstractActor {
     private int startWarehouseId;
     private int warehouseIdRange;
+    private MetricRegistry registry;
     private Database db;
 
     @SuppressWarnings("MustBeClosedChecker")
-    public TerminalGroup(int startWarehouseId, int warehouseIdRange) {
+    public TerminalGroup(int startWarehouseId, int warehouseIdRange, MetricRegistry registry) {
         this.startWarehouseId = startWarehouseId;
         this.warehouseIdRange = warehouseIdRange;
+        this.registry = registry;
         this.db = new Database("localhost:9092", "localhost");
     }
 
@@ -26,8 +29,8 @@ public class TerminalGroup extends AbstractActor {
             .build();
     }
 
-    public static Props props(int startWarehouseId, int range) {
-        return Props.create(TerminalGroup.class, () -> new TerminalGroup(startWarehouseId, range));
+    public static Props props(int startWarehouseId, int range, MetricRegistry registry) {
+        return Props.create(TerminalGroup.class, () -> new TerminalGroup(startWarehouseId, range, registry));
     }
 
     @Override
@@ -35,7 +38,7 @@ public class TerminalGroup extends AbstractActor {
         for (int i = 0; i < warehouseIdRange; i++) {
             int warehouse = startWarehouseId + i;
             for (int district = 1; district <= 10; district++) {
-                getContext().actorOf(Terminal.props(warehouse, district, db), "term-" + warehouse + "-" + district);
+                getContext().actorOf(Terminal.props(warehouse, district, db, registry), "term-" + warehouse + "-" + district);
             }
         }
     }

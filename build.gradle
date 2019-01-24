@@ -44,9 +44,7 @@ dependencies {
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
     compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-guava', version: '2.9.7'
     compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.9.7'
-    // Akka for scheduling within the application
-    compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.17'
-    // Log4j for loggging
+    // Log4j for logging
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.1'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.1'
     compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.11.1'
@@ -55,6 +53,9 @@ dependencies {
     // Akka for the application
     compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.19'
     testCompile group: 'com.typesafe.akka', name: 'akka-testkit_2.12', version: '2.5.19'
+    // Metrics for performing the benchmarks
+    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.0.5'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: '4.0.5'
 
     // Expose the errorprone client library to the application
     compile group: 'com.google.errorprone', name: 'error_prone_core', version: '2.3.2'
