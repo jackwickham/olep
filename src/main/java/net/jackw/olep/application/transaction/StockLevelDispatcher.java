@@ -1,14 +1,15 @@
 package net.jackw.olep.application.transaction;
 
+import akka.actor.ActorContext;
 import akka.actor.ActorRef;
+import akka.dispatch.Futures;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
-import net.jackw.olep.common.KafkaConfig;
-import net.jackw.olep.common.records.OrderStatusResult;
 import net.jackw.olep.edge.Database;
-import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
+import scala.concurrent.ExecutionContext;
+import scala.concurrent.Future;
 
 public class StockLevelDispatcher {
     private final int warehouseId;
@@ -16,15 +17,18 @@ public class StockLevelDispatcher {
     private final ActorRef actor;
     private final Database db;
     private final RandomDataGenerator rand;
+    private final ExecutionContext executionContext;
 
     private final Timer completeTimer;
 
     public StockLevelDispatcher(
-        int warehouseId, int districtId, ActorRef actor, Database db, RandomDataGenerator rand, MetricRegistry registry
+        int warehouseId, int districtId, ActorRef actor, ActorContext actorContext, Database db, RandomDataGenerator rand,
+        MetricRegistry registry
     ) {
         this.warehouseId = warehouseId;
         this.districtId = districtId;
         this.actor = actor;
+        this.executionContext = actorContext.dispatcher();
         this.db = db;
         this.rand = rand;
 
@@ -35,12 +39,16 @@ public class StockLevelDispatcher {
         // The threshold of minimum quantity in stock is selected at random within [10 .. 20]
         int threshold = rand.uniform(10, 20);
 
-        Timer.Context completeTimerContext = completeTimer.time();
-        int result = db.stockLevel(districtId, warehouseId, threshold);
-        completeTimerContext.stop();
+        Future<Integer> result = Futures.future(() -> {
+            Timer.Context completeTimerContext = completeTimer.time();
+            int res = db.stockLevel(districtId, warehouseId, threshold);
+            completeTimerContext.stop();
+
+            actor.tell(new TransactionCompleteMessage(), ActorRef.noSender());
+
+            return res;
+        }, executionContext);
 
         // The result can be checked here
-
-        actor.tell(new TransactionCompleteMessage(), ActorRef.noSender());
     }
 }
