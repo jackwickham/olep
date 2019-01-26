@@ -4,3 +4,6 @@ districtsPerWarehouse: 5
 customersPerDistrict: 10
 customerNameRange: 5
 predictableData: true
+verifierInstances: 1
+workerInstances: 1
+applicationInstances: 1

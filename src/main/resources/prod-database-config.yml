@@ -3,3 +3,7 @@ warehouseCount: 2000 # TODO: This is what affects the benchmark, and should be c
 districtsPerWarehouse: 10
 customersPerDistrict: 3000
 customerNameRange: 1000
+# TODO: These should be increased when distributing over multiple servers
+verifierInstances: 1
+workerInstances: 1
+applicationInstances: 1

@@ -125,10 +125,10 @@ public class Resetter implements AutoCloseable {
             // Topics involved with transactions are partitioned based on the warehouse they are associated with
             // To allow for scaling if needed, have twice as many partitions as verifiers/workers
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.TRANSACTION_REQUEST_TOPIC, NUM_VERIFIERS * 2, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.TRANSACTION_REQUEST_TOPIC, KafkaConfig.verifierInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, NUM_WORKERS * 2, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             // Modification log probably wants to be partitioned more later
             futures.add(createTopic(new NewTopic(
@@ -136,21 +136,21 @@ public class Resetter implements AutoCloseable {
             ), adminClient, 0));
             // The transaction results can be filtered by the application, but aim to have ~1 partition per application
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.TRANSACTION_RESULT_TOPIC, NUM_APPLICATIONS, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.TRANSACTION_RESULT_TOPIC, KafkaConfig.applicationInstances(), TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
 
             // Also create worker changelogs
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.STOCK_QUANTITY_CHANGELOG, NUM_WORKERS * 2, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.STOCK_QUANTITY_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.NEW_ORDER_CHANGELOG, NUM_WORKERS * 2, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.NEW_ORDER_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.CUSTOMER_MUTABLE_CHANGELOG, NUM_WORKERS * 2, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.CUSTOMER_MUTABLE_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG, NUM_WORKERS * 2, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
         }
 

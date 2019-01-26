@@ -47,6 +47,12 @@ public class KafkaConfig {
     private int customersPerDistrict;
     @JsonProperty(required = true)
     private int customerNameRange;
+    @JsonProperty(required = true)
+    private int verifierInstances;
+    @JsonProperty(required = true)
+    private int workerInstances;
+    @JsonProperty
+    private int applicationInstances = 1;
     @JsonProperty
     private boolean predictableData = false;
 
@@ -87,6 +93,27 @@ public class KafkaConfig {
      */
     public static int customerNameRange() {
         return getInstance().customerNameRange;
+    }
+
+    /**
+     * The number of verifier apps running, from which the number of transaction request topic partitions is derived
+     */
+    public static int verifierInstances() {
+        return getInstance().verifierInstances;
+    }
+
+    /**
+     * The number of worker apps running, from which the number of accepted transaction topic partitions is derived
+     */
+    public static int workerInstances() {
+        return getInstance().workerInstances;
+    }
+
+    /**
+     * The number of applications running, from which the number of transaction result topic partitions is derived
+     */
+    public static int applicationInstances() {
+        return getInstance().applicationInstances;
     }
 
     /**
