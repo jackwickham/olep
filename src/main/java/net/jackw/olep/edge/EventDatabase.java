@@ -2,6 +2,7 @@ package net.jackw.olep.edge;
 
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
+import net.jackw.olep.common.Database;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
@@ -11,7 +12,6 @@ import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.view.ViewReadAdapter;
 import net.jackw.olep.common.records.OrderStatusResult;
 
-import java.io.Closeable;
 import java.math.BigDecimal;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -19,13 +19,13 @@ import java.rmi.registry.LocateRegistry;
 import java.util.Date;
 import java.util.List;
 
-public class Database implements Closeable {
+public class EventDatabase implements Database {
     private final DatabaseConnection eventConnection;
     private final ViewReadAdapter viewAdapter;
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public Database(String eventBootstrapServers, String viewServer) {
+    public EventDatabase(String eventBootstrapServers, String viewServer) {
         try {
             viewAdapter = loadViewAdapter(viewServer);
             eventConnection = new DatabaseConnection(eventBootstrapServers);
@@ -43,6 +43,7 @@ public class Database implements Closeable {
     /**
      * Send a New-Order transaction
      */
+    @Override
     public TransactionStatus<NewOrderResult> newOrder(
         int customerId, int districtId, int warehouseId, List<NewOrderRequest.OrderLine> lines
     ) {
@@ -57,6 +58,7 @@ public class Database implements Closeable {
     /**
      * Send a Payment transaction by customer ID
      */
+    @Override
     public TransactionStatus<PaymentResult> payment(
         int customerId, int districtId, int warehouseId, int customerDistrictId, int customerWarehouseId,
         BigDecimal amount
@@ -72,6 +74,7 @@ public class Database implements Closeable {
     /**
      * Send a Payment transaction by customer last name
      */
+    @Override
     public TransactionStatus<PaymentResult> payment(
         String customerLastName, int districtId, int warehouseId, int customerDistrictId, int customerWarehouseId,
         BigDecimal amount
@@ -87,11 +90,13 @@ public class Database implements Closeable {
     /**
      * Send a Delivery transaction
      */
+    @Override
     public TransactionStatus<DeliveryResult> delivery(int warehouseId, int carrierId) {
         DeliveryRequest msgBody = new DeliveryRequest(warehouseId, carrierId, new Date().getTime());
         return eventConnection.send(msgBody, new DeliveryResult.Builder(warehouseId, carrierId)).getTransactionStatus();
     }
 
+    @Override
     public int stockLevel(int districtId, int warehouseId, int stockThreshold) {
         try {
             return viewAdapter.stockLevel(districtId, warehouseId, stockThreshold);
@@ -100,6 +105,7 @@ public class Database implements Closeable {
         }
     }
 
+    @Override
     public OrderStatusResult orderStatus(int customerId, int districtId, int warehouseId) {
         try {
             return viewAdapter.orderStatus(customerId, districtId, warehouseId);
@@ -108,6 +114,7 @@ public class Database implements Closeable {
         }
     }
 
+    @Override
     public OrderStatusResult orderStatus(String customerLastName, int districtId, int warehouseId) {
         try {
             return viewAdapter.orderStatus(customerLastName, districtId, warehouseId);

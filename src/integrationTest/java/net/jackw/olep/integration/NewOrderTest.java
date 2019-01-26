@@ -2,7 +2,7 @@ package net.jackw.olep.integration;
 
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.Item;
-import net.jackw.olep.edge.Database;
+import net.jackw.olep.edge.EventDatabase;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.integration.matchers.DateMatcher;
 import net.jackw.olep.integration.matchers.NewOrderResultMatcher;
@@ -39,7 +39,7 @@ public class NewOrderTest extends BaseIntegrationTest {
         PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
         PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getCustomerNameRange());
 
-        try (Database db = new Database(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
@@ -76,7 +76,7 @@ public class NewOrderTest extends BaseIntegrationTest {
         PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
         PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getCustomerNameRange());
 
-        try (Database db = new Database(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
@@ -108,7 +108,7 @@ public class NewOrderTest extends BaseIntegrationTest {
 
     @Test
     public void testInvalidItem() throws Throwable {
-        try (Database db = new Database(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);

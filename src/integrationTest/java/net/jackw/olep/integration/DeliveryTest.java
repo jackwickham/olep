@@ -1,6 +1,6 @@
 package net.jackw.olep.integration;
 
-import net.jackw.olep.edge.Database;
+import net.jackw.olep.edge.EventDatabase;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.integration.matchers.DeliveryResultMatcher;
 import net.jackw.olep.integration.matchers.MapEntryMatcher;
@@ -23,7 +23,7 @@ public class DeliveryTest extends BaseIntegrationTest {
 
     @Test
     public void testNothingMarkedAsDeliveredWhenNoPendingOrders() throws Throwable {
-        try (Database db = new Database(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             TransactionStatus<DeliveryResult> deliveryStatus = db.delivery(1, 4);
@@ -35,7 +35,7 @@ public class DeliveryTest extends BaseIntegrationTest {
 
     @Test
     public void testCorrectResultWhenRecordsInserted() throws Throwable {
-        try (Database db = new Database(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
             // Populate DB
             final CountDownLatch latch = new CountDownLatch(5);
             List<TransactionStatus<NewOrderResult>> orders = List.of(

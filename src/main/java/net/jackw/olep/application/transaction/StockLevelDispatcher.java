@@ -6,7 +6,7 @@ import akka.dispatch.Futures;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
-import net.jackw.olep.edge.Database;
+import net.jackw.olep.common.Database;
 import net.jackw.olep.utils.RandomDataGenerator;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;

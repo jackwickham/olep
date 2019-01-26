@@ -3,7 +3,8 @@ package net.jackw.olep.application;
 import akka.actor.AbstractActor;
 import akka.actor.Props;
 import com.codahale.metrics.MetricRegistry;
-import net.jackw.olep.edge.Database;
+import net.jackw.olep.common.Database;
+import net.jackw.olep.edge.EventDatabase;
 
 /**
  * A group of terminals that share a database connection, to optimise resource use
@@ -19,7 +20,7 @@ public class TerminalGroup extends AbstractActor {
         this.startWarehouseId = startWarehouseId;
         this.warehouseIdRange = warehouseIdRange;
         this.registry = registry;
-        this.db = new Database("localhost:9092", "localhost");
+        this.db = new EventDatabase("localhost:9092", "localhost");
     }
 
     @Override
