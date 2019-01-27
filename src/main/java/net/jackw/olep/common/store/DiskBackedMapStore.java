@@ -141,4 +141,12 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
             }
         }
     }
+
+    /**
+     * Remove everything from the map
+     */
+    @Override
+    public void clear() {
+        map.clear();
+    }
 }

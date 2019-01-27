@@ -14,13 +14,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-class SharedCustomerMapStore implements WritableKeyValueStore<DistrictSpecificKey, CustomerShared>, SharedCustomerStore {
+class InMemoryCustomerMapStore implements WritableCustomerStore {
     // Store id -> Customer
     private Map<DistrictSpecificKey, CustomerShared> idMap;
     // Store lastName -> All customers with that last name (+district/warehouse)
     private Multimap<CustomerNameKey, CustomerShared> nameMultimap;
 
-    SharedCustomerMapStore(int initialCapacity) {
+    InMemoryCustomerMapStore(int initialCapacity) {
         idMap = new HashMap<>(initialCapacity);
         nameMultimap = HashMultimap.create(initialCapacity / 10, 10);
     }
@@ -79,5 +79,11 @@ class SharedCustomerMapStore implements WritableKeyValueStore<DistrictSpecificKe
         // This means we need to trim the list to 5 (respectively 6) elements and sort those, then get the last element
         int cutoff = customers.size() / 2 + 1;
         return nameOrdering.leastOf(customers, cutoff).get(cutoff - 1);
+    }
+
+    @Override
+    public void clear() {
+        idMap.clear();
+        nameMultimap.clear();
     }
 }

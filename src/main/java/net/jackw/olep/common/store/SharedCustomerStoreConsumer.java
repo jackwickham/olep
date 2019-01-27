@@ -20,7 +20,7 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
      */
     @Override
     protected WritableKeyValueStore<DistrictSpecificKey, CustomerShared> createStore() {
-        return new SharedCustomerMapStore(100_000);
+        return new DiskBackedCustomerMapStore();
     }
 
     /**

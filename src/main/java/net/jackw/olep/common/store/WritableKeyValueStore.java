@@ -20,4 +20,9 @@ public interface WritableKeyValueStore<K, V> extends SharedKeyValueStore<K, V> {
     @CanIgnoreReturnValue
     @Nullable
     V remove(K key);
+
+    /**
+     * Remove everything from the store
+     */
+    void clear();
 }

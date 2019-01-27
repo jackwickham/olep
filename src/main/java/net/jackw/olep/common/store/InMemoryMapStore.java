@@ -44,4 +44,9 @@ class InMemoryMapStore<K, V> implements WritableKeyValueStore<K, V> {
     public V remove(K key) {
         return map.remove(key);
     }
+
+    @Override
+    public void clear() {
+        map.clear();
+    }
 }
