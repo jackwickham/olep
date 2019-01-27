@@ -1,5 +1,8 @@
 package net.jackw.olep.common;
 
+import net.jackw.olep.common.records.StockShared;
+import net.jackw.olep.common.records.WarehouseSpecificKey;
+import net.jackw.olep.utils.populate.PredictableStockFactory;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -38,7 +41,11 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
      */
     SharedStoreConsumer(String bootstrapServers, String nodeID, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
         super("Shared store consumer - " + topic + " (" + nodeID + ")");
-        store = createStore();
+        if (topic.equals(KafkaConfig.STOCK_IMMUTABLE_TOPIC)) {
+            store = (WritableKeyValueStore) createStockSharedStore();
+        } else {
+            store = createStore();
+        }
 
         Properties itemConsumerProps = new Properties();
         itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -104,6 +111,14 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
         done = true;
         consumer.wakeup();
         join();
+        if (store instanceof DiskBackedMapStore) {
+            ((DiskBackedMapStore<K, V>) store).close();
+        }
+    }
+
+    // TODO: Remove specialisation
+    private WritableKeyValueStore<WarehouseSpecificKey, StockShared> createStockSharedStore() {
+        return new DiskBackedMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount(), WarehouseSpecificKey.class, StockShared.class, "stockshared", new WarehouseSpecificKey(1, 1), PredictableStockFactory.instanceFor(1).getStockShared(1));
     }
 
     /**

@@ -56,6 +56,8 @@ dependencies {
     // Metrics for performing the benchmarks
     compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.0.5'
     compile group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: '4.0.5'
+    // Chronicle map for storing data that may exceed the available memory
+    compile group: 'net.openhft', name: 'chronicle-map', version: '3.17.0'
 
     // Expose the errorprone client library to the application
     compile group: 'com.google.errorprone', name: 'error_prone_core', version: '2.3.2'

@@ -4,13 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.errorprone.annotations.ForOverride;
 import com.google.errorprone.annotations.Immutable;
 
+import java.io.Serializable;
+
 /**
  * An abstract database record
  *
  * @param <K> The type of a unique key for this record
  */
 @Immutable
-public abstract class Record<K> {
+public abstract class Record<K> implements Serializable {
     @SuppressWarnings("Immutable")
     private K key = null;
 

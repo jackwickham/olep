@@ -54,6 +54,8 @@ public class KafkaConfig {
     @JsonProperty
     private int applicationInstances = 1;
     @JsonProperty
+    private String storeBackingDir = "/tmp/olep/";
+    @JsonProperty
     private boolean predictableData = false;
 
 
@@ -114,6 +116,10 @@ public class KafkaConfig {
      */
     public static int applicationInstances() {
         return getInstance().applicationInstances;
+    }
+
+    public static String storeBackingDir() {
+        return getInstance().storeBackingDir;
     }
 
     /**

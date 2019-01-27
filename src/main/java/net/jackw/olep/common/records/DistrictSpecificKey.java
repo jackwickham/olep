@@ -3,9 +3,10 @@ package net.jackw.olep.common.records;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class DistrictSpecificKey {
+public class DistrictSpecificKey implements Serializable {
     public final int id;
     public final int districtId;
     public final int warehouseId;
