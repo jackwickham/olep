@@ -39,10 +39,6 @@ public class Resetter implements AutoCloseable {
         KafkaConfig.STOCK_IMMUTABLE_TOPIC
     );
 
-    private static final int NUM_VERIFIERS = 2;
-    private static final int NUM_WORKERS = 2;
-    private static final int NUM_APPLICATIONS = 2;
-
     // The replication factor that should be used for transaction-related topics
     private static final short TRANSACTION_REPLICATION_FACTOR = 1;
     // The replication factor that should be used for shared stores

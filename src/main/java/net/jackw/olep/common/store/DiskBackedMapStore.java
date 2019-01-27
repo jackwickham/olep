@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.function.Supplier;
 
 public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, AutoCloseable {
@@ -25,9 +26,11 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
     private int references = 1;
 
     private DiskBackedMapStore(ChronicleMapBuilder<K, V> mapBuilder, String storeName) {
+        Random rand = new Random();
         try {
-            File persistentFile = new File(KafkaConfig.storeBackingDir(), storeName + ".dat");
+            File persistentFile = new File(KafkaConfig.storeBackingDir(), storeName + rand.nextInt() + ".dat");
             Files.createParentDirs(persistentFile);
+            persistentFile.deleteOnExit();
 
             this.map = mapBuilder.createPersistedTo(persistentFile);
             this.storeName = storeName;
@@ -46,7 +49,7 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
     @SuppressWarnings("unchecked")
     private static synchronized <K, V> DiskBackedMapStore<K, V> getOrCreate(String storeName, Supplier<DiskBackedMapStore<K, V>> create) {
         DiskBackedMapStore<K, V> instance = (DiskBackedMapStore<K, V>) instances.get(storeName);
-        if (instance == null) {
+        if (true) { // TODO: Move logic
             instance = create.get();
             instances.put(storeName, instance);
 
@@ -74,7 +77,7 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
         return getOrCreate(storeName, () -> {
             ChronicleMapBuilder<K, V> mapBuilder = ChronicleMapBuilder.of(keyClass, valueClass)
                 .entries(capacity)
-                .name(storeName)
+                .name(storeName + new Random().nextInt())
                 .averageKey(averageKey)
                 .averageValue(averageValue);
 
@@ -97,7 +100,7 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
         return getOrCreate(storeName, () -> {
             ChronicleMapBuilder<Integer, V> mapBuilder = ChronicleMapBuilder.of(Integer.class, valueClass)
                 .entries(capacity)
-                .name(storeName)
+                .name(storeName + new Random().nextInt())
                 .averageValue(averageValue);
 
             return new DiskBackedMapStore<>(mapBuilder, storeName);

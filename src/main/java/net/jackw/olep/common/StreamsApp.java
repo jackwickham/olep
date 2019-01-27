@@ -84,6 +84,7 @@ public abstract class StreamsApp implements AutoCloseable {
 
     public void start() {
         streams = getStreams();
+        streams.cleanUp();
         streams.start();
     }
 

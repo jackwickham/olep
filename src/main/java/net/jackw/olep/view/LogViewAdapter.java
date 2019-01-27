@@ -24,6 +24,7 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.time.Duration;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -107,7 +108,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
             consumer.assign(partitions);
             consumer.seekToBeginning(partitions);
 
-            customerStoreConsumer = new SharedCustomerStoreConsumer(bootstrapServers, "view-adapter-TODO_PARTITION_ID");
+            customerStoreConsumer = new SharedCustomerStoreConsumer(bootstrapServers, "view-adapter-TODO_PARTITION_ID-" + new Date().getTime());
             customerStoreConsumer.start();
 
             viewWrapper = new InMemoryRMIWrapper(registryServer, customerStoreConsumer.getStore());
