@@ -1,14 +1,18 @@
 package net.jackw.olep.worker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import net.jackw.olep.common.SharedCustomerStoreConsumer;
+import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
-import net.jackw.olep.common.SharedStoreConsumer;
+import net.jackw.olep.common.store.SharedDistrictStoreConsumer;
+import net.jackw.olep.common.store.SharedItemStoreConsumer;
+import net.jackw.olep.common.store.SharedStockStoreConsumer;
+import net.jackw.olep.common.store.SharedStoreConsumer;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.TransactionResultPartitioner;
+import net.jackw.olep.common.store.SharedWarehouseStoreConsumer;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -48,38 +52,15 @@ public class WorkerApp extends StreamsApp {
         super(bootstrapServers);
 
         // Consume from all the shared stores to make them accessible to workers
-        itemConsumer = new SharedStoreConsumer<>(
-            getBootstrapServers(),
-            getApplicationID() + "-" + getNodeID(),
-            KafkaConfig.ITEM_IMMUTABLE_TOPIC,
-            Serdes.Integer().deserializer(),
-            Item.class
-        );
-        warehouseConsumer = new SharedStoreConsumer<>(
-            getBootstrapServers(),
-            getApplicationID() + "-" + getNodeID(),
-            KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC,
-            Serdes.Integer().deserializer(),
-            WarehouseShared.class
-        );
-        districtConsumer = new SharedStoreConsumer<>(
-            getBootstrapServers(),
-            getApplicationID() + "-" + getNodeID(),
-            KafkaConfig.DISTRICT_IMMUTABLE_TOPIC,
-            WarehouseSpecificKey.class,
-            DistrictShared.class
-        );
+        String nodeId = getApplicationID() + "-" + getNodeID();
+        itemConsumer = new SharedItemStoreConsumer(getBootstrapServers(), nodeId);
+        warehouseConsumer = new SharedWarehouseStoreConsumer(getBootstrapServers(), nodeId);
+        districtConsumer = new SharedDistrictStoreConsumer(getBootstrapServers(), nodeId);
         customerConsumer = new SharedCustomerStoreConsumer(
             getBootstrapServers(),
             getApplicationID() + "-" + getNodeID()
         );
-        stockConsumer = new SharedStoreConsumer<>(
-            getBootstrapServers(),
-            getApplicationID() + "-" + getNodeID(),
-            KafkaConfig.STOCK_IMMUTABLE_TOPIC,
-            WarehouseSpecificKey.class,
-            StockShared.class
-        );
+        stockConsumer = new SharedStockStoreConsumer(getBootstrapServers(), nodeId);
 
         Properties pseudoConsumerProperties = new Properties();
         pseudoConsumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

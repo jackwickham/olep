@@ -1,7 +1,7 @@
 package net.jackw.olep.view;
 
 import com.google.common.collect.ImmutableList;
-import net.jackw.olep.common.SharedCustomerStore;
+import net.jackw.olep.common.store.SharedCustomerStore;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerNameKey;

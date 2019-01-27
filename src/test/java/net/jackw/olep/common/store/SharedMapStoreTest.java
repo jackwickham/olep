@@ -1,5 +1,7 @@
-package net.jackw.olep.common;
+package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.StoreKeyMissingException;
+import net.jackw.olep.common.store.SharedMapStore;
 import org.junit.Before;
 import org.junit.Test;
 

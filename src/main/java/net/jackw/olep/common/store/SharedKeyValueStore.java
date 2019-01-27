@@ -1,4 +1,6 @@
-package net.jackw.olep.common;
+package net.jackw.olep.common.store;
+
+import net.jackw.olep.common.StoreKeyMissingException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

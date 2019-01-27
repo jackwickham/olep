@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 @Immutable
-public class Address {
+public class Address implements Serializable {
     public final String street1;
     public final String street2;
     public final String city;

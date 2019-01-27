@@ -3,7 +3,7 @@ package net.jackw.olep.view;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import net.jackw.olep.common.SharedCustomerStore;
+import net.jackw.olep.common.store.SharedCustomerStore;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;

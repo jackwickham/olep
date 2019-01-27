@@ -2,7 +2,7 @@ package net.jackw.olep.verifier;
 
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.LogConfig;
-import net.jackw.olep.common.SharedKeyValueStore;
+import net.jackw.olep.common.store.SharedKeyValueStore;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;

@@ -1,7 +1,7 @@
 package net.jackw.olep.view;
 
 import com.google.errorprone.annotations.MustBeClosed;
-import net.jackw.olep.common.SharedCustomerStore;
+import net.jackw.olep.common.store.SharedCustomerStore;
 
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;

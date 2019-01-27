@@ -1,5 +1,7 @@
-package net.jackw.olep.common;
+package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.JsonDeserializer;
+import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.utils.populate.PredictableStockFactory;
@@ -22,7 +24,7 @@ import java.util.Properties;
  * @param <K> The store key
  * @param <V> The store value
  */
-public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
+public abstract class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
     private Consumer<K, V> consumer;
     private WritableKeyValueStore<K, V> store;
 
@@ -41,11 +43,7 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
      */
     SharedStoreConsumer(String bootstrapServers, String nodeID, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
         super("Shared store consumer - " + topic + " (" + nodeID + ")");
-        if (topic.equals(KafkaConfig.STOCK_IMMUTABLE_TOPIC)) {
-            store = (WritableKeyValueStore) createStockSharedStore();
-        } else {
-            store = createStore();
-        }
+        store = createStore();
 
         Properties itemConsumerProps = new Properties();
         itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -116,15 +114,8 @@ public class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
         }
     }
 
-    // TODO: Remove specialisation
-    private WritableKeyValueStore<WarehouseSpecificKey, StockShared> createStockSharedStore() {
-        return new DiskBackedMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount(), WarehouseSpecificKey.class, StockShared.class, "stockshared", new WarehouseSpecificKey(1, 1), PredictableStockFactory.instanceFor(1).getStockShared(1));
-    }
-
     /**
      * Create and return the underlying store that data should be saved in
      */
-    protected WritableKeyValueStore<K, V> createStore() {
-        return new SharedMapStore<>(100_000);
-    }
+    protected abstract WritableKeyValueStore<K, V> createStore();
 }

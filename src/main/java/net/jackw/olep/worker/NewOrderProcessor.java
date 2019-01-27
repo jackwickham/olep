@@ -2,7 +2,7 @@ package net.jackw.olep.worker;
 
 import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.KafkaConfig;
-import net.jackw.olep.common.SharedKeyValueStore;
+import net.jackw.olep.common.store.SharedKeyValueStore;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.DistrictShared;

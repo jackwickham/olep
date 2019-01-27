@@ -3,7 +3,7 @@ package net.jackw.olep.view;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
-import net.jackw.olep.common.SharedCustomerStoreConsumer;
+import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.modification.NewOrderModification;

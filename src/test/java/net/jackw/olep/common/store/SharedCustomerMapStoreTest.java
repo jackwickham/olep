@@ -1,9 +1,11 @@
-package net.jackw.olep.common;
+package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.StoreKeyMissingException;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.store.SharedCustomerMapStore;
 import org.junit.Before;
 import org.junit.Test;
 

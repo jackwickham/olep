@@ -3,7 +3,7 @@ package net.jackw.olep.verifier;
 import com.google.common.collect.ImmutableList;
 import net.jackw.olep.ForwardedMessageMatcher;
 import net.jackw.olep.common.KafkaConfig;
-import net.jackw.olep.common.SharedKeyValueStore;
+import net.jackw.olep.common.store.SharedKeyValueStore;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;

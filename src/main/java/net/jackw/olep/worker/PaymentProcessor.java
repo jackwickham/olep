@@ -2,8 +2,8 @@ package net.jackw.olep.worker;
 
 import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.KafkaConfig;
-import net.jackw.olep.common.SharedCustomerStore;
-import net.jackw.olep.common.SharedKeyValueStore;
+import net.jackw.olep.common.store.SharedCustomerStore;
+import net.jackw.olep.common.store.SharedKeyValueStore;
 import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.CustomerNameKey;

@@ -1,4 +1,4 @@
-package net.jackw.olep.common;
+package net.jackw.olep.common.store;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 

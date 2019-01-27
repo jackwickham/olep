@@ -1,5 +1,6 @@
-package net.jackw.olep.common;
+package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.StoreKeyMissingException;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
