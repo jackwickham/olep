@@ -1,18 +1,17 @@
 package net.jackw.olep.common.store;
 
 import net.jackw.olep.common.StoreKeyMissingException;
-import net.jackw.olep.common.store.SharedMapStore;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class SharedMapStoreTest {
-    private SharedMapStore<Integer, Object> store;
+public class InMemoryMapStoreTest {
+    private InMemoryMapStore<Integer, Object> store;
 
     @Before
     public void initializeStore() {
-        store = new SharedMapStore<>(2);
+        store = new InMemoryMapStore<>(2);
     }
 
     @Test

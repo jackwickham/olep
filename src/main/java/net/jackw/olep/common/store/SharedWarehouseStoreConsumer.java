@@ -2,7 +2,6 @@ package net.jackw.olep.common.store;
 
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.WarehouseShared;
-import net.jackw.olep.utils.populate.PredictableWarehouseFactory;
 import org.apache.kafka.common.serialization.Serdes;
 
 public class SharedWarehouseStoreConsumer extends SharedStoreConsumer<Integer, WarehouseShared> {
@@ -15,11 +14,6 @@ public class SharedWarehouseStoreConsumer extends SharedStoreConsumer<Integer, W
 
     @Override
     protected WritableKeyValueStore<Integer, WarehouseShared> createStore() {
-        return DiskBackedMapStore.createIntegerKeyed(
-            KafkaConfig.warehouseCount() * KafkaConfig.itemCount(),
-            WarehouseShared.class,
-            "warehouseshared",
-            PredictableWarehouseFactory.getInstance().getWarehouseShared(1)
-        );
+        return new InMemoryMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount());
     }
 }

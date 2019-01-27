@@ -4,14 +4,14 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-class SharedMapStore<K, V> implements WritableKeyValueStore<K, V> {
+class InMemoryMapStore<K, V> implements WritableKeyValueStore<K, V> {
     private Map<K, V> map;
 
-    SharedMapStore(int initialCapacity) {
-        map = new HashMap<>(initialCapacity);
+    InMemoryMapStore(int initialCapacity) {
+        map = new ConcurrentHashMap<>(initialCapacity);
     }
 
     @Override
