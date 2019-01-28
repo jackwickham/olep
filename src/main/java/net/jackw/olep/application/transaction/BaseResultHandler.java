@@ -9,17 +9,22 @@ import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
+import scala.concurrent.ExecutionContext;
 
 import java.time.Duration;
 
 public abstract class BaseResultHandler<T extends TransactionResultMessage> implements TransactionStatusListener<T> {
     private final ActorSystem actorSystem;
     private final ActorRef actor;
+    private final ExecutionContext executionContext;
+    private final TransactionType transactionType;
     private Cancellable scheduledTimeoutMessage;
 
-    public BaseResultHandler(ActorSystem actorSystem, ActorRef actor) {
+    public BaseResultHandler(ActorSystem actorSystem, ActorRef actor, TransactionType type) {
         this.actorSystem = actorSystem;
         this.actor = actor;
+        this.executionContext = actorSystem.dispatcher();
+        this.transactionType = type;
     }
 
     /**
@@ -30,10 +35,10 @@ public abstract class BaseResultHandler<T extends TransactionResultMessage> impl
     public void attach(TransactionStatus<T> status) {
         // Add a timeout, if we don't receive a message in time
         TransactionTimeoutMessage timeoutMessage = new TransactionTimeoutMessage(
-            status.getTransactionId(), TransactionType.NEW_ORDER
+            status.getTransactionId(), transactionType
         );
         scheduledTimeoutMessage = actorSystem.scheduler().scheduleOnce(
-            Duration.ofSeconds(8), actor, timeoutMessage, null, ActorRef.noSender()
+            Duration.ofSeconds(8), actor, timeoutMessage, executionContext, ActorRef.noSender()
         );
         status.register(this);
     }

@@ -4,6 +4,7 @@ import akka.actor.AbstractActor;
 import akka.actor.Props;
 import com.codahale.metrics.MetricRegistry;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.EventDatabase;
 
 /**
@@ -38,7 +39,7 @@ public class TerminalGroup extends AbstractActor {
     public void preStart() {
         for (int i = 0; i < warehouseIdRange; i++) {
             int warehouse = startWarehouseId + i;
-            for (int district = 1; district <= 10; district++) {
+            for (int district = 1; district <= KafkaConfig.districtsPerWarehouse(); district++) {
                 getContext().actorOf(Terminal.props(warehouse, district, db, registry), "term-" + warehouse + "-" + district);
             }
         }

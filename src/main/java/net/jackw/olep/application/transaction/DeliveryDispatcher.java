@@ -5,6 +5,7 @@ import akka.actor.ActorSystem;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
+import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
@@ -52,7 +53,7 @@ public class DeliveryDispatcher {
         private final Timer.Context completeTimerContext;
 
         public ResultHandler() {
-            super(actorSystem, actor);
+            super(actorSystem, actor, TransactionType.DELIVERY);
 
             acceptedTimerContext = acceptedTimer.time();
             completeTimerContext = completeTimer.time();

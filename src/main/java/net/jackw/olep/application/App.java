@@ -33,8 +33,9 @@ public class App {
     }
 
     public static void start(MetricRegistry registry, ActorSystem system) {
-        for (int i = 1; i < KafkaConfig.warehouseCount(); i += 10) {
-            system.actorOf(TerminalGroup.props(i, 10, registry), "term-group-" + i);
+        for (int i = 1; i < KafkaConfig.warehouseCount(); i += 200) {
+            int range = Math.min(200, KafkaConfig.warehouseCount() - 200 * i);
+            system.actorOf(TerminalGroup.props(i, range, registry), "term-group-" + i);
         }
     }
 }

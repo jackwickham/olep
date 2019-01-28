@@ -7,6 +7,7 @@ import com.codahale.metrics.Timer;
 import com.google.common.collect.ImmutableList;
 import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
+import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.TransactionStatus;
@@ -95,7 +96,7 @@ public class NewOrderDispatcher {
         private final Timer.Context completeTimerContext;
 
         public SuccessResultHandler() {
-            super(actorSystem, actor);
+            super(actorSystem, actor, TransactionType.NEW_ORDER);
 
             acceptedTimerContext = acceptedTimer.time();
             completeTimerContext = completeTimer.time();
@@ -118,7 +119,7 @@ public class NewOrderDispatcher {
         private final Timer.Context rejectedTimerContext;
 
         public FailureResultHandler() {
-            super(actorSystem, actor);
+            super(actorSystem, actor, TransactionType.NEW_ORDER);
 
             rejectedTimerContext = rejectedTimer.time();
         }
