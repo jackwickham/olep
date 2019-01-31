@@ -40,7 +40,7 @@ public class NewOrderDispatcher {
         this.rand = rand;
 
         acceptedTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "accepted"));
-        completeTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "success"));
+        completeTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "complete"));
         rejectedTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "failure"));
     }
 

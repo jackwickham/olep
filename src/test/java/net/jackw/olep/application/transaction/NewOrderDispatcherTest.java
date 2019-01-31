@@ -13,7 +13,7 @@ import net.jackw.olep.common.Database;
 import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.edge.TransactionStatusListener;
-import net.jackw.olep.message.transaction_result.DeliveryResult;
+import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.junit.After;
 import org.junit.Before;
@@ -31,21 +31,19 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class DeliveryDispatcherTest {
+public class NewOrderDispatcherTest {
     private TestProbe actor;
-
     private ActorSystem actorSystem;
+    private MetricRegistry registry = new MetricRegistry();
 
     @Mock
     private Database database;
 
     @Mock
-    private TransactionStatus<DeliveryResult> transactionStatus;
+    private TransactionStatus<NewOrderResult> transactionStatus;
 
     @Captor
-    private ArgumentCaptor<TransactionStatusListener<DeliveryResult>> listenerCaptor;
-
-    private MetricRegistry registry = new MetricRegistry();
+    private ArgumentCaptor<TransactionStatusListener<NewOrderResult>> listenerCaptor;
 
     @Before
     public void setupAkka() {
@@ -59,33 +57,30 @@ public class DeliveryDispatcherTest {
     }
 
     @Test
-    public void testDispatchSendsDeliveryTransaction() {
-        DeliveryDispatcher dispatcher = new DeliveryDispatcher(
+    public void testDispatchSendsNewOrderTransaction() {
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
             4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
         );
-
-        when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
 
         dispatcher.dispatch();
 
-        verify(database).delivery(eq(4), anyInt());
+        verify(database).newOrder(anyInt(), anyInt(), eq(4), any());
         verifyNoMoreInteractions(database);
     }
 
     @Test
-    public void testActorNotifiedOnTransactionAccepted() {
-        DeliveryDispatcher dispatcher = new DeliveryDispatcher(
+    public void testActorNotifiedOnTransactionComplete() {
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
             4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
         );
-
-        when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
 
         dispatcher.dispatch();
 
         verify(transactionStatus).register(listenerCaptor.capture());
 
-        // Delivery is done when accepted rather than when completed
-        listenerCaptor.getValue().acceptedHandler();
+        listenerCaptor.getValue().completeHandler(null);
 
         // The actor should have been notified
         actor.expectMsgClass(TransactionCompleteMessage.class);
@@ -93,19 +88,18 @@ public class DeliveryDispatcherTest {
 
     @Test
     public void testMetricsGatheredCorrectly() {
-        DeliveryDispatcher dispatcher = new DeliveryDispatcher(
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
             4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
         );
-
-        when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
 
         dispatcher.dispatch();
         verify(transactionStatus).register(listenerCaptor.capture());
-        TransactionStatusListener<DeliveryResult> listener = listenerCaptor.getValue();
+        TransactionStatusListener<NewOrderResult> listener = listenerCaptor.getValue();
 
         Map<String, Timer> timers = registry.getTimers();
-        Timer acceptedTimer = timers.get(MetricRegistry.name(DeliveryDispatcher.class, "accepted"));
-        Timer completeTimer = timers.get(MetricRegistry.name(DeliveryDispatcher.class, "complete"));
+        Timer acceptedTimer = timers.get(MetricRegistry.name(NewOrderDispatcher.class, "accepted"));
+        Timer completeTimer = timers.get(MetricRegistry.name(NewOrderDispatcher.class, "complete"));
 
         assertNotNull(acceptedTimer);
         assertNotNull(completeTimer);
@@ -135,11 +129,10 @@ public class DeliveryDispatcherTest {
         Scheduler mockScheduler = mock(Scheduler.class);
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
-        DeliveryDispatcher dispatcher = new DeliveryDispatcher(
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
             4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
         );
-
-        when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
 
         dispatcher.dispatch();
 
@@ -151,11 +144,10 @@ public class DeliveryDispatcherTest {
         Scheduler mockScheduler = mock(Scheduler.class);
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
-        DeliveryDispatcher dispatcher = new DeliveryDispatcher(
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
             4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
         );
-
-        when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
 
         Cancellable scheduledEvent = mock(Cancellable.class);
         when(mockScheduler.scheduleOnce((Duration) any(), eq(actor.ref()), any(TransactionTimeoutMessage.class), any(), any())).thenReturn(scheduledEvent);
@@ -173,11 +165,10 @@ public class DeliveryDispatcherTest {
         Scheduler mockScheduler = mock(Scheduler.class);
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
-        DeliveryDispatcher dispatcher = new DeliveryDispatcher(
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
             4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
         );
-
-        when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
 
         Cancellable scheduledEvent = mock(Cancellable.class);
         when(mockScheduler.scheduleOnce((Duration) any(), eq(actor.ref()), any(TransactionTimeoutMessage.class), any(), any())).thenReturn(scheduledEvent);
@@ -192,11 +183,10 @@ public class DeliveryDispatcherTest {
 
     @Test
     public void testIllegalTransactionResponseExceptionReceivedWhenTransactionRejected() {
-        DeliveryDispatcher dispatcher = new DeliveryDispatcher(
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
             4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
         );
-
-        when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
 
         dispatcher.dispatch();
 

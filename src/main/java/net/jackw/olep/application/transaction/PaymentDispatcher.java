@@ -39,7 +39,7 @@ public class PaymentDispatcher {
         this.rand = rand;
 
         acceptedTimer = registry.timer(MetricRegistry.name(PaymentDispatcher.class, "accepted"));
-        completeTimer = registry.timer(MetricRegistry.name(PaymentDispatcher.class, "success"));
+        completeTimer = registry.timer(MetricRegistry.name(PaymentDispatcher.class, "complete"));
     }
 
     public void dispatch() {
