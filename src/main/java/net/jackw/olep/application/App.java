@@ -8,6 +8,7 @@ import net.jackw.olep.common.KafkaConfig;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +17,8 @@ public class App {
     public static void main(String[] args) throws IOException {
         MetricRegistry registry = new MetricRegistry();
 
-        File resultsDir = new File(String.format("results/%d-%d/", KafkaConfig.warehouseCount(), new Date().getTime()));
+        String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
+        File resultsDir = new File(String.format("results/%s-%d/", date, KafkaConfig.warehouseCount()));
         Files.createDirectory(resultsDir.toPath());
 
         CsvReporter reporter = CsvReporter.forRegistry(registry)
@@ -34,7 +36,7 @@ public class App {
 
     public static void start(MetricRegistry registry, ActorSystem system) {
         for (int i = 1; i < KafkaConfig.warehouseCount(); i += 200) {
-            int range = Math.min(200, KafkaConfig.warehouseCount() - 200 * i);
+            int range = Math.min(200, KafkaConfig.warehouseCount() - 200 * (i-1));
             system.actorOf(TerminalGroup.props(i, range, registry), "term-group-" + i);
         }
     }
