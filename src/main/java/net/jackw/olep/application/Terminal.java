@@ -30,8 +30,8 @@ public class Terminal extends AbstractActorWithTimers {
         newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, registry);
         paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, registry);
         deliveryDispatcher = new DeliveryDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, registry);
-        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext(), db, rand, registry);
-        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext(), db, rand, registry);
+        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().dispatcher(), db, rand, registry);
+        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().dispatcher(), db, rand, registry);
     }
 
     @Override

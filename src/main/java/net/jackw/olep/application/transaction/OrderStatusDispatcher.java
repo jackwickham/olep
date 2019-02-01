@@ -1,6 +1,5 @@
 package net.jackw.olep.application.transaction;
 
-import akka.actor.ActorContext;
 import akka.actor.ActorRef;
 import akka.dispatch.Futures;
 import com.codahale.metrics.MetricRegistry;
@@ -26,14 +25,14 @@ public class OrderStatusDispatcher {
     private final Timer completeTimer;
 
     public OrderStatusDispatcher(
-        int warehouseId, ActorRef actor, ActorContext actorContext, Database db, RandomDataGenerator rand,
+        int warehouseId, ActorRef actor, ExecutionContext executionContext, Database db, RandomDataGenerator rand,
         MetricRegistry registry
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
         this.db = db;
         this.rand = rand;
-        this.executionContext = actorContext.dispatcher();
+        this.executionContext = executionContext;
 
         completeTimer = registry.timer(MetricRegistry.name(OrderStatusDispatcher.class, "complete"));
     }
@@ -44,16 +43,14 @@ public class OrderStatusDispatcher {
 
         Future<OrderStatusResult> result;
 
-        // The customer is randomly selected 60% of the time by lsat name and 40% of the time by number
+        // The customer is randomly selected 60% of the time by last name and 40% of the time by number
         boolean selectByName = rand.choice(60);
         if (selectByName) {
             String name = CommonFieldGenerators.generateLastName(rand.nuRand(255, 0, KafkaConfig.customerNameRange() - 1));
             result = timeTransactionAsync(() -> db.orderStatus(name, districtId, warehouseId));
         } else {
             int customerId = rand.nuRand(1023, 1, KafkaConfig.customersPerDistrict());
-            Timer.Context completeTimerContext = completeTimer.time();
             result = timeTransactionAsync(() -> db.orderStatus(customerId, districtId, warehouseId));
-            completeTimerContext.stop();
         }
 
         result.onComplete((resultOpt) -> {

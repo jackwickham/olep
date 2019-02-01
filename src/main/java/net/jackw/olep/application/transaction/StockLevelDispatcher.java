@@ -22,13 +22,13 @@ public class StockLevelDispatcher {
     private final Timer completeTimer;
 
     public StockLevelDispatcher(
-        int warehouseId, int districtId, ActorRef actor, ActorContext actorContext, Database db, RandomDataGenerator rand,
+        int warehouseId, int districtId, ActorRef actor, ExecutionContext executionContext, Database db, RandomDataGenerator rand,
         MetricRegistry registry
     ) {
         this.warehouseId = warehouseId;
         this.districtId = districtId;
         this.actor = actor;
-        this.executionContext = actorContext.dispatcher();
+        this.executionContext = executionContext;
         this.db = db;
         this.rand = rand;
 
