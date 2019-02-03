@@ -10,6 +10,8 @@ plugins {
 
     // jacoco provides coverage checks
     id 'jacoco'
+
+    id "net.java.openjdk.shinyafox.jshell.gradle.plugin" version "1.0.4"
 }
 
 // Set up source set for integration testing

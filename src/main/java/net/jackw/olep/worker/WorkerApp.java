@@ -53,14 +53,11 @@ public class WorkerApp extends StreamsApp {
 
         // Consume from all the shared stores to make them accessible to workers
         String nodeId = getApplicationID() + "-" + getNodeID();
-        itemConsumer = new SharedItemStoreConsumer(getBootstrapServers(), nodeId);
-        warehouseConsumer = new SharedWarehouseStoreConsumer(getBootstrapServers(), nodeId);
-        districtConsumer = new SharedDistrictStoreConsumer(getBootstrapServers(), nodeId);
-        customerConsumer = new SharedCustomerStoreConsumer(
-            getBootstrapServers(),
-            getApplicationID() + "-" + getNodeID()
-        );
-        stockConsumer = new SharedStockStoreConsumer(getBootstrapServers(), nodeId);
+        itemConsumer = SharedItemStoreConsumer.create(getBootstrapServers(), nodeId);
+        warehouseConsumer = SharedWarehouseStoreConsumer.create(getBootstrapServers(), nodeId);
+        districtConsumer = SharedDistrictStoreConsumer.create(getBootstrapServers(), nodeId);
+        customerConsumer = SharedCustomerStoreConsumer.create(getBootstrapServers(), nodeId);
+        stockConsumer = SharedStockStoreConsumer.create(getBootstrapServers(), nodeId);
 
         Properties pseudoConsumerProperties = new Properties();
         pseudoConsumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -72,15 +69,6 @@ public class WorkerApp extends StreamsApp {
     @Override
     public String getApplicationID() {
         return "worker";
-    }
-
-    @Override
-    public void setup() {
-        itemConsumer.start();
-        warehouseConsumer.start();
-        districtConsumer.start();
-        customerConsumer.start();
-        stockConsumer.start();
     }
 
     @Override

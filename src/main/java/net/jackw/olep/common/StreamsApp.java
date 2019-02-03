@@ -131,7 +131,9 @@ public abstract class StreamsApp implements AutoCloseable {
     @OverridingMethodsMustInvokeSuper
     @Override
     public void close() throws InterruptedException {
-        streams.close();
+        if (streams != null) {
+            streams.close();
+        }
     }
 
     public void cleanup() {

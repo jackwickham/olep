@@ -7,12 +7,17 @@ import net.jackw.olep.view.StandaloneRegistry;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public abstract class BaseIntegrationTest {
+    @Rule
+    public Timeout globalTimeout = Timeout.seconds(120);
+
     /**
      * Set up the immutable stuff once per class (JUnit doesn't really allow once per suite)
      */

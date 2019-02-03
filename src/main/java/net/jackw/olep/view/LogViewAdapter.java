@@ -108,8 +108,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
             consumer.assign(partitions);
             consumer.seekToBeginning(partitions);
 
-            customerStoreConsumer = new SharedCustomerStoreConsumer(bootstrapServers, "view-adapter-TODO_PARTITION_ID-" + new Date().getTime());
-            customerStoreConsumer.start();
+            customerStoreConsumer = SharedCustomerStoreConsumer.create(bootstrapServers, "view-adapter-TODO_PARTITION_ID-" + new Date().getTime());
 
             viewWrapper = new InMemoryRMIWrapper(registryServer, customerStoreConsumer.getStore());
 

@@ -1,10 +1,7 @@
 package net.jackw.olep.common.store;
 
+import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
 import net.jackw.olep.common.JsonDeserializer;
-import net.jackw.olep.common.KafkaConfig;
-import net.jackw.olep.common.records.StockShared;
-import net.jackw.olep.common.records.WarehouseSpecificKey;
-import net.jackw.olep.utils.populate.PredictableStockFactory;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -24,9 +21,10 @@ import java.util.Properties;
  * @param <K> The store key
  * @param <V> The store value
  */
-public abstract class SharedStoreConsumer<K, V> extends Thread implements AutoCloseable {
+public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseable {
     private Consumer<K, V> consumer;
     private WritableKeyValueStore<K, V> store;
+    private Thread thread;
 
     // Volatile is needed to ensure that this new value is guaranteed to be seen after the wakeup event is received
     // See https://docs.oracle.com/javase/specs/jls/se11/html/jls-17.html#jls-17.4
@@ -36,18 +34,17 @@ public abstract class SharedStoreConsumer<K, V> extends Thread implements AutoCl
      * Construct a new shared store consumer, and subscribe to the corresponding topic
      *
      * @param bootstrapServers The Kafka cluster's bootstrap servers
-     * @param nodeID The ID of this node. It should be unique between all consumers of this log.
+     * @param nodeId The ID of this node. It should be unique between all consumers of this log.
      * @param topic The changelog topic corresponding to this store
      * @param keyDeserializer The deserializer for the store key
      * @param valueDeserializer The deserializer for the store values
      */
-    SharedStoreConsumer(String bootstrapServers, String nodeID, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
-        super("Shared store consumer - " + topic + " (" + nodeID + ")");
+    private SharedStoreConsumer(String bootstrapServers, String nodeId, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
         store = createStore();
 
         Properties itemConsumerProps = new Properties();
         itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        itemConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, nodeID);
+        itemConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, nodeId);
         itemConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         itemConsumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
@@ -57,6 +54,8 @@ public abstract class SharedStoreConsumer<K, V> extends Thread implements AutoCl
         TopicPartition partition = new TopicPartition(topic, 0);
         consumer.assign(List.of(partition));
         consumer.seekToBeginning(List.of(partition));
+
+        thread = new Thread(this, "Shared store consumer - " + topic + " (" + nodeId + ")");
     }
 
     /**
@@ -108,7 +107,7 @@ public abstract class SharedStoreConsumer<K, V> extends Thread implements AutoCl
     public void close() throws InterruptedException {
         done = true;
         consumer.wakeup();
-        join();
+        thread.join();
         if (store instanceof DiskBackedMapStore) {
             ((DiskBackedMapStore<K, V>) store).close();
         }

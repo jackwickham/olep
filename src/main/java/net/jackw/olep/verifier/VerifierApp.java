@@ -22,17 +22,12 @@ public class VerifierApp extends StreamsApp {
         super(bootstrapServers);
 
         // Consume from items so we can check the transactions
-        itemConsumer = new SharedItemStoreConsumer(getBootstrapServers(), getApplicationID() + "-" + getNodeID());
+        itemConsumer = SharedItemStoreConsumer.create(getBootstrapServers(), getApplicationID() + "-" + getNodeID());
     }
 
     @Override
     public String getApplicationID() {
         return "verifier";
-    }
-
-    @Override
-    public void setup() {
-        itemConsumer.start();
     }
 
     @Override

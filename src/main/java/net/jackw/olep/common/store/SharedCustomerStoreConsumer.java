@@ -5,14 +5,16 @@ import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
 
 public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpecificKey, CustomerShared> {
+    private int referenceCount = 0;
+
     /**
      * Construct a new shared store consumer, and subscribe to the corresponding topic
      *
      * @param bootstrapServers  The Kafka cluster's bootstrap servers
-     * @param nodeID            The ID of this node. It should be unique between all consumers of this log.
+     * @param nodeId            The ID of this node. It should be unique between all consumers of this log.
      */
-    public SharedCustomerStoreConsumer(String bootstrapServers, String nodeID) {
-        super(bootstrapServers, nodeID, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, DistrictSpecificKey.class, CustomerShared.class);
+    private SharedCustomerStoreConsumer(String bootstrapServers, String nodeId) {
+        super(bootstrapServers, nodeId, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, DistrictSpecificKey.class, CustomerShared.class);
     }
 
     /**
@@ -29,5 +31,37 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
     @Override
     public SharedCustomerStore getStore() {
         return (SharedCustomerStore) super.getStore();
+    }
+
+    private static SharedCustomerStoreConsumer instance;
+
+    /**
+     * Get a view on the store, creating it if it doesn't already exist
+     *
+     * @param bootstrapServers The Kafka bootstrap servers
+     * @param nodeId The ID for this processing node
+     * @return A SharedWarehouseStore
+     */
+    public static synchronized SharedCustomerStoreConsumer create(String bootstrapServers, String nodeId) {
+        if (instance == null) {
+            instance = new SharedCustomerStoreConsumer(bootstrapServers, nodeId);
+        }
+        instance.referenceCount++;
+        return instance;
+    }
+
+    /**
+     * Decrement the reference count, closing the underlying store if there are no remaining references.
+     *
+     * This method must be called once per call to {@link #create(String, String)}.
+     */
+    @Override
+    public void close() throws InterruptedException {
+        synchronized (SharedCustomerStoreConsumer.class) {
+            if (--referenceCount == 0) {
+                super.close();
+                instance = null;
+            }
+        }
     }
 }
