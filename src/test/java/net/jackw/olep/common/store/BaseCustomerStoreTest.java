@@ -1,6 +1,5 @@
 package net.jackw.olep.common.store;
 
-import com.google.common.base.MoreObjects;
 import net.jackw.olep.common.StoreKeyMissingException;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;

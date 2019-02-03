@@ -12,6 +12,10 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.assertTrue;
 
 public class DeliveryTest extends BaseIntegrationTest {
     @Before
@@ -47,16 +51,24 @@ public class DeliveryTest extends BaseIntegrationTest {
             );
 
             final int[] orderIds = new int[5];
+            AtomicReference<Throwable> errorRef = new AtomicReference<>();
 
             for (TransactionStatus<NewOrderResult> status : orders) {
                 status.addCompleteHandler(result -> {
                     orderIds[result.districtId - 1] = result.orderId;
                     latch.countDown();
                 });
+                status.addRejectedHandler(err -> {
+                    errorRef.set(err);
+                    latch.countDown();
+                });
             }
 
-            latch.await();
-            Thread.sleep(3000);
+            assertTrue(latch.await(20, TimeUnit.SECONDS));
+            Throwable err = errorRef.get();
+            if (err != null) {
+                throw err;
+            }
 
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
