@@ -6,6 +6,7 @@ import net.jackw.olep.common.records.DistrictSpecificKey;
 
 public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpecificKey, CustomerShared> {
     private int referenceCount = 0;
+    private DiskBackedCustomerMapStore store;
 
     /**
      * Construct a new shared store consumer, and subscribe to the corresponding topic
@@ -15,14 +16,15 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
      */
     private SharedCustomerStoreConsumer(String bootstrapServers, String nodeId) {
         super(bootstrapServers, nodeId, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, DistrictSpecificKey.class, CustomerShared.class);
+        store = new DiskBackedCustomerMapStore();
     }
 
     /**
      * Create and return the underlying store that data should be saved in
      */
     @Override
-    protected WritableKeyValueStore<DistrictSpecificKey, CustomerShared> createStore() {
-        return new DiskBackedCustomerMapStore();
+    protected WritableKeyValueStore<DistrictSpecificKey, CustomerShared> getWriteableStore() {
+        return store;
     }
 
     /**
@@ -45,6 +47,7 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
     public static synchronized SharedCustomerStoreConsumer create(String bootstrapServers, String nodeId) {
         if (instance == null) {
             instance = new SharedCustomerStoreConsumer(bootstrapServers, nodeId);
+            instance.start();
         }
         instance.referenceCount++;
         return instance;
@@ -57,11 +60,19 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
      */
     @Override
     public void close() throws InterruptedException {
+        boolean close;
         synchronized (SharedCustomerStoreConsumer.class) {
             if (--referenceCount == 0) {
-                super.close();
+                close = true;
                 instance = null;
+            } else {
+                close = false;
             }
+        }
+
+        if (close) {
+            super.close();
+            store.close();
         }
     }
 }

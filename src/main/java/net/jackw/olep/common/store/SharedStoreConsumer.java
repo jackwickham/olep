@@ -24,7 +24,6 @@ import java.util.Properties;
  */
 public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseable {
     private Consumer<K, V> consumer;
-    private WritableKeyValueStore<K, V> store;
     private Thread thread;
 
     // Volatile is needed to ensure that this new value is guaranteed to be seen after the wakeup event is received
@@ -41,7 +40,6 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
     @VisibleForTesting
     SharedStoreConsumer(Consumer<K, V> consumer, String nodeId, String topic) {
         this.consumer = consumer;
-        store = createStore();
 
         // We only subscribe to one partition here, because shared store topics should only ever have one partition
         TopicPartition partition = new TopicPartition(topic, 0);
@@ -49,7 +47,6 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
         consumer.seekToBeginning(List.of(partition));
 
         thread = new Thread(this, "Shared store consumer - " + topic + " (" + nodeId + ")");
-        thread.start();
     }
 
     /**
@@ -88,7 +85,15 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
      * Get the store that is populated by this consumer
      */
     public SharedKeyValueStore<K, V> getStore() {
-        return store;
+        // Wrapper around getWriteableStore to return it as the read-only version
+        return getWriteableStore();
+    }
+
+    /**
+     * Start the consumer thread. This method must always be called after creation
+     */
+    protected void start() {
+        thread.start();
     }
 
     @Override
@@ -98,9 +103,9 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
                 ConsumerRecords<K, V> receivedRecords = consumer.poll(Duration.ofHours(12));
                 for (ConsumerRecord<K, V> record : receivedRecords) {
                     if (record.value() == null) {
-                        store.remove(record.key());
+                        getWriteableStore().remove(record.key());
                     } else {
-                        store.put(record.key(), record.value());
+                        getWriteableStore().put(record.key(), record.value());
                     }
                 }
             } catch (WakeupException e) {
@@ -116,14 +121,11 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
         done = true;
         consumer.wakeup();
         thread.join();
-        if (store instanceof DiskBackedMapStore) {
-            ((DiskBackedMapStore<K, V>) store).close();
-        }
     }
 
     /**
      * Create and return the underlying store that data should be saved in
      */
     @ForOverride
-    protected abstract WritableKeyValueStore<K, V> createStore();
+    protected abstract WritableKeyValueStore<K, V> getWriteableStore();
 }

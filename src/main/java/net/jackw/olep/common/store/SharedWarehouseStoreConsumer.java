@@ -6,17 +6,20 @@ import org.apache.kafka.common.serialization.Serdes;
 
 public class SharedWarehouseStoreConsumer extends SharedStoreConsumer<Integer, WarehouseShared> {
     private int referenceCount = 0;
+    private InMemoryMapStore<Integer, WarehouseShared> store;
 
     private SharedWarehouseStoreConsumer(String bootstrapServers, String nodeId) {
         super(
             bootstrapServers, nodeId, KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC, Serdes.Integer().deserializer(),
             WarehouseShared.class
         );
+
+        store = new InMemoryMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount());
     }
 
     @Override
-    protected WritableKeyValueStore<Integer, WarehouseShared> createStore() {
-        return new InMemoryMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount());
+    protected WritableKeyValueStore<Integer, WarehouseShared> getWriteableStore() {
+        return store;
     }
 
     private static SharedWarehouseStoreConsumer instance;
@@ -31,6 +34,7 @@ public class SharedWarehouseStoreConsumer extends SharedStoreConsumer<Integer, W
     public static synchronized SharedWarehouseStoreConsumer create(String bootstrapServers, String nodeId) {
         if (instance == null) {
             instance = new SharedWarehouseStoreConsumer(bootstrapServers, nodeId);
+            instance.start();
         }
         instance.referenceCount++;
         return instance;
@@ -43,11 +47,20 @@ public class SharedWarehouseStoreConsumer extends SharedStoreConsumer<Integer, W
      */
     @Override
     public void close() throws InterruptedException {
+        boolean close;
+
         synchronized (SharedWarehouseStoreConsumer.class) {
             if (--referenceCount == 0) {
-                super.close();
+                close = true;
                 instance = null;
+            } else {
+                close = false;
             }
+        }
+
+        // Close after releasing lock
+        if (close) {
+            super.close();
         }
     }
 }

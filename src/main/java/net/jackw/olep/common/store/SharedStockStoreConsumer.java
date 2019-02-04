@@ -7,14 +7,11 @@ import net.jackw.olep.utils.populate.PredictableStockFactory;
 
 public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpecificKey, StockShared> {
     private int referenceCount = 0;
+    private DiskBackedMapStore<WarehouseSpecificKey, StockShared> store;
 
     private SharedStockStoreConsumer(String bootstrapServers, String nodeId) {
         super(bootstrapServers, nodeId, KafkaConfig.STOCK_IMMUTABLE_TOPIC, WarehouseSpecificKey.class, StockShared.class);
-    }
-
-    @Override
-    protected WritableKeyValueStore<WarehouseSpecificKey, StockShared> createStore() {
-        return DiskBackedMapStore.create(
+        store = DiskBackedMapStore.create(
             KafkaConfig.warehouseCount() * KafkaConfig.itemCount(),
             WarehouseSpecificKey.class,
             StockShared.class,
@@ -22,6 +19,11 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
             new WarehouseSpecificKey(1, 1),
             PredictableStockFactory.instanceFor(1).getStockShared(1)
         );
+    }
+
+    @Override
+    protected WritableKeyValueStore<WarehouseSpecificKey, StockShared> getWriteableStore() {
+        return store;
     }
 
     private static SharedStockStoreConsumer instance;
@@ -36,6 +38,7 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
     public static synchronized SharedStockStoreConsumer create(String bootstrapServers, String nodeId) {
         if (instance == null) {
             instance = new SharedStockStoreConsumer(bootstrapServers, nodeId);
+            instance.start();
         }
         instance.referenceCount++;
         return instance;
@@ -48,11 +51,20 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
      */
     @Override
     public void close() throws InterruptedException {
+        boolean close;
         synchronized (SharedStockStoreConsumer.class) {
             if (--referenceCount == 0) {
-                super.close();
                 instance = null;
+                close = true;
+            } else {
+                close = false;
             }
+        }
+
+        // Actually close it after releasing the lock, to avoid holding it unnecessarily long
+        if (close) {
+            super.close();
+            store.close();
         }
     }
 }

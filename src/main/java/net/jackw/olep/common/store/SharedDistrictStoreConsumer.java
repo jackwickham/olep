@@ -6,14 +6,16 @@ import net.jackw.olep.common.records.WarehouseSpecificKey;
 
 public class SharedDistrictStoreConsumer extends SharedStoreConsumer<WarehouseSpecificKey, DistrictShared> {
     private int referenceCount = 0;
+    private InMemoryMapStore<WarehouseSpecificKey, DistrictShared> store;
 
     private SharedDistrictStoreConsumer(String bootstrapServers, String nodeId) {
         super(bootstrapServers, nodeId, KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, WarehouseSpecificKey.class, DistrictShared.class);
+        store = new InMemoryMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount());
     }
 
     @Override
-    protected WritableKeyValueStore<WarehouseSpecificKey, DistrictShared> createStore() {
-        return new InMemoryMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount());
+    protected WritableKeyValueStore<WarehouseSpecificKey, DistrictShared> getWriteableStore() {
+        return store;
     }
 
     private static SharedDistrictStoreConsumer instance;
@@ -28,6 +30,7 @@ public class SharedDistrictStoreConsumer extends SharedStoreConsumer<WarehouseSp
     public static synchronized SharedDistrictStoreConsumer create(String bootstrapServers, String nodeId) {
         if (instance == null) {
             instance = new SharedDistrictStoreConsumer(bootstrapServers, nodeId);
+            instance.start();
         }
         instance.referenceCount++;
         return instance;
@@ -40,11 +43,18 @@ public class SharedDistrictStoreConsumer extends SharedStoreConsumer<WarehouseSp
      */
     @Override
     public void close() throws InterruptedException {
+        boolean close;
         synchronized (SharedDistrictStoreConsumer.class) {
             if (--referenceCount == 0) {
-                super.close();
                 instance = null;
+                close = true;
+            } else {
+                close = false;
             }
+        }
+
+        if (close) {
+            super.close();
         }
     }
 }

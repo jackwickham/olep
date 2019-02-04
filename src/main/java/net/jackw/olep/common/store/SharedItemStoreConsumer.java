@@ -7,22 +7,24 @@ import org.apache.kafka.common.serialization.Serdes;
 
 public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> {
     private int referenceCount = 0;
+    private DiskBackedMapStore<Integer, Item> store;
 
     private SharedItemStoreConsumer(String bootstrapServers, String nodeId) {
         super(
             bootstrapServers, nodeId, KafkaConfig.ITEM_IMMUTABLE_TOPIC, Serdes.Integer().deserializer(),
             Item.class
         );
-    }
-
-    @Override
-    protected WritableKeyValueStore<Integer, Item> createStore() {
-        return DiskBackedMapStore.createIntegerKeyed(
+        store = DiskBackedMapStore.createIntegerKeyed(
             KafkaConfig.warehouseCount() * KafkaConfig.itemCount(),
             Item.class,
             "itemshared",
             PredictableItemFactory.getInstance().getItem(1)
         );
+    }
+
+    @Override
+    protected WritableKeyValueStore<Integer, Item> getWriteableStore() {
+        return store;
     }
 
     private static SharedItemStoreConsumer instance;
@@ -37,6 +39,7 @@ public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> 
     public static SharedItemStoreConsumer create(String bootstrapServers, String nodeId) {
         if (instance == null) {
             instance = new SharedItemStoreConsumer(bootstrapServers, nodeId);
+            instance.start();
         }
         instance.referenceCount++;
         return instance;
@@ -49,11 +52,20 @@ public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> 
      */
     @Override
     public void close() throws InterruptedException {
+        boolean close;
         synchronized (SharedItemStoreConsumer.class) {
             if (--referenceCount == 0) {
-                super.close();
+                close = true;
                 instance = null;
+            } else {
+                close = false;
             }
+        }
+
+        // Closing the disk store might be slow, so release the lock first
+        if (close) {
+            super.close();
+            store.close();
         }
     }
 }

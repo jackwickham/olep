@@ -33,6 +33,7 @@ public class SharedStoreConsumerTest {
         consumer.updateBeginningOffsets(Map.of(new TopicPartition(TOPIC, 0), 0L));
 
         storeConsumer = new ConcreteStoreConsumer(consumer);
+        storeConsumer.start();
     }
 
     @After
@@ -79,7 +80,7 @@ public class SharedStoreConsumerTest {
         }
 
         @Override
-        protected WritableKeyValueStore<String, String> createStore() {
+        protected WritableKeyValueStore<String, String> getWriteableStore() {
             // From outer class
             return store;
         }
