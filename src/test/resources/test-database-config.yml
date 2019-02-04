@@ -1,0 +1,8 @@
+itemCount: 20
+warehouseCount: 20
+districtsPerWarehouse: 10
+customersPerDistrict: 10
+customerNameRange: 20
+verifierInstances: 1
+workerInstances: 1
+applicationInstances: 1

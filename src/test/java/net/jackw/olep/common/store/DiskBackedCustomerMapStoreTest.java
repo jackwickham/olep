@@ -5,7 +5,6 @@ import org.junit.After;
 public class DiskBackedCustomerMapStoreTest extends BaseCustomerStoreTest {
     public DiskBackedCustomerMapStoreTest() {
         super(new DiskBackedCustomerMapStore());
-        store.clear();
     }
 
     @After
