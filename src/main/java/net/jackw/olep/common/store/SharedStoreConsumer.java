@@ -1,6 +1,7 @@
 package net.jackw.olep.common.store;
 
-import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.ForOverride;
 import net.jackw.olep.common.JsonDeserializer;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -33,22 +34,14 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
     /**
      * Construct a new shared store consumer, and subscribe to the corresponding topic
      *
-     * @param bootstrapServers The Kafka cluster's bootstrap servers
+     * @param consumer The Kafka consumer
      * @param nodeId The ID of this node. It should be unique between all consumers of this log.
      * @param topic The changelog topic corresponding to this store
-     * @param keyDeserializer The deserializer for the store key
-     * @param valueDeserializer The deserializer for the store values
      */
-    private SharedStoreConsumer(String bootstrapServers, String nodeId, String topic, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
+    @VisibleForTesting
+    SharedStoreConsumer(Consumer<K, V> consumer, String nodeId, String topic) {
+        this.consumer = consumer;
         store = createStore();
-
-        Properties itemConsumerProps = new Properties();
-        itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        itemConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, nodeId);
-        itemConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        itemConsumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-
-        consumer = new KafkaConsumer<>(itemConsumerProps, keyDeserializer, valueDeserializer);
 
         // We only subscribe to one partition here, because shared store topics should only ever have one partition
         TopicPartition partition = new TopicPartition(topic, 0);
@@ -56,24 +49,39 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
         consumer.seekToBeginning(List.of(partition));
 
         thread = new Thread(this, "Shared store consumer - " + topic + " (" + nodeId + ")");
+        thread.start();
+    }
+
+    /**
+     * Construct a new shared store consumer, and subscribe to the corresponding topic
+     *
+     * @param bootstrapServers The Kafka cluster's bootstrap servers
+     * @param nodeId The ID of this node. It should be unique between all consumers of this log
+     * @param keyDeserializer The deserializer for the store key
+     * @param valueDeserializer The deserializer for the store values
+     */
+    private static <K, V> Consumer<K, V> createConsumer(String bootstrapServers, String nodeId, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
+        Properties itemConsumerProps = new Properties();
+        itemConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        itemConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, nodeId);
+        itemConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        itemConsumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+
+        return new KafkaConsumer<>(itemConsumerProps, keyDeserializer, valueDeserializer);
     }
 
     /**
      * Helper constructor for when the key is a value with provided deserializer and the value is a class
-     *
-     * @see SharedStoreConsumer(String, String, String, Deserializer, Deserializer)
      */
-    public SharedStoreConsumer(String bootstrapServers, String nodeID, String log, Deserializer<K> keyDeserializer, Class<V> valueClass) {
-        this(bootstrapServers, nodeID, log, keyDeserializer, new JsonDeserializer<>(valueClass));
+    public SharedStoreConsumer(String bootstrapServers, String nodeId, String log, Deserializer<K> keyDeserializer, Class<V> valueClass) {
+        this(createConsumer(bootstrapServers, nodeId, keyDeserializer, new JsonDeserializer<>(valueClass)), nodeId, log);
     }
 
     /**
      * Helper constructor for when the key and value are both classes
-     *
-     * @see SharedStoreConsumer(String, String, String, Deserializer, Deserializer)
      */
-    public SharedStoreConsumer(String bootstrapServers, String nodeID, String log, Class<K> keyClass, Class<V> valueClass) {
-        this(bootstrapServers, nodeID, log, new JsonDeserializer<>(keyClass), new JsonDeserializer<>(valueClass));
+    public SharedStoreConsumer(String bootstrapServers, String nodeId, String log, Class<K> keyClass, Class<V> valueClass) {
+        this(createConsumer(bootstrapServers, nodeId, new JsonDeserializer<>(keyClass), new JsonDeserializer<>(valueClass)), nodeId, log);
     }
 
     /**
@@ -116,5 +124,6 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
     /**
      * Create and return the underlying store that data should be saved in
      */
+    @ForOverride
     protected abstract WritableKeyValueStore<K, V> createStore();
 }
