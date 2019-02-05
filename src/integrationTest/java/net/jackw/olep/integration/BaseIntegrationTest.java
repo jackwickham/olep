@@ -1,5 +1,6 @@
 package net.jackw.olep.integration;
 
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.worker.WorkerApp;
 import net.jackw.olep.utils.Resetter;
 import net.jackw.olep.verifier.VerifierApp;
@@ -10,6 +11,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -18,17 +21,20 @@ public abstract class BaseIntegrationTest {
     @Rule
     public Timeout globalTimeout = Timeout.seconds(120);
 
+    private static DatabaseConfig config;
+
     /**
      * Set up the immutable stuff once per class (JUnit doesn't really allow once per suite)
      */
     @BeforeClass
-    public static void resetImmutableTopics() throws InterruptedException, ExecutionException {
-        new Resetter(true, false, true).reset();
+    public static void resetImmutableTopics() throws InterruptedException, ExecutionException, IOException {
+        config = DatabaseConfig.create(List.of());
+        new Resetter(true, false, true, config).reset();
     }
 
     @Before
     public void resetMutableTopics() throws InterruptedException, ExecutionException {
-        new Resetter(false, true, true).reset();
+        new Resetter(false, true, true, config).reset();
     }
 
     @BeforeClass
@@ -56,14 +62,14 @@ public abstract class BaseIntegrationTest {
      * Start a verifier instance, with a fresh state store
      */
     protected void startVerifier() {
-        VerifierApp verifier = new VerifierApp(getEventBootsrapServers());
+        VerifierApp verifier = new VerifierApp(getEventBootsrapServers(), config);
         verifierInstances.add(verifier);
         verifier.setup();
         verifier.start();
     }
 
     protected void startWorker() {
-        WorkerApp worker = new WorkerApp(getEventBootsrapServers());
+        WorkerApp worker = new WorkerApp(getEventBootsrapServers(), config);
         workerInstances.add(worker);
         worker.setup();
         worker.start();

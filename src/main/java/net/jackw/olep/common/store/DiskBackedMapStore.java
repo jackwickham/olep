@@ -1,7 +1,7 @@
 package net.jackw.olep.common.store;
 
 import com.google.common.io.Files;
-import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.DatabaseConfig;
 import net.openhft.chronicle.map.ChronicleMap;
 import net.openhft.chronicle.map.ChronicleMapBuilder;
 
@@ -15,11 +15,11 @@ import java.util.Random;
 public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, AutoCloseable {
     private ChronicleMap<K, V> map;
     private String storeName;
+    private static Random rand = new Random();
 
-    private DiskBackedMapStore(ChronicleMapBuilder<K, V> mapBuilder, String storeName) {
-        Random rand = new Random();
+    private DiskBackedMapStore(ChronicleMapBuilder<K, V> mapBuilder, String storeName, DatabaseConfig config) {
         try {
-            File persistentFile = new File(KafkaConfig.storeBackingDir(), storeName + rand.nextInt() + ".dat");
+            File persistentFile = new File(config.getStoreBackingDir(), storeName + rand.nextInt() + ".dat");
             Files.createParentDirs(persistentFile);
             persistentFile.deleteOnExit();
 
@@ -39,17 +39,19 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
      * @param storeName The string name for the store
      * @param averageKey A representative instance of the keys
      * @param averageValue A representative instance of the values
+     * @param config The current database configuration
      * @return An instance of the store
      */
     public static <K, V> DiskBackedMapStore<K, V> create(long capacity, Class<K> keyClass, Class<V> valueClass,
-                                                        String storeName, K averageKey, V averageValue) {
+                                                         String storeName, K averageKey, V averageValue,
+                                                         DatabaseConfig config) {
         ChronicleMapBuilder<K, V> mapBuilder = ChronicleMapBuilder.of(keyClass, valueClass)
             .entries(capacity)
-            .name(storeName + new Random().nextInt())
+            .name(storeName + rand.nextInt())
             .averageKey(averageKey)
             .averageValue(averageValue);
 
-        return new DiskBackedMapStore<>(mapBuilder, storeName);
+        return new DiskBackedMapStore<>(mapBuilder, storeName, config);
     }
 
 
@@ -60,16 +62,18 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
      * @param valueClass The type of the store value
      * @param storeName The string name for the store
      * @param averageValue A representative instance of the values
+     * @param config The current database configuration
      * @return An instance of the store
      */
     public static <V> DiskBackedMapStore<Integer, V> createIntegerKeyed(long capacity, Class<V> valueClass,
-                                                                        String storeName, V averageValue) {
+                                                                        String storeName, V averageValue,
+                                                                        DatabaseConfig config) {
         ChronicleMapBuilder<Integer, V> mapBuilder = ChronicleMapBuilder.of(Integer.class, valueClass)
             .entries(capacity)
-            .name(storeName + new Random().nextInt())
+            .name(storeName + rand.nextInt())
             .averageValue(averageValue);
 
-        return new DiskBackedMapStore<>(mapBuilder, storeName);
+        return new DiskBackedMapStore<>(mapBuilder, storeName, config);
     }
 
     @Override

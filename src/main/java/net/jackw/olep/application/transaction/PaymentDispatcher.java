@@ -7,6 +7,7 @@ import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_result.PaymentResult;
@@ -24,19 +25,21 @@ public class PaymentDispatcher {
     private final ActorSystem actorSystem;
     private final Database db;
     private final RandomDataGenerator rand;
+    private final DatabaseConfig config;
 
     private final Timer acceptedTimer;
     private final Timer completeTimer;
 
     public PaymentDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
-        MetricRegistry registry
+        DatabaseConfig config, MetricRegistry registry
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
         this.actorSystem = actorSystem;
         this.db = db;
         this.rand = rand;
+        this.config = config;
 
         acceptedTimer = registry.timer(MetricRegistry.name(PaymentDispatcher.class, "accepted"));
         completeTimer = registry.timer(MetricRegistry.name(PaymentDispatcher.class, "complete"));
@@ -44,7 +47,7 @@ public class PaymentDispatcher {
 
     public void dispatch() {
         // The district number (D_ID) is randomly selected within [1 .. 10]
-        int districtId = rand.uniform(1, KafkaConfig.districtsPerWarehouse());
+        int districtId = rand.uniform(1, config.getDistrictsPerWarehouse());
         // The customer resident warehouse is the home warehouse 85% of the time, and is a randomly selected remote
         // warehouse 15% of the time.
         boolean remote = rand.choice(15);
@@ -52,7 +55,7 @@ public class PaymentDispatcher {
         int customerDistrictId;
         if (remote) {
             do {
-                customerWarehouseId = rand.uniform(1, KafkaConfig.warehouseCount());
+                customerWarehouseId = rand.uniform(1, config.getWarehouseCount());
             } while (customerWarehouseId == warehouseId);
             customerDistrictId = rand.uniform(1, 10);
         } else {
@@ -68,10 +71,10 @@ public class PaymentDispatcher {
         // The customer is randomly selected 60% of the time by last name, and 40% of the time by number
         boolean selectByName = rand.choice(60);
         if (selectByName) {
-            String name = CommonFieldGenerators.generateLastName(rand.nuRand(255, 0, KafkaConfig.customerNameRange() - 1));
+            String name = CommonFieldGenerators.generateLastName(rand.nuRand(255, 0, config.getCustomerNameRange() - 1));
             status = db.payment(name, districtId, warehouseId, customerDistrictId, customerWarehouseId, amount);
         } else {
-            int id = rand.nuRand(1023, 1, KafkaConfig.customersPerDistrict());
+            int id = rand.nuRand(1023, 1, config.getCustomersPerDistrict());
             status = db.payment(id, districtId, warehouseId, customerDistrictId, customerWarehouseId, amount);
         }
 

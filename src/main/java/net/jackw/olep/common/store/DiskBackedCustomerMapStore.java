@@ -3,7 +3,7 @@ package net.jackw.olep.common.store;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
-import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -15,6 +15,8 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 
 public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCloseable {
+    private DatabaseConfig config;
+
     /**
      * Map of warehouse id + district id + customer id -> customer
      */
@@ -42,17 +44,19 @@ public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCl
     /**
      * Create a new view on the store
      */
-    public DiskBackedCustomerMapStore() {
-        int capacity = KafkaConfig.warehouseCount() * KafkaConfig.districtsPerWarehouse() * KafkaConfig.customersPerDistrict();
+    public DiskBackedCustomerMapStore(DatabaseConfig config) {
+        this.config = config;
+
+        int capacity = config.getWarehouseCount() * config.getDistrictsPerWarehouse() * config.getCustomersPerDistrict();
         CustomerShared sampleCustomer = PredictableCustomerFactory.instanceFor(1, 1, 10).getCustomerShared(1);
 
         idMap = DiskBackedMapStore.create(
             capacity, DistrictSpecificKey.class, CustomerShared.class, "customer-id", sampleCustomer.getKey(),
-            sampleCustomer
+            sampleCustomer, config
         );
         nameMap = DiskBackedMapStore.create(
             capacity, CustomerNameKey.class, CustomerShared.class, "customer-name",
-            new CustomerNameKey(sampleCustomer.lastName, 1, 1), sampleCustomer
+            new CustomerNameKey(sampleCustomer.lastName, 1, 1), sampleCustomer, config
         );
     }
 
@@ -77,8 +81,8 @@ public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCl
         if (!district.equals(currentPopulatingDistrict)) {
             currentPopulatingDistrict = district;
             currentWarehouseNamesMultimap = HashMultimap.create(
-                KafkaConfig.customerNameRange(),
-                KafkaConfig.customersPerDistrict() / KafkaConfig.customerNameRange()
+                config.getCustomerNameRange(),
+                config.getCustomersPerDistrict() / config.getCustomerNameRange()
             );
         }
         currentWarehouseNamesMultimap.put(value.lastName, value);

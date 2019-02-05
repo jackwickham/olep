@@ -10,6 +10,7 @@ import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionTimeoutMessage;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.edge.TransactionStatusListener;
@@ -24,7 +25,9 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -36,6 +39,7 @@ public class NewOrderDispatcherTest {
     private ActorSystem actorSystem;
     private MetricRegistry registry = new MetricRegistry();
     private RandomDataGenerator rand;
+    private DatabaseConfig config;
 
     @Mock
     private Database database;
@@ -53,6 +57,11 @@ public class NewOrderDispatcherTest {
         rand = spy(new RandomDataGenerator(0));
     }
 
+    @Before
+    public void loadConfigFile() throws IOException {
+        config = DatabaseConfig.create(List.of());
+    }
+
     @After
     public void shutDownAkka() {
         actorSystem.terminate();
@@ -61,7 +70,7 @@ public class NewOrderDispatcherTest {
     @Test
     public void testDispatchSendsNewOrderTransaction() {
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         // Transaction shouldn't be rolled back
         when(rand.choice(1)).thenReturn(false);
@@ -76,7 +85,7 @@ public class NewOrderDispatcherTest {
     @Test
     public void testActorNotifiedOnTransactionComplete() {
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(false);
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -94,7 +103,7 @@ public class NewOrderDispatcherTest {
     @Test
     public void testMetricsGatheredCorrectly() {
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(false);
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -136,7 +145,7 @@ public class NewOrderDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(false);
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -152,7 +161,7 @@ public class NewOrderDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(false);
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -174,7 +183,7 @@ public class NewOrderDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(false);
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -193,7 +202,7 @@ public class NewOrderDispatcherTest {
     @Test
     public void testIllegalTransactionResponseExceptionReceivedWhenTransactionRejected() {
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(false);
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -211,7 +220,7 @@ public class NewOrderDispatcherTest {
     @Test
     public void testTransactionRollbackWorksCorrectly() {
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(true); // expecting it to roll back
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -227,7 +236,7 @@ public class NewOrderDispatcherTest {
     @Test
     public void testIllegalTransactionResponseExceptionReceivedWhenRollbackTransactionDoesntFail() {
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(1)).thenReturn(true); // expecting it to roll back
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);

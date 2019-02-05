@@ -9,6 +9,7 @@ import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
@@ -24,6 +25,7 @@ public class NewOrderDispatcher {
     private final ActorSystem actorSystem;
     private final Database db;
     private final RandomDataGenerator rand;
+    private final DatabaseConfig config;
 
     private final Timer acceptedTimer;
     private final Timer completeTimer;
@@ -31,13 +33,14 @@ public class NewOrderDispatcher {
 
     public NewOrderDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
-        MetricRegistry registry
+        DatabaseConfig config, MetricRegistry registry
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
         this.actorSystem = actorSystem;
         this.db = db;
         this.rand = rand;
+        this.config = config;
 
         acceptedTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "accepted"));
         completeTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "complete"));
@@ -46,9 +49,9 @@ public class NewOrderDispatcher {
 
     public void dispatch() {
         // The district number (D_ID) is randomly selected within [1 .. 10]
-        int districtId = rand.uniform(1, KafkaConfig.districtsPerWarehouse());
+        int districtId = rand.uniform(1, config.getDistrictsPerWarehouse());
         // The non-uniform random customer number (C_ID) is selected from the NURand(1023, 1, 3000) function
-        int customerId = rand.nuRand(1023, 1, KafkaConfig.customersPerDistrict());
+        int customerId = rand.nuRand(1023, 1, config.getCustomersPerDistrict());
         // The number of items in the order (ol_cnt) is randomly selected within [5 .. 15]
         int orderLineCount = rand.uniform(5, 15);
         // A fixed 1% of the New-Order transactions are chosen at random to simulate user data entry errors
@@ -62,14 +65,14 @@ public class NewOrderDispatcher {
             if (rollback && i == orderLineCount - 1) {
                 itemId = Integer.MAX_VALUE;
             } else {
-                itemId = rand.nuRand(8191, 1, KafkaConfig.itemCount());
+                itemId = rand.nuRand(8191, 1, config.getItemCount());
             }
             // A supplying warehouse number (OL_SUPPLY_W_ID) is selected as the home warehouse 99% of the time and as a
             // remote warehouse 1% of the time
             int supplyWarehouseId;
             if (rand.choice(1)) {
                 do {
-                    supplyWarehouseId = rand.uniform(1, KafkaConfig.warehouseCount());
+                    supplyWarehouseId = rand.uniform(1, config.getWarehouseCount());
                 } while (supplyWarehouseId == warehouseId);
             } else {
                 supplyWarehouseId = warehouseId;

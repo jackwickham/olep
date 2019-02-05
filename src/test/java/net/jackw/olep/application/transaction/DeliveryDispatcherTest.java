@@ -10,6 +10,7 @@ import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionTimeoutMessage;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.edge.TransactionStatusListener;
@@ -24,7 +25,9 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -35,6 +38,8 @@ public class DeliveryDispatcherTest {
     private TestProbe actor;
 
     private ActorSystem actorSystem;
+
+    private DatabaseConfig config;
 
     @Mock
     private Database database;
@@ -53,6 +58,11 @@ public class DeliveryDispatcherTest {
         actor = new TestProbe(actorSystem);
     }
 
+    @Before
+    public void loadConfigFile() throws IOException {
+        config = DatabaseConfig.create(List.of());
+    }
+
     @After
     public void shutDownAkka() {
         actorSystem.terminate();
@@ -61,7 +71,7 @@ public class DeliveryDispatcherTest {
     @Test
     public void testDispatchSendsDeliveryTransaction() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -75,7 +85,7 @@ public class DeliveryDispatcherTest {
     @Test
     public void testActorNotifiedOnTransactionAccepted() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -94,7 +104,7 @@ public class DeliveryDispatcherTest {
     @Test
     public void testMetricsGatheredCorrectly() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -136,7 +146,7 @@ public class DeliveryDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -152,7 +162,7 @@ public class DeliveryDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -174,7 +184,7 @@ public class DeliveryDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -193,7 +203,7 @@ public class DeliveryDispatcherTest {
     @Test
     public void testIllegalTransactionResponseExceptionReceivedWhenTransactionRejected() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);

@@ -1,5 +1,6 @@
 package net.jackw.olep.verifier;
 
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.store.SharedItemStoreConsumer;
 import net.jackw.olep.common.store.SharedStoreConsumer;
@@ -15,14 +16,20 @@ import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
 
+import java.io.IOException;
+
 public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
+    private DatabaseConfig config;
 
-    public VerifierApp(String bootstrapServers) {
+    public VerifierApp(String bootstrapServers, DatabaseConfig config) {
         super(bootstrapServers);
+        this.config = config;
 
         // Consume from items so we can check the transactions
-        itemConsumer = SharedItemStoreConsumer.create(getBootstrapServers(), getApplicationID() + "-" + getNodeID());
+        itemConsumer = SharedItemStoreConsumer.create(
+            getBootstrapServers(), getApplicationID() + "-" + getNodeID(), config
+        );
     }
 
     @Override
@@ -70,8 +77,13 @@ public class VerifierApp extends StreamsApp {
         return topology;
     }
 
-    public static void main(String[] args) {
-        StreamsApp instance = new VerifierApp("localhost:9092");
+    public static void main(String[] args) throws IOException {
+        DatabaseConfig config = DatabaseConfig.create(args);
+        run(config);
+    }
+
+    public static void run(DatabaseConfig config) {
+        StreamsApp instance = new VerifierApp("localhost:9092", config);
         instance.run();
     }
 }

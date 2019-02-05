@@ -1,5 +1,6 @@
 package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
@@ -8,9 +9,9 @@ public class SharedDistrictStoreConsumer extends SharedStoreConsumer<WarehouseSp
     private int referenceCount = 0;
     private InMemoryMapStore<WarehouseSpecificKey, DistrictShared> store;
 
-    private SharedDistrictStoreConsumer(String bootstrapServers, String nodeId) {
+    private SharedDistrictStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
         super(bootstrapServers, nodeId, KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, WarehouseSpecificKey.class, DistrictShared.class);
-        store = new InMemoryMapStore<>(KafkaConfig.warehouseCount() * KafkaConfig.itemCount());
+        store = new InMemoryMapStore<>(config.getWarehouseCount() * config.getItemCount());
     }
 
     @Override
@@ -25,11 +26,12 @@ public class SharedDistrictStoreConsumer extends SharedStoreConsumer<WarehouseSp
      *
      * @param bootstrapServers The Kafka bootstrap servers
      * @param nodeId The ID for this processing node
+     * @param config The current database configuration
      * @return A SharedWarehouseStore
      */
-    public static synchronized SharedDistrictStoreConsumer create(String bootstrapServers, String nodeId) {
+    public static synchronized SharedDistrictStoreConsumer create(String bootstrapServers, String nodeId, DatabaseConfig config) {
         if (instance == null) {
-            instance = new SharedDistrictStoreConsumer(bootstrapServers, nodeId);
+            instance = new SharedDistrictStoreConsumer(bootstrapServers, nodeId, config);
             instance.start();
         }
         instance.referenceCount++;
@@ -39,7 +41,7 @@ public class SharedDistrictStoreConsumer extends SharedStoreConsumer<WarehouseSp
     /**
      * Decrement the reference count, closing the underlying store if there are no remaining references.
      *
-     * This method must be called once per call to {@link #create(String, String)}.
+     * This method must be called once per call to {@link #create(String, String, DatabaseConfig)}.
      */
     @Override
     public void close() throws InterruptedException {

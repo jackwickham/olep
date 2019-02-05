@@ -1,5 +1,6 @@
 package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
@@ -9,15 +10,16 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
     private int referenceCount = 0;
     private DiskBackedMapStore<WarehouseSpecificKey, StockShared> store;
 
-    private SharedStockStoreConsumer(String bootstrapServers, String nodeId) {
+    private SharedStockStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
         super(bootstrapServers, nodeId, KafkaConfig.STOCK_IMMUTABLE_TOPIC, WarehouseSpecificKey.class, StockShared.class);
         store = DiskBackedMapStore.create(
-            KafkaConfig.warehouseCount() * KafkaConfig.itemCount(),
+            config.getWarehouseCount() * config.getItemCount(),
             WarehouseSpecificKey.class,
             StockShared.class,
             "stockshared",
             new WarehouseSpecificKey(1, 1),
-            PredictableStockFactory.instanceFor(1).getStockShared(1)
+            PredictableStockFactory.instanceFor(1).getStockShared(1),
+            config
         );
     }
 
@@ -33,11 +35,12 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
      *
      * @param bootstrapServers The Kafka bootstrap servers
      * @param nodeId The ID for this processing node
+     * @param config The current database configuration
      * @return A SharedWarehouseStore
      */
-    public static synchronized SharedStockStoreConsumer create(String bootstrapServers, String nodeId) {
+    public static synchronized SharedStockStoreConsumer create(String bootstrapServers, String nodeId, DatabaseConfig config) {
         if (instance == null) {
-            instance = new SharedStockStoreConsumer(bootstrapServers, nodeId);
+            instance = new SharedStockStoreConsumer(bootstrapServers, nodeId, config);
             instance.start();
         }
         instance.referenceCount++;
@@ -47,7 +50,7 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
     /**
      * Decrement the reference count, closing the underlying store if there are no remaining references.
      *
-     * This method must be called once per call to {@link #create(String, String)}.
+     * This method must be called once per call to {@link #create(String, String, DatabaseConfig)}.
      */
     @Override
     public void close() throws InterruptedException {

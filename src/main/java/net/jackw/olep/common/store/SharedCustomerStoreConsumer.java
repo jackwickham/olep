@@ -1,5 +1,6 @@
 package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -13,10 +14,11 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
      *
      * @param bootstrapServers  The Kafka cluster's bootstrap servers
      * @param nodeId            The ID of this node. It should be unique between all consumers of this log.
+     * @param config            The current database config
      */
-    private SharedCustomerStoreConsumer(String bootstrapServers, String nodeId) {
+    private SharedCustomerStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
         super(bootstrapServers, nodeId, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, DistrictSpecificKey.class, CustomerShared.class);
-        store = new DiskBackedCustomerMapStore();
+        store = new DiskBackedCustomerMapStore(config);
     }
 
     /**
@@ -42,11 +44,12 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
      *
      * @param bootstrapServers The Kafka bootstrap servers
      * @param nodeId The ID for this processing node
+     * @param config The current database config
      * @return A SharedWarehouseStore
      */
-    public static synchronized SharedCustomerStoreConsumer create(String bootstrapServers, String nodeId) {
+    public static synchronized SharedCustomerStoreConsumer create(String bootstrapServers, String nodeId, DatabaseConfig config) {
         if (instance == null) {
-            instance = new SharedCustomerStoreConsumer(bootstrapServers, nodeId);
+            instance = new SharedCustomerStoreConsumer(bootstrapServers, nodeId, config);
             instance.start();
         }
         instance.referenceCount++;

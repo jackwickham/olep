@@ -9,6 +9,7 @@ import net.jackw.olep.application.transaction.OrderStatusDispatcher;
 import net.jackw.olep.application.transaction.PaymentDispatcher;
 import net.jackw.olep.application.transaction.StockLevelDispatcher;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.utils.RandomDataGenerator;
 
 import java.time.Duration;
@@ -24,14 +25,14 @@ public class Terminal extends AbstractActorWithTimers {
     private final OrderStatusDispatcher orderStatusDispatcher;
     private final StockLevelDispatcher stockLevelDispatcher;
 
-    public Terminal(int warehouseId, int districtId, Database db, MetricRegistry registry) {
+    public Terminal(int warehouseId, int districtId, Database db, DatabaseConfig config, MetricRegistry registry) {
         rand = new RandomDataGenerator();
 
-        newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, registry);
-        paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, registry);
-        deliveryDispatcher = new DeliveryDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, registry);
-        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().dispatcher(), db, rand, registry);
-        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().dispatcher(), db, rand, registry);
+        newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config, registry);
+        paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config, registry);
+        deliveryDispatcher = new DeliveryDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config, registry);
+        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().dispatcher(), db, rand, config, registry);
+        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().dispatcher(), db, rand, config, registry);
     }
 
     @Override
@@ -54,8 +55,8 @@ public class Terminal extends AbstractActorWithTimers {
             .build();
     }
 
-    public static Props props(int warehouseId, int districtId, Database db, MetricRegistry registry) {
-        return Props.create(Terminal.class, () -> new Terminal(warehouseId, districtId, db, registry));
+    public static Props props(int warehouseId, int districtId, Database db, DatabaseConfig config, MetricRegistry registry) {
+        return Props.create(Terminal.class, () -> new Terminal(warehouseId, districtId, db, config, registry));
     }
 
     @Override

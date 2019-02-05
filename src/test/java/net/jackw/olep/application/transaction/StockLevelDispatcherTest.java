@@ -8,6 +8,7 @@ import com.codahale.metrics.Timer;
 import net.jackw.olep.application.OnDemandExecutionContext;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.hamcrest.Matchers;
 import org.junit.After;
@@ -17,6 +18,8 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -29,6 +32,7 @@ public class StockLevelDispatcherTest {
     private MetricRegistry registry = new MetricRegistry();
     private RandomDataGenerator rand;
     private OnDemandExecutionContext executionContext = new OnDemandExecutionContext();
+    private DatabaseConfig config;
 
     @Mock
     private Database database;
@@ -40,6 +44,11 @@ public class StockLevelDispatcherTest {
         rand = spy(new RandomDataGenerator(0));
     }
 
+    @Before
+    public void loadConfigFile() throws IOException {
+        config = DatabaseConfig.create(List.of());
+    }
+
     @After
     public void shutDownAkka() {
         actorSystem.terminate();
@@ -48,7 +57,7 @@ public class StockLevelDispatcherTest {
     @Test
     public void testDispatcherSendsStockLevelTransaction() {
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actor.ref(), executionContext, database, rand, registry
+            4, 8, actor.ref(), executionContext, database, rand, config, registry
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).thenReturn(5);
 
@@ -63,7 +72,7 @@ public class StockLevelDispatcherTest {
     public void testActorNotifiedOnTransactionComplete() {
         ActorRef actorRefSpy = spy(actor.ref());
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actorRefSpy, executionContext, database, rand, registry
+            4, 8, actorRefSpy, executionContext, database, rand, config, registry
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).thenReturn(5);
 
@@ -79,7 +88,7 @@ public class StockLevelDispatcherTest {
     @Test
     public void testMetricsGatheredCorrectly() {
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actor.ref(), executionContext, database, rand, registry
+            4, 8, actor.ref(), executionContext, database, rand, config, registry
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).then(invocation -> {
             Thread.sleep(20);

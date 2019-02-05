@@ -1,6 +1,7 @@
 package net.jackw.olep.view;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
@@ -20,6 +21,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -87,7 +89,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public static LogViewAdapter init(String bootstrapServers, String registryServer) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException {
+    public static LogViewAdapter init(String bootstrapServers, String registryServer, DatabaseConfig config) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException {
         Properties consumerProps = new Properties();
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "view-consumer");
@@ -108,7 +110,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
             consumer.assign(partitions);
             consumer.seekToBeginning(partitions);
 
-            customerStoreConsumer = SharedCustomerStoreConsumer.create(bootstrapServers, "view-adapter-TODO_PARTITION_ID-" + new Date().getTime());
+            customerStoreConsumer = SharedCustomerStoreConsumer.create(bootstrapServers, "view-adapter-TODO_PARTITION_ID-" + new Date().getTime(), config);
 
             viewWrapper = new InMemoryRMIWrapper(registryServer, customerStoreConsumer.getStore());
 
@@ -124,8 +126,9 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         }
     }
 
-    public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException {
-        try (LogViewAdapter adapter = init("localhost:9092", "localhost")) {
+    public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException, IOException {
+        DatabaseConfig config = DatabaseConfig.create(args);
+        try (LogViewAdapter adapter = init("localhost:9092", "localhost", config)) {
             adapter.start();
             adapter.join();
         }

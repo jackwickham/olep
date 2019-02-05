@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.utils.populate.PopulateStores;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -14,7 +15,9 @@ import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.KafkaException;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -48,11 +51,13 @@ public class Resetter implements AutoCloseable {
     private boolean resetImmutableTopics;
     private boolean resetMutableTopics;
     private boolean populate;
+    private DatabaseConfig config;
 
-    public Resetter(boolean resetImmutableTopics, boolean resetMutableTopics, boolean populate) {
+    public Resetter(boolean resetImmutableTopics, boolean resetMutableTopics, boolean populate, DatabaseConfig config) {
         this.resetImmutableTopics = resetImmutableTopics;
         this.resetMutableTopics = resetMutableTopics;
         this.populate = populate;
+        this.config = config;
 
         Properties adminClientConfig = new Properties();
         adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
@@ -60,8 +65,15 @@ public class Resetter implements AutoCloseable {
         adminClient = AdminClient.create(adminClientConfig);
     }
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
-        new Resetter(true, true, true).reset();
+    public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
+        boolean resetImmutable = false;
+        List<String> argList = Arrays.asList(args);
+        if (args.length > 0 && args[0].equals("--all")) {
+            resetImmutable = true;
+            argList.remove(0);
+        }
+        DatabaseConfig config = DatabaseConfig.create(argList);
+        new Resetter(resetImmutable, true, true, config).reset();
     }
 
     public void reset() throws InterruptedException, ExecutionException {
@@ -121,10 +133,10 @@ public class Resetter implements AutoCloseable {
             // Topics involved with transactions are partitioned based on the warehouse they are associated with
             // To allow for scaling if needed, have twice as many partitions as verifiers/workers
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.TRANSACTION_REQUEST_TOPIC, KafkaConfig.verifierInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.TRANSACTION_REQUEST_TOPIC, config.getVerifierInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             // Modification log probably wants to be partitioned more later
             futures.add(createTopic(new NewTopic(
@@ -132,21 +144,21 @@ public class Resetter implements AutoCloseable {
             ), adminClient, 0));
             // The transaction results can be filtered by the application, but aim to have ~1 partition per application
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.TRANSACTION_RESULT_TOPIC, KafkaConfig.applicationInstances(), TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.TRANSACTION_RESULT_TOPIC, config.getApplicationInstances(), TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
 
             // Also create worker changelogs
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.STOCK_QUANTITY_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.STOCK_QUANTITY_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.NEW_ORDER_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.NEW_ORDER_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.CUSTOMER_MUTABLE_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.CUSTOMER_MUTABLE_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG, KafkaConfig.workerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
         }
 
@@ -169,9 +181,9 @@ public class Resetter implements AutoCloseable {
     }
 
     private void populateTopics() {
-        try (PopulateStores populateStores = new PopulateStores(KafkaConfig.itemCount(), KafkaConfig.warehouseCount(),
-            KafkaConfig.districtsPerWarehouse(), KafkaConfig.customersPerDistrict(), KafkaConfig.customerNameRange(),
-            KafkaConfig.predictableData(), resetImmutableTopics, resetMutableTopics)
+        try (PopulateStores populateStores = new PopulateStores(config.getItemCount(), config.getWarehouseCount(),
+            config.getDistrictsPerWarehouse(), config.getCustomersPerDistrict(), config.getCustomerNameRange(),
+            config.isPredictableData(), resetImmutableTopics, resetMutableTopics)
         ) {
             populateStores.populate();
         }

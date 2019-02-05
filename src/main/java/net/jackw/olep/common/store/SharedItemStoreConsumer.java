@@ -1,5 +1,6 @@
 package net.jackw.olep.common.store;
 
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.utils.populate.PredictableItemFactory;
@@ -9,16 +10,17 @@ public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> 
     private int referenceCount = 0;
     private DiskBackedMapStore<Integer, Item> store;
 
-    private SharedItemStoreConsumer(String bootstrapServers, String nodeId) {
+    private SharedItemStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
         super(
             bootstrapServers, nodeId, KafkaConfig.ITEM_IMMUTABLE_TOPIC, Serdes.Integer().deserializer(),
             Item.class
         );
         store = DiskBackedMapStore.createIntegerKeyed(
-            KafkaConfig.warehouseCount() * KafkaConfig.itemCount(),
+            config.getWarehouseCount() * config.getItemCount(),
             Item.class,
             "itemshared",
-            PredictableItemFactory.getInstance().getItem(1)
+            PredictableItemFactory.getInstance().getItem(1),
+            config
         );
     }
 
@@ -34,11 +36,12 @@ public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> 
      *
      * @param bootstrapServers The Kafka bootstrap servers
      * @param nodeId The ID for this processing node
+     * @param config The current database configuration
      * @return A SharedWarehouseStore
      */
-    public static SharedItemStoreConsumer create(String bootstrapServers, String nodeId) {
+    public static SharedItemStoreConsumer create(String bootstrapServers, String nodeId, DatabaseConfig config) {
         if (instance == null) {
-            instance = new SharedItemStoreConsumer(bootstrapServers, nodeId);
+            instance = new SharedItemStoreConsumer(bootstrapServers, nodeId, config);
             instance.start();
         }
         instance.referenceCount++;
@@ -48,7 +51,7 @@ public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> 
     /**
      * Decrement the reference count, closing the underlying store if there are no remaining references.
      *
-     * This method must be called once per call to {@link #create(String, String)}.
+     * This method must be called once per call to {@link #create(String, String, DatabaseConfig)}.
      */
     @Override
     public void close() throws InterruptedException {

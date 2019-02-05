@@ -1,6 +1,7 @@
 package net.jackw.olep.worker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
@@ -33,6 +34,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Properties;
 
@@ -48,16 +50,16 @@ public class WorkerApp extends StreamsApp {
      */
     private Consumer<byte[], byte[]> pseudoConsumer;
 
-    public WorkerApp(String bootstrapServers) {
+    public WorkerApp(String bootstrapServers, DatabaseConfig config) {
         super(bootstrapServers);
 
         // Consume from all the shared stores to make them accessible to workers
         String nodeId = getApplicationID() + "-" + getNodeID();
-        itemConsumer = SharedItemStoreConsumer.create(getBootstrapServers(), nodeId);
-        warehouseConsumer = SharedWarehouseStoreConsumer.create(getBootstrapServers(), nodeId);
-        districtConsumer = SharedDistrictStoreConsumer.create(getBootstrapServers(), nodeId);
-        customerConsumer = SharedCustomerStoreConsumer.create(getBootstrapServers(), nodeId);
-        stockConsumer = SharedStockStoreConsumer.create(getBootstrapServers(), nodeId);
+        itemConsumer = SharedItemStoreConsumer.create(getBootstrapServers(), nodeId, config);
+        warehouseConsumer = SharedWarehouseStoreConsumer.create(getBootstrapServers(), nodeId, config);
+        districtConsumer = SharedDistrictStoreConsumer.create(getBootstrapServers(), nodeId, config);
+        customerConsumer = SharedCustomerStoreConsumer.create(getBootstrapServers(), nodeId, config);
+        stockConsumer = SharedStockStoreConsumer.create(getBootstrapServers(), nodeId, config);
 
         Properties pseudoConsumerProperties = new Properties();
         pseudoConsumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -154,8 +156,13 @@ public class WorkerApp extends StreamsApp {
         return topology;
     }
 
-    public static void main(String[] args) {
-        StreamsApp instance = new WorkerApp("localhost:9092");
+    public static void main(String[] args) throws IOException {
+        DatabaseConfig config = DatabaseConfig.create(args);
+        run(config);
+    }
+
+    public static void run(DatabaseConfig config) {
+        StreamsApp instance = new WorkerApp("localhost:9092", config);
         instance.run();
     }
 }

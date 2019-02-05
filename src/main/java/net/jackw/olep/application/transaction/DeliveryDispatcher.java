@@ -7,6 +7,7 @@ import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -20,19 +21,21 @@ public class DeliveryDispatcher {
     private final ActorSystem actorSystem;
     private final Database db;
     private final RandomDataGenerator rand;
+    private final DatabaseConfig config;
 
     private final Timer acceptedTimer;
     private final Timer completeTimer;
 
     public DeliveryDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
-        MetricRegistry registry
+        DatabaseConfig config, MetricRegistry registry
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
         this.actorSystem = actorSystem;
         this.db = db;
         this.rand = rand;
+        this.config = config;
 
         acceptedTimer = registry.timer(MetricRegistry.name(DeliveryDispatcher.class, "accepted"));
         completeTimer = registry.timer(MetricRegistry.name(DeliveryDispatcher.class, "complete"));

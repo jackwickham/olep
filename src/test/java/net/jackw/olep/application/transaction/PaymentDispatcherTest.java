@@ -10,6 +10,7 @@ import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionTimeoutMessage;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatus;
@@ -25,7 +26,9 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -37,6 +40,7 @@ public class PaymentDispatcherTest {
     private ActorSystem actorSystem;
     private MetricRegistry registry = new MetricRegistry();
     private RandomDataGenerator rand;
+    private DatabaseConfig config;
 
     @Mock
     private Database database;
@@ -54,6 +58,11 @@ public class PaymentDispatcherTest {
         rand = spy(new RandomDataGenerator(0));
     }
 
+    @Before
+    public void loadConfigFile() throws IOException {
+        config = DatabaseConfig.create(List.of());
+    }
+
     @After
     public void shutDownAkka() {
         actorSystem.terminate();
@@ -62,7 +71,7 @@ public class PaymentDispatcherTest {
     @Test
     public void testDispatchSendsPaymentTransactionById() {
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
 
         // Ensure that it uses the customer's ID
@@ -79,7 +88,7 @@ public class PaymentDispatcherTest {
     @Test
     public void testDispatchSendsPaymentTransactionByName() {
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
 
         // Ensure that it uses the customer's name
@@ -96,7 +105,7 @@ public class PaymentDispatcherTest {
     @Test
     public void testActorNotifiedOnTransactionComplete() {
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), anyInt(), any())).thenReturn(transactionStatus);
@@ -114,7 +123,7 @@ public class PaymentDispatcherTest {
     @Test
     public void testMetricsGatheredCorrectly() {
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), anyInt(), any())).thenReturn(transactionStatus);
@@ -156,7 +165,7 @@ public class PaymentDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), anyInt(), any())).thenReturn(transactionStatus);
@@ -172,7 +181,7 @@ public class PaymentDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), anyInt(), any())).thenReturn(transactionStatus);
@@ -194,7 +203,7 @@ public class PaymentDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), anyInt(), any())).thenReturn(transactionStatus);
@@ -213,7 +222,7 @@ public class PaymentDispatcherTest {
     @Test
     public void testIllegalTransactionResponseExceptionReceivedWhenTransactionRejected() {
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), anyInt(), any())).thenReturn(transactionStatus);
@@ -231,7 +240,7 @@ public class PaymentDispatcherTest {
     @Test
     public void testUsesHomeWarehouseWhenNecessary() {
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
 
         // Ensure that it uses the customer's ID
@@ -249,13 +258,13 @@ public class PaymentDispatcherTest {
     @Test
     public void testUsesRemoteWarehouseWhenNecessary() {
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, registry
+            4, actor.ref(), actorSystem, database, rand, config, registry
         );
 
         // Ensure that it uses the customer's ID
         when(rand.choice(60)).thenReturn(false);
         when(rand.choice(15)).thenReturn(true);
-        when(rand.uniform(1, KafkaConfig.warehouseCount())).thenReturn(50000);
+        when(rand.uniform(1, config.getWarehouseCount())).thenReturn(50000);
 
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), eq(50000), any())).thenReturn(transactionStatus);
 
