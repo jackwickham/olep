@@ -1,5 +1,6 @@
 package net.jackw.olep.utils;
 
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -10,6 +11,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serdes;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
@@ -20,9 +22,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * Simple log consumer
  */
 public class Tee {
-    public static void run() {
+    public static void run(DatabaseConfig config) {
         Properties transactionResultConsumerProps = new Properties();
-        transactionResultConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        transactionResultConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
         transactionResultConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "tee");
         transactionResultConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         Consumer<TransactionResultKey, byte[]> consumer = new KafkaConsumer<>(
@@ -43,7 +45,8 @@ public class Tee {
         }
     }
 
-    public static void main(String[] args) {
-        run();
+    public static void main(String[] args) throws IOException {
+        DatabaseConfig config = DatabaseConfig.create(args);
+        run(config);
     }
 }

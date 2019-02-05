@@ -22,8 +22,8 @@ public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
     private DatabaseConfig config;
 
-    public VerifierApp(String bootstrapServers, DatabaseConfig config) {
-        super(bootstrapServers);
+    public VerifierApp(DatabaseConfig config) {
+        super(config.getBootstrapServers());
         this.config = config;
 
         // Consume from items so we can check the transactions
@@ -83,7 +83,7 @@ public class VerifierApp extends StreamsApp {
     }
 
     public static void run(DatabaseConfig config) {
-        StreamsApp instance = new VerifierApp("localhost:9092", config);
+        StreamsApp instance = new VerifierApp(config);
         instance.run();
     }
 }

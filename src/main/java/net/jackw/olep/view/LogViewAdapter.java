@@ -128,7 +128,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
 
     public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException, IOException {
         DatabaseConfig config = DatabaseConfig.create(args);
-        try (LogViewAdapter adapter = init("localhost:9092", "localhost", config)) {
+        try (LogViewAdapter adapter = init(config.getBootstrapServers(), config.getViewRegistryHost(), config)) {
             adapter.start();
             adapter.join();
         }

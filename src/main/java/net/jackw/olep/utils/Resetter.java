@@ -60,7 +60,7 @@ public class Resetter implements AutoCloseable {
         this.config = config;
 
         Properties adminClientConfig = new Properties();
-        adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
 
         adminClient = AdminClient.create(adminClientConfig);
     }
@@ -181,9 +181,7 @@ public class Resetter implements AutoCloseable {
     }
 
     private void populateTopics() {
-        try (PopulateStores populateStores = new PopulateStores(config.getItemCount(), config.getWarehouseCount(),
-            config.getDistrictsPerWarehouse(), config.getCustomersPerDistrict(), config.getCustomerNameRange(),
-            config.isPredictableData(), resetImmutableTopics, resetMutableTopics)
+        try (PopulateStores populateStores = new PopulateStores(config, resetImmutableTopics, resetMutableTopics)
         ) {
             populateStores.populate();
         }

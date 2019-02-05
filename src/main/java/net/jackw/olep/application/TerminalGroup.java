@@ -24,7 +24,7 @@ public class TerminalGroup extends AbstractActor {
         this.warehouseIdRange = warehouseIdRange;
         this.config = config;
         this.registry = registry;
-        this.db = new EventDatabase("localhost:9092", "localhost");
+        this.db = new EventDatabase(config.getBootstrapServers(), config.getViewRegistryHost());
     }
 
     @Override

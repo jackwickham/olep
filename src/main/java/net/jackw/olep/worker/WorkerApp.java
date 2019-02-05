@@ -50,8 +50,8 @@ public class WorkerApp extends StreamsApp {
      */
     private Consumer<byte[], byte[]> pseudoConsumer;
 
-    public WorkerApp(String bootstrapServers, DatabaseConfig config) {
-        super(bootstrapServers);
+    public WorkerApp(DatabaseConfig config) {
+        super(config.getBootstrapServers());
 
         // Consume from all the shared stores to make them accessible to workers
         String nodeId = getApplicationID() + "-" + getNodeID();
@@ -62,7 +62,7 @@ public class WorkerApp extends StreamsApp {
         stockConsumer = SharedStockStoreConsumer.create(getBootstrapServers(), nodeId, config);
 
         Properties pseudoConsumerProperties = new Properties();
-        pseudoConsumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        pseudoConsumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
         pseudoConsumer = new KafkaConsumer<>(
             pseudoConsumerProperties, Serdes.ByteArray().deserializer(), Serdes.ByteArray().deserializer()
         );
@@ -162,7 +162,7 @@ public class WorkerApp extends StreamsApp {
     }
 
     public static void run(DatabaseConfig config) {
-        StreamsApp instance = new WorkerApp("localhost:9092", config);
+        StreamsApp instance = new WorkerApp(config);
         instance.run();
     }
 }

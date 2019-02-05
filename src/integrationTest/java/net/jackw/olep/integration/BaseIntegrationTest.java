@@ -43,11 +43,11 @@ public abstract class BaseIntegrationTest {
     }
 
     protected String getEventBootsrapServers() {
-        return "127.0.0.1:9092";
+        return config.getBootstrapServers();
     }
 
     protected String getViewBootstrapServers() {
-        return "127.0.0.1";
+        return config.getViewRegistryHost();
     }
 
     protected static int getCustomerNameRange() {
@@ -62,14 +62,14 @@ public abstract class BaseIntegrationTest {
      * Start a verifier instance, with a fresh state store
      */
     protected void startVerifier() {
-        VerifierApp verifier = new VerifierApp(getEventBootsrapServers(), config);
+        VerifierApp verifier = new VerifierApp(config);
         verifierInstances.add(verifier);
         verifier.setup();
         verifier.start();
     }
 
     protected void startWorker() {
-        WorkerApp worker = new WorkerApp(getEventBootsrapServers(), config);
+        WorkerApp worker = new WorkerApp(config);
         workerInstances.add(worker);
         worker.setup();
         worker.start();
@@ -77,7 +77,7 @@ public abstract class BaseIntegrationTest {
 
     @SuppressWarnings("MustBeClosedChecker")
     protected void startView() {
-        logViewAdapter = LogViewAdapterStub.create(getViewBootstrapServers());
+        logViewAdapter = LogViewAdapterStub.create(config.getViewRegistryHost());
     }
 
     @After

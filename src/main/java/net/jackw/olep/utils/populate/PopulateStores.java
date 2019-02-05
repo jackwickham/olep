@@ -1,6 +1,7 @@
 package net.jackw.olep.utils.populate;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.Customer;
@@ -30,9 +31,6 @@ import java.util.stream.IntStream;
 
 @SuppressWarnings("FutureReturnValueIgnored")
 public class PopulateStores implements AutoCloseable {
-    private String bootstrapServers = "localhost:9092";
-    private Properties props;
-
     private Producer<Integer, Item> itemProducer;
     private Producer<Integer, WarehouseShared> warehouseProducer;
     private Producer<WarehouseSpecificKey, DistrictShared> districtProducer;
@@ -47,15 +45,9 @@ public class PopulateStores implements AutoCloseable {
 
     private Producer<Long, ModificationMessage> modificationLogProducer;
 
-    private int itemCount;
-    private int warehouseCount;
-    private int districtsPerWarehouse;
-    private int customersPerDistrict;
-    private int customerNameRange;
-    private boolean predictable;
-
     private boolean populateImmutableStores;
     private boolean populateMutableStores;
+    private DatabaseConfig config;
 
     private ArrayList<Integer> customerIds;
 
@@ -63,21 +55,13 @@ public class PopulateStores implements AutoCloseable {
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public PopulateStores(
-        int itemCount, int warehouseCount, int districtsPerWarehouse, int customersPerDistrict, int customerNameRange,
-        boolean predictable, boolean populateImmutableStores, boolean populateMutableStores
-    ) {
-        this.itemCount = itemCount;
-        this.warehouseCount = warehouseCount;
-        this.districtsPerWarehouse = districtsPerWarehouse;
-        this.customersPerDistrict = customersPerDistrict;
-        this.customerNameRange = customerNameRange;
-        this.predictable = predictable;
+    public PopulateStores(DatabaseConfig config, boolean populateImmutableStores, boolean populateMutableStores) {
         this.populateImmutableStores = populateImmutableStores;
         this.populateMutableStores = populateMutableStores;
+        this.config = config;
 
-        props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
 
         itemProducer = new KafkaProducer<>(props, Serdes.Integer().serializer(), new JsonSerializer<>());
         warehouseProducer = new KafkaProducer<>(props, Serdes.Integer().serializer(), new JsonSerializer<>());
@@ -94,7 +78,7 @@ public class PopulateStores implements AutoCloseable {
 
         modificationLogProducer = new KafkaProducer<>(props, Serdes.Long().serializer(), new JsonSerializer<>());
 
-        customerIds = IntStream.range(1, customersPerDistrict+1).boxed().collect(Collectors.toCollection(ArrayList::new));
+        customerIds = IntStream.range(1, config.getCustomersPerDistrict()+1).boxed().collect(Collectors.toCollection(ArrayList::new));
     }
 
     public void populate() {
@@ -121,13 +105,13 @@ public class PopulateStores implements AutoCloseable {
 
     private void populateItems() {
         ItemFactory factory;
-        if (predictable) {
+        if (config.isPredictableData()) {
             factory = PredictableItemFactory.getInstance();
         } else {
             factory = RandomItemFactory.getInstance();
         }
 
-        for (int i = 0; i < itemCount; i++) {
+        for (int i = 0; i < config.getItemCount(); i++) {
             Item item = factory.makeItem();
             if (populateImmutableStores) {
                 itemProducer.send(new ProducerRecord<>(KafkaConfig.ITEM_IMMUTABLE_TOPIC, 0, item.id, item));
@@ -138,13 +122,13 @@ public class PopulateStores implements AutoCloseable {
 
     private void populateWarehouses() {
         WarehouseFactory factory;
-        if (predictable) {
+        if (config.isPredictableData()) {
             factory = PredictableWarehouseFactory.getInstance();
         } else {
             factory = RandomWarehouseFactory.getInstance();
         }
 
-        for (int wh = 0; wh < warehouseCount; wh++) {
+        for (int wh = 0; wh < config.getWarehouseCount(); wh++) {
             WarehouseShared warehouse = factory.makeWarehouseShared();
             if (populateImmutableStores) {
                 warehouseProducer.send(new ProducerRecord<>(KafkaConfig.WAREHOUSE_IMMUTABLE_TOPIC, 0, warehouse.id, warehouse));
@@ -158,12 +142,12 @@ public class PopulateStores implements AutoCloseable {
 
     private void populateDistricts(WarehouseShared warehouse, int[] stockQuantities) {
         DistrictFactory districtFactory;
-        if (predictable) {
+        if (config.isPredictableData()) {
             districtFactory = PredictableDistrictFactory.instanceFor(warehouse);
         } else {
             districtFactory = RandomDistrictFactory.instanceFor(warehouse);
         }
-        for (int dst = 0; dst < districtsPerWarehouse; dst++) {
+        for (int dst = 0; dst < config.getDistrictsPerWarehouse(); dst++) {
             DistrictShared district = districtFactory.makeDistrictShared();
             if (populateImmutableStores) {
                 districtProducer.send(new ProducerRecord<>(KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, 0, district.getKey(), district));
@@ -178,12 +162,12 @@ public class PopulateStores implements AutoCloseable {
 
     private void populateCustomers(DistrictShared district) {
         CustomerFactory customerFactory;
-        if (predictable) {
-            customerFactory = PredictableCustomerFactory.instanceFor(district, customerNameRange);
+        if (config.isPredictableData()) {
+            customerFactory = PredictableCustomerFactory.instanceFor(district, config.getCustomerNameRange());
         } else {
-            customerFactory = RandomCustomerFactory.instanceFor(district, customerNameRange);
+            customerFactory = RandomCustomerFactory.instanceFor(district, config.getCustomerNameRange());
         }
-        for (int cust = 0; cust < customersPerDistrict; cust++) {
+        for (int cust = 0; cust < config.getCustomersPerDistrict(); cust++) {
             Customer customer = customerFactory.makeCustomer();
             if (populateImmutableStores) {
                 customerProducer.send(new ProducerRecord<>(
@@ -200,13 +184,13 @@ public class PopulateStores implements AutoCloseable {
 
     private int[] populateStock(WarehouseShared warehouse) {
         StockFactory stockFactory;
-        if (predictable) {
+        if (config.isPredictableData()) {
             stockFactory = PredictableStockFactory.instanceFor(warehouse);
         } else {
             stockFactory = RandomStockFactory.instanceFor(warehouse);
         }
-        int[] stockQuantities = new int[itemCount];
-        for (int item = 0; item < itemCount; item++) {
+        int[] stockQuantities = new int[config.getItemCount()];
+        for (int item = 0; item < config.getItemCount(); item++) {
             Stock stock = stockFactory.makeStock();
             if (populateImmutableStores) {
                 stockProducer.send(new ProducerRecord<>(
@@ -225,17 +209,17 @@ public class PopulateStores implements AutoCloseable {
 
     private void populateOrders(DistrictShared district, int[] stockQuantities) {
         OrderFactory orderFactory;
-        if (predictable) {
-            orderFactory = PredictableOrderFactory.instanceFor(district, itemCount);
+        if (config.isPredictableData()) {
+            orderFactory = PredictableOrderFactory.instanceFor(district, config.getItemCount());
         } else {
-            orderFactory = RandomOrderFactory.instanceFor(district, itemCount);
+            orderFactory = RandomOrderFactory.instanceFor(district, config.getItemCount());
             Collections.shuffle(customerIds);
         }
         OrderFactory.StockProvider stockProvider = itemId -> stockQuantities[itemId-1];
         int processedCustomers = 0;
-        List<NewOrder> newOrders = new ArrayList<>(customersPerDistrict / 3);
+        List<NewOrder> newOrders = new ArrayList<>(config.getCustomersPerDistrict() / 3);
         for (int customerId : customerIds) {
-            if (predictable || processedCustomers++ < customersPerDistrict * 7 / 10) {
+            if (config.isPredictableData() || processedCustomers++ < config.getCustomersPerDistrict() * 7 / 10) {
                 // For 7/10 of the customers, the order has been delivered already (and to simplify testing, predictable
                 // mode doesn't create any pending orders, so they have to be created manually)
                 OrderFactory.DeliveredOrder order = orderFactory.makeDeliveredOrder(customerId, stockProvider);

@@ -23,7 +23,7 @@ public class RunDatabase {
         new Thread(() -> VerifierApp.run(config), "verifier-main").start();
         new Thread(() -> WorkerApp.run(config), "worker-main").start();
 
-        try (LogViewAdapter logViewAdapter = LogViewAdapter.init("127.0.0.1:9092", "127.0.0.1", config)) {
+        try (LogViewAdapter logViewAdapter = LogViewAdapter.init(config.getBootstrapServers(), config.getViewRegistryHost(), config)) {
             logViewAdapter.start();
             // Block until Ctrl+C
             logViewAdapter.join();
