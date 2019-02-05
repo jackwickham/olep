@@ -70,7 +70,7 @@ public class Resetter implements AutoCloseable {
         List<String> argList = Arrays.asList(args);
         if (args.length > 0 && args[0].equals("--all")) {
             resetImmutable = true;
-            argList.remove(0);
+            argList = argList.subList(1, argList.size());
         }
         DatabaseConfig config = DatabaseConfig.create(argList);
         new Resetter(resetImmutable, true, true, config).reset();
