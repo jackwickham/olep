@@ -41,8 +41,12 @@ public class PaymentDispatcher {
         this.rand = rand;
         this.config = config;
 
-        acceptedTimer = registry.timer(MetricRegistry.name(PaymentDispatcher.class, "accepted"));
-        completeTimer = registry.timer(MetricRegistry.name(PaymentDispatcher.class, "complete"));
+        acceptedTimer = registry.timer(
+            MetricRegistry.name(PaymentDispatcher.class, "accepted"), new TimerSupplier()
+        );
+        completeTimer = registry.timer(
+            MetricRegistry.name(PaymentDispatcher.class, "complete"), new TimerSupplier()
+        );
     }
 
     public void dispatch() {

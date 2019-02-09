@@ -37,8 +37,12 @@ public class DeliveryDispatcher {
         this.rand = rand;
         this.config = config;
 
-        acceptedTimer = registry.timer(MetricRegistry.name(DeliveryDispatcher.class, "accepted"));
-        completeTimer = registry.timer(MetricRegistry.name(DeliveryDispatcher.class, "complete"));
+        acceptedTimer = registry.timer(
+            MetricRegistry.name(DeliveryDispatcher.class, "accepted"), new TimerSupplier()
+        );
+        completeTimer = registry.timer(
+            MetricRegistry.name(DeliveryDispatcher.class, "complete"), new TimerSupplier()
+        );
     }
 
     public void dispatch() {

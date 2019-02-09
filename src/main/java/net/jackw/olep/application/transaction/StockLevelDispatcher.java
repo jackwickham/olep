@@ -1,6 +1,5 @@
 package net.jackw.olep.application.transaction;
 
-import akka.actor.ActorContext;
 import akka.actor.ActorRef;
 import akka.dispatch.Futures;
 import com.codahale.metrics.MetricRegistry;
@@ -35,7 +34,9 @@ public class StockLevelDispatcher {
         this.rand = rand;
         this.config = config;
 
-        completeTimer = registry.timer(MetricRegistry.name(StockLevelDispatcher.class, "complete"));
+        completeTimer = registry.timer(
+            MetricRegistry.name(StockLevelDispatcher.class, "complete"), new TimerSupplier()
+        );
     }
 
     public void dispatch() {

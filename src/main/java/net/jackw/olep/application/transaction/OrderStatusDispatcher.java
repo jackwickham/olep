@@ -7,7 +7,6 @@ import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
-import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.OrderStatusResult;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -37,7 +36,9 @@ public class OrderStatusDispatcher {
         this.rand = rand;
         this.config = config;
 
-        completeTimer = registry.timer(MetricRegistry.name(OrderStatusDispatcher.class, "complete"));
+        completeTimer = registry.timer(
+            MetricRegistry.name(OrderStatusDispatcher.class, "complete"), new TimerSupplier()
+        );
     }
 
     public void dispatch() {

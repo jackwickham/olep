@@ -10,7 +10,6 @@ import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
-import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
@@ -42,9 +41,15 @@ public class NewOrderDispatcher {
         this.rand = rand;
         this.config = config;
 
-        acceptedTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "accepted"));
-        completeTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "complete"));
-        rejectedTimer = registry.timer(MetricRegistry.name(NewOrderDispatcher.class, "failure"));
+        acceptedTimer = registry.timer(
+            MetricRegistry.name(NewOrderDispatcher.class, "accepted"), new TimerSupplier()
+        );
+        completeTimer = registry.timer(
+            MetricRegistry.name(NewOrderDispatcher.class, "complete"), new TimerSupplier()
+        );
+        rejectedTimer = registry.timer(
+            MetricRegistry.name(NewOrderDispatcher.class, "failure"), new TimerSupplier()
+        );
     }
 
     public void dispatch() {
