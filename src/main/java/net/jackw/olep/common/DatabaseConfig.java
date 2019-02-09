@@ -39,6 +39,15 @@ public class DatabaseConfig {
     private int applicationInstances = 1;
 
     @JsonProperty
+    private int verifierThreads = 2;
+
+    @JsonProperty
+    private int workerThreads = 2;
+
+    @JsonProperty
+    private int viewThreads = 1;
+
+    @JsonProperty
     private String storeBackingDir = "/tmp/olep/";
 
     @JsonProperty
@@ -105,6 +114,27 @@ public class DatabaseConfig {
      */
     public int getApplicationInstances() {
         return applicationInstances;
+    }
+
+    /**
+     * Get the number of verifier threads that should be created per application instance
+     */
+    public int getVerifierThreads() {
+        return verifierThreads;
+    }
+
+    /**
+     * Get the number of worker threads that should be created per application instance
+     */
+    public int getWorkerThreads() {
+        return workerThreads;
+    }
+
+    /**
+     * Get the number of view threads that should be created per application instance
+     */
+    public int getViewThreads() {
+        return viewThreads;
     }
 
     /**

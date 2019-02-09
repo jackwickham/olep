@@ -45,6 +45,8 @@ public class WorkerApp extends StreamsApp {
     private SharedCustomerStoreConsumer customerConsumer;
     private SharedStoreConsumer<WarehouseSpecificKey, StockShared> stockConsumer;
 
+    private DatabaseConfig config;
+
     /**
      * A fake consumer, to allow access to {@link Consumer#partitionsFor(String)}
      */
@@ -52,6 +54,8 @@ public class WorkerApp extends StreamsApp {
 
     public WorkerApp(DatabaseConfig config) {
         super(config.getBootstrapServers());
+
+        this.config = config;
 
         // Consume from all the shared stores to make them accessible to workers
         String nodeId = getApplicationID() + "-" + getNodeID();
@@ -154,6 +158,11 @@ public class WorkerApp extends StreamsApp {
             );
 
         return topology;
+    }
+
+    @Override
+    protected int getThreadCount() {
+        return config.getWorkerThreads();
     }
 
     public static void main(String[] args) throws IOException {

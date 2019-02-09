@@ -77,6 +77,11 @@ public class VerifierApp extends StreamsApp {
         return topology;
     }
 
+    @Override
+    protected int getThreadCount() {
+        return config.getVerifierThreads();
+    }
+
     public static void main(String[] args) throws IOException {
         DatabaseConfig config = DatabaseConfig.create(args);
         run(config);

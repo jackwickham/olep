@@ -131,34 +131,37 @@ public class Resetter implements AutoCloseable {
         }
         if (resetMutableTopics) {
             // Topics involved with transactions are partitioned based on the warehouse they are associated with
-            // To allow for scaling if needed, have twice as many partitions as verifiers/workers
+            int transactionRequestPartitions = config.getVerifierInstances() * config.getVerifierThreads() * 8;
+            int acceptedTransactionPartitions = config.getWorkerInstances() * config.getWorkerThreads() * 8;
+
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.TRANSACTION_REQUEST_TOPIC, config.getVerifierInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.TRANSACTION_REQUEST_TOPIC, transactionRequestPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.ACCEPTED_TRANSACTION_TOPIC, acceptedTransactionPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             // Modification log probably wants to be partitioned more later
             futures.add(createTopic(new NewTopic(
                 KafkaConfig.MODIFICATION_LOG, 1, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
-            // The transaction results can be filtered by the application, but aim to have ~1 partition per application
+            // The transaction results can be filtered by the application, but aim to have ~1 partition per application DB connection
+            int expectedDbConnections = (config.getWarehouseCount() + 199) / 200; // ceiling division
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.TRANSACTION_RESULT_TOPIC, config.getApplicationInstances(), TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.TRANSACTION_RESULT_TOPIC, expectedDbConnections, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
 
-            // Also create worker changelogs
+            // Also create worker changelogs, which need to be partitioned the same as the accepted transaction topic
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.STOCK_QUANTITY_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.STOCK_QUANTITY_CHANGELOG, acceptedTransactionPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.NEW_ORDER_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.NEW_ORDER_CHANGELOG, acceptedTransactionPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.CUSTOMER_MUTABLE_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.CUSTOMER_MUTABLE_CHANGELOG, acceptedTransactionPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG, config.getWorkerInstances() * 8, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG, acceptedTransactionPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
         }
 

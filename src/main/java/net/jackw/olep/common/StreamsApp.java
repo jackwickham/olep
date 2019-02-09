@@ -41,7 +41,7 @@ public abstract class StreamsApp implements AutoCloseable {
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, getApplicationID());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 2);
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, getThreadCount());
 
         Topology topology = getTopology();
         log.debug(topology.describe());
@@ -65,6 +65,11 @@ public abstract class StreamsApp implements AutoCloseable {
      * Get this processor's application ID
      */
     public abstract String getApplicationID();
+
+    /**
+     * Get the number of threads that should be created for this application
+     */
+    protected abstract int getThreadCount();
 
     /**
      * Cache for the generated node ID
