@@ -23,7 +23,7 @@ public class VerifierApp extends StreamsApp {
     private DatabaseConfig config;
 
     public VerifierApp(DatabaseConfig config) {
-        super(config.getBootstrapServers());
+        super(config);
         this.config = config;
 
         // Consume from items so we can check the transactions

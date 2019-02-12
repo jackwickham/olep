@@ -51,6 +51,9 @@ public class DatabaseConfig {
     private String storeBackingDir = "/tmp/olep/";
 
     @JsonProperty
+    private String streamsStateDir = "/tmp/kafka-streams/";
+
+    @JsonProperty
     private boolean predictableData = false;
 
     @JsonProperty
@@ -142,6 +145,13 @@ public class DatabaseConfig {
      */
     public String getStoreBackingDir() {
         return storeBackingDir;
+    }
+
+    /**
+     * Get the directory where the stream state should be stored
+     */
+    public String getStreamsStateDir() {
+        return streamsStateDir;
     }
 
     /**

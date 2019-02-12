@@ -53,7 +53,7 @@ public class WorkerApp extends StreamsApp {
     private Consumer<byte[], byte[]> pseudoConsumer;
 
     public WorkerApp(DatabaseConfig config) {
-        super(config.getBootstrapServers());
+        super(config);
 
         this.config = config;
 

@@ -26,20 +26,21 @@ public abstract class StreamsApp implements AutoCloseable {
     private KafkaStreams streams;
 
     /**
-     * The bootstrap servers
+     * The database config
      */
-    private String bootstrapServers;
+    private DatabaseConfig config;
 
-    protected StreamsApp(String bootstrapServers) {
+    protected StreamsApp(DatabaseConfig config) {
         appShutdownLatch = new CountDownLatch(1);
-        this.bootstrapServers = bootstrapServers;
+        this.config = config;
     }
 
     public KafkaStreams getStreams() {
         // Set up the properties of this application
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, getApplicationID());
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
+        props.put(StreamsConfig.STATE_DIR_CONFIG, config.getStreamsStateDir());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, getThreadCount());
 
@@ -146,7 +147,7 @@ public abstract class StreamsApp implements AutoCloseable {
     }
 
     protected String getBootstrapServers() {
-        return bootstrapServers;
+        return config.getBootstrapServers();
     }
 
     private static Logger log = LogManager.getLogger();
