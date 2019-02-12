@@ -4,6 +4,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.LockingLRUSet;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationMessage;
@@ -29,16 +30,19 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public class LogViewAdapter extends Thread implements AutoCloseable {
     private final InMemoryRMIWrapper viewWrapper;
     private final ViewWriteAdapter viewAdapter;
     private final Consumer<Long, ModificationMessage> logConsumer;
+    private final Set<Long> recentTransactions;
 
     public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, InMemoryRMIWrapper viewWrapper) {
         this.viewWrapper = viewWrapper;
         this.viewAdapter = viewWrapper.getAdapter();
         this.logConsumer = logConsumer;
+        this.recentTransactions = new LockingLRUSet<>(100);
 
         // Add a shutdown listener to gracefully handle Ctrl+C
         Runtime.getRuntime().addShutdownHook(new Thread("view-adapter-shutdown-hook") {
@@ -73,6 +77,10 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
     }
 
     private void processModification(long key, ModificationMessage message) {
+        if (!recentTransactions.add(key)) {
+            log.info("Received duplicate transaction {}", key);
+            return;
+        }
         log.debug("Processing {} for transaction {}", message.getClass(), key);
         if (message instanceof NewOrderModification) {
             viewAdapter.newOrder((NewOrderModification) message);

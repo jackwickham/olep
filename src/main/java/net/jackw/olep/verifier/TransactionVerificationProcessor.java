@@ -1,6 +1,7 @@
 package net.jackw.olep.verifier;
 
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.LockingLRUSet;
 import net.jackw.olep.common.LogConfig;
 import net.jackw.olep.common.store.SharedKeyValueStore;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
@@ -22,9 +23,11 @@ import java.util.Set;
 public class TransactionVerificationProcessor implements Processor<Long, TransactionRequestMessage> {
     private ProcessorContext context;
     private final SharedKeyValueStore<Integer, Item> itemStore;
+    private final Set<Long> recentTransactions;
 
     public TransactionVerificationProcessor(SharedKeyValueStore<Integer, Item> itemStore) {
         this.itemStore = itemStore;
+        recentTransactions = new LockingLRUSet<>(100);
     }
 
     @Override
@@ -40,6 +43,10 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
      */
     @Override
     public void process(Long key, TransactionRequestMessage message) {
+        if (!recentTransactions.add(key)) {
+            // Already present, so we processed this transaction already
+            return;
+        }
         if (message instanceof NewOrderRequest) {
             NewOrderRequest body = (NewOrderRequest) message;
             if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {

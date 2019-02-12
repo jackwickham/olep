@@ -3,6 +3,7 @@ package net.jackw.olep.edge;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.LRUSet;
+import net.jackw.olep.common.LockingLRUSet;
 import net.jackw.olep.common.TransactionResultPartitioner;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
@@ -66,7 +67,7 @@ class DatabaseConnection implements Closeable {
 
         // Initialise regular fields
         pendingTransactions = new ConcurrentHashMap<>();
-        recentlyCompletedTransactions = new LRUSet<>(100);
+        recentlyCompletedTransactions = new LockingLRUSet<>(100);
 
         // Set up the producer, which is used to send requests from the application to the DB
         Serializer<TransactionRequestMessage> transactionRequestSerializer = new JsonSerializer<>();
