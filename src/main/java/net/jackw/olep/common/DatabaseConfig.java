@@ -62,6 +62,9 @@ public class DatabaseConfig {
     @JsonProperty
     private String viewRegistryHost = "127.0.0.1";
 
+    @JsonProperty
+    private String resultsDir = "results";
+
     /**
      * Get the number of items that the database will hold
      */
@@ -173,6 +176,13 @@ public class DatabaseConfig {
      */
     public String getViewRegistryHost() {
         return viewRegistryHost;
+    }
+
+    /**
+     * Get the directory where the benchmark results should be placed
+     */
+    public String getResultsDir() {
+        return resultsDir;
     }
 
     /**

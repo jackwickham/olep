@@ -2,12 +2,13 @@ package net.jackw.olep.application.transaction;
 
 import akka.actor.ActorRef;
 import akka.dispatch.Futures;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.OrderStatusResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
 import scala.concurrent.ExecutionContext;
@@ -22,12 +23,11 @@ public class OrderStatusDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-
-    private final Timer completeTimer;
+    private final MetricsManager metricsManager;
 
     public OrderStatusDispatcher(
         int warehouseId, ActorRef actor, ExecutionContext executionContext, Database db, RandomDataGenerator rand,
-        DatabaseConfig config, MetricRegistry registry
+        DatabaseConfig config
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
@@ -35,10 +35,7 @@ public class OrderStatusDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-
-        completeTimer = registry.timer(
-            MetricRegistry.name(OrderStatusDispatcher.class, "complete"), new TimerSupplier()
-        );
+        this.metricsManager = MetricsManager.getInstance();
     }
 
     public void dispatch() {
@@ -67,9 +64,9 @@ public class OrderStatusDispatcher {
 
     private Future<OrderStatusResult> timeTransactionAsync(Callable<OrderStatusResult> transaction) {
         return Futures.future(() -> {
-            Timer.Context completeTimerContext = completeTimer.time();
+            Timer timer = metricsManager.startTimer();
             OrderStatusResult res = transaction.call();
-            completeTimerContext.stop();
+            metricsManager.recordDuration(DurationType.ORDER_STATUS_COMPLETE, timer);
             return res;
         }, executionContext);
     }

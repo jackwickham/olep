@@ -2,8 +2,6 @@ package net.jackw.olep.application.transaction;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.google.common.collect.ImmutableList;
 import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
@@ -13,6 +11,9 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 
 /**
@@ -25,14 +26,11 @@ public class NewOrderDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-
-    private final Timer acceptedTimer;
-    private final Timer completeTimer;
-    private final Timer rejectedTimer;
+    private final MetricsManager metricsManager;
 
     public NewOrderDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
-        DatabaseConfig config, MetricRegistry registry
+        DatabaseConfig config
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
@@ -40,16 +38,7 @@ public class NewOrderDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-
-        acceptedTimer = registry.timer(
-            MetricRegistry.name(NewOrderDispatcher.class, "accepted"), new TimerSupplier()
-        );
-        completeTimer = registry.timer(
-            MetricRegistry.name(NewOrderDispatcher.class, "complete"), new TimerSupplier()
-        );
-        rejectedTimer = registry.timer(
-            MetricRegistry.name(NewOrderDispatcher.class, "failure"), new TimerSupplier()
-        );
+        this.metricsManager = MetricsManager.getInstance();
     }
 
     public void dispatch() {
@@ -100,36 +89,34 @@ public class NewOrderDispatcher {
     }
 
     private class SuccessResultHandler extends BaseResultHandler<NewOrderResult> {
-        private final Timer.Context acceptedTimerContext;
-        private final Timer.Context completeTimerContext;
+        private final Timer timer;
 
         public SuccessResultHandler() {
             super(actorSystem, actor, TransactionType.NEW_ORDER);
 
-            acceptedTimerContext = acceptedTimer.time();
-            completeTimerContext = completeTimer.time();
+            timer = metricsManager.startTimer();
         }
 
         @Override
         public void acceptedHandler() {
-            acceptedTimerContext.stop();
+            metricsManager.recordDuration(DurationType.NEW_ORDER_ACCEPTED, timer);
         }
 
         @Override
         public void completeHandler(NewOrderResult result) {
-            completeTimerContext.stop();
+            metricsManager.recordDuration(DurationType.NEW_ORDER_COMPLETE, timer);
 
             done(new TransactionCompleteMessage());
         }
     }
 
     private class FailureResultHandler extends BaseResultHandler<NewOrderResult> {
-        private final Timer.Context rejectedTimerContext;
+        private final Timer timer;
 
         public FailureResultHandler() {
             super(actorSystem, actor, TransactionType.NEW_ORDER);
 
-            rejectedTimerContext = rejectedTimer.time();
+            timer = metricsManager.startTimer();
         }
 
         @Override
@@ -139,7 +126,7 @@ public class NewOrderDispatcher {
 
         @Override
         public void rejectedHandler(Throwable t) {
-            rejectedTimerContext.stop();
+            metricsManager.recordDuration(DurationType.NEW_ORDER_REJECTED, timer);
 
             done(new TransactionCompleteMessage());
         }

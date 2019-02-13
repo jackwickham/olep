@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
 public class StockLevelDispatcherTest {
     private TestProbe actor;
     private ActorSystem actorSystem;
-    private MetricRegistry registry = new MetricRegistry();
     private RandomDataGenerator rand;
     private OnDemandExecutionContext executionContext = new OnDemandExecutionContext();
     private DatabaseConfig config;
@@ -57,7 +56,7 @@ public class StockLevelDispatcherTest {
     @Test
     public void testDispatcherSendsStockLevelTransaction() {
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actor.ref(), executionContext, database, rand, config, registry
+            4, 8, actor.ref(), executionContext, database, rand, config
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).thenReturn(5);
 
@@ -72,7 +71,7 @@ public class StockLevelDispatcherTest {
     public void testActorNotifiedOnTransactionComplete() {
         ActorRef actorRefSpy = spy(actor.ref());
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actorRefSpy, executionContext, database, rand, config, registry
+            4, 8, actorRefSpy, executionContext, database, rand, config
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).thenReturn(5);
 
@@ -85,10 +84,10 @@ public class StockLevelDispatcherTest {
         verify(actorRefSpy).tell(any(TransactionCompleteMessage.class), any());
     }
 
-    @Test
+    /*@Test
     public void testMetricsGatheredCorrectly() {
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actor.ref(), executionContext, database, rand, config, registry
+            4, 8, actor.ref(), executionContext, database, rand, config
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).then(invocation -> {
             Thread.sleep(20);
@@ -118,5 +117,5 @@ public class StockLevelDispatcherTest {
             completeTimer.getSnapshot().getValues()[0],
             Matchers.both(Matchers.lessThan(duration)).and(Matchers.greaterThanOrEqualTo(20000000L))
         );
-    }
+    }*/
 }

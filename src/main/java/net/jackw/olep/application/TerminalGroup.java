@@ -2,10 +2,8 @@ package net.jackw.olep.application;
 
 import akka.actor.AbstractActor;
 import akka.actor.Props;
-import com.codahale.metrics.MetricRegistry;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
-import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.EventDatabase;
 
 /**
@@ -15,15 +13,13 @@ public class TerminalGroup extends AbstractActor {
     private int startWarehouseId;
     private int warehouseIdRange;
     private DatabaseConfig config;
-    private MetricRegistry registry;
     private Database db;
 
     @SuppressWarnings("MustBeClosedChecker")
-    public TerminalGroup(int startWarehouseId, int warehouseIdRange, DatabaseConfig config, MetricRegistry registry) {
+    public TerminalGroup(int startWarehouseId, int warehouseIdRange, DatabaseConfig config) {
         this.startWarehouseId = startWarehouseId;
         this.warehouseIdRange = warehouseIdRange;
         this.config = config;
-        this.registry = registry;
         this.db = new EventDatabase(config.getBootstrapServers(), config.getViewRegistryHost());
     }
 
@@ -34,8 +30,8 @@ public class TerminalGroup extends AbstractActor {
             .build();
     }
 
-    public static Props props(int startWarehouseId, int range, DatabaseConfig config, MetricRegistry registry) {
-        return Props.create(TerminalGroup.class, () -> new TerminalGroup(startWarehouseId, range, config, registry));
+    public static Props props(int startWarehouseId, int range, DatabaseConfig config) {
+        return Props.create(TerminalGroup.class, () -> new TerminalGroup(startWarehouseId, range, config));
     }
 
     @Override
@@ -43,7 +39,7 @@ public class TerminalGroup extends AbstractActor {
         for (int i = 0; i < warehouseIdRange; i++) {
             int warehouse = startWarehouseId + i;
             for (int district = 1; district <= config.getDistrictsPerWarehouse(); district++) {
-                getContext().actorOf(Terminal.props(warehouse, district, db, config, registry), "term-" + warehouse + "-" + district);
+                getContext().actorOf(Terminal.props(warehouse, district, db, config), "term-" + warehouse + "-" + district);
             }
         }
     }

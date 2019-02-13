@@ -50,8 +50,6 @@ public class DeliveryDispatcherTest {
     @Captor
     private ArgumentCaptor<TransactionStatusListener<DeliveryResult>> listenerCaptor;
 
-    private MetricRegistry registry = new MetricRegistry();
-
     @Before
     public void setupAkka() {
         actorSystem = spy(ActorSystem.create());
@@ -71,7 +69,7 @@ public class DeliveryDispatcherTest {
     @Test
     public void testDispatchSendsDeliveryTransaction() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -85,7 +83,7 @@ public class DeliveryDispatcherTest {
     @Test
     public void testActorNotifiedOnTransactionAccepted() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -101,10 +99,10 @@ public class DeliveryDispatcherTest {
         actor.expectMsgClass(TransactionCompleteMessage.class);
     }
 
-    @Test
+    /*@Test
     public void testMetricsGatheredCorrectly() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -138,7 +136,7 @@ public class DeliveryDispatcherTest {
         listener.completeHandler(null);
         assertEquals(1, acceptedTimer.getCount());
         assertEquals(1, completeTimer.getCount());
-    }
+    }*/
 
     @Test
     public void testTimeoutOccursWhenTooSlow() {
@@ -146,7 +144,7 @@ public class DeliveryDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -162,7 +160,7 @@ public class DeliveryDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -184,7 +182,7 @@ public class DeliveryDispatcherTest {
         when(actorSystem.scheduler()).thenReturn(mockScheduler);
 
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);
@@ -203,7 +201,7 @@ public class DeliveryDispatcherTest {
     @Test
     public void testIllegalTransactionResponseExceptionReceivedWhenTransactionRejected() {
         DeliveryDispatcher dispatcher = new DeliveryDispatcher(
-            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config, registry
+            4, actor.ref(), actorSystem, database, new RandomDataGenerator(0), config
         );
 
         when(database.delivery(eq(4), anyInt())).thenReturn(transactionStatus);

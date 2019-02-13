@@ -2,15 +2,15 @@ package net.jackw.olep.application.transaction;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
-import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_result.PaymentResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
 
@@ -26,13 +26,11 @@ public class PaymentDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-
-    private final Timer acceptedTimer;
-    private final Timer completeTimer;
+    private final MetricsManager metricsManager;
 
     public PaymentDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
-        DatabaseConfig config, MetricRegistry registry
+        DatabaseConfig config
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
@@ -40,13 +38,7 @@ public class PaymentDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-
-        acceptedTimer = registry.timer(
-            MetricRegistry.name(PaymentDispatcher.class, "accepted"), new TimerSupplier()
-        );
-        completeTimer = registry.timer(
-            MetricRegistry.name(PaymentDispatcher.class, "complete"), new TimerSupplier()
-        );
+        this.metricsManager = MetricsManager.getInstance();
     }
 
     public void dispatch() {
@@ -86,24 +78,22 @@ public class PaymentDispatcher {
     }
 
     private class ResultHandler extends BaseResultHandler<PaymentResult> {
-        private final Timer.Context acceptedTimerContext;
-        private final Timer.Context completeTimerContext;
+        private final Timer timer;
 
         public ResultHandler() {
             super(actorSystem, actor, TransactionType.PAYMENT);
 
-            acceptedTimerContext = acceptedTimer.time();
-            completeTimerContext = completeTimer.time();
+            timer = metricsManager.startTimer();
         }
 
         @Override
         public void acceptedHandler() {
-            acceptedTimerContext.stop();
+            metricsManager.recordDuration(DurationType.PAYMENT_ACCEPTED, timer);
         }
 
         @Override
         public void completeHandler(PaymentResult result) {
-            completeTimerContext.stop();
+            metricsManager.recordDuration(DurationType.PAYMENT_COMPLETE, timer);
             done(new TransactionCompleteMessage());
         }
     }

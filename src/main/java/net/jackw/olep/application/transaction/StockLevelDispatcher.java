@@ -2,11 +2,12 @@ package net.jackw.olep.application.transaction;
 
 import akka.actor.ActorRef;
 import akka.dispatch.Futures;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
@@ -19,12 +20,11 @@ public class StockLevelDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-
-    private final Timer completeTimer;
+    private final MetricsManager metricsManager;
 
     public StockLevelDispatcher(
         int warehouseId, int districtId, ActorRef actor, ExecutionContext executionContext, Database db, RandomDataGenerator rand,
-        DatabaseConfig config, MetricRegistry registry
+        DatabaseConfig config
     ) {
         this.warehouseId = warehouseId;
         this.districtId = districtId;
@@ -33,10 +33,7 @@ public class StockLevelDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-
-        completeTimer = registry.timer(
-            MetricRegistry.name(StockLevelDispatcher.class, "complete"), new TimerSupplier()
-        );
+        this.metricsManager = MetricsManager.getInstance();
     }
 
     public void dispatch() {
@@ -44,9 +41,9 @@ public class StockLevelDispatcher {
         int threshold = rand.uniform(10, 20);
 
         Future<Integer> result = Futures.future(() -> {
-            Timer.Context completeTimerContext = completeTimer.time();
+            Timer timer = metricsManager.startTimer();
             int res = db.stockLevel(districtId, warehouseId, threshold);
-            completeTimerContext.stop();
+            metricsManager.recordDuration(DurationType.STOCK_LEVEL_COMPLETE, timer);
 
             actor.tell(new TransactionCompleteMessage(), ActorRef.noSender());
 

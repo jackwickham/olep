@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
 public class OrderStatusDispatcherTest {
     private TestProbe actor;
     private ActorSystem actorSystem;
-    private MetricRegistry registry = new MetricRegistry();
     private RandomDataGenerator rand;
     private OnDemandExecutionContext executionContext = new OnDemandExecutionContext();
     private DatabaseConfig config;
@@ -57,7 +56,7 @@ public class OrderStatusDispatcherTest {
     @Test
     public void testDispatcherSendsOrderStatusTransactionById() {
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, config, registry
+            4, actor.ref(), executionContext, database, rand, config
         );
         // Send transaction by ID
         when(rand.choice(60)).thenReturn(false);
@@ -73,7 +72,7 @@ public class OrderStatusDispatcherTest {
     @Test
     public void testDispatcherSendsOrderStatusTransactionByName() {
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, config, registry
+            4, actor.ref(), executionContext, database, rand, config
         );
         // Send transaction by name
         when(rand.choice(60)).thenReturn(true);
@@ -90,7 +89,7 @@ public class OrderStatusDispatcherTest {
     public void testActorNotifiedOnTransactionCompleteById() {
         ActorRef actorRefSpy = spy(actor.ref());
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actorRefSpy, executionContext, database, rand, config, registry
+            4, actorRefSpy, executionContext, database, rand, config
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.orderStatus(anyInt(), anyInt(), eq(4))).thenReturn(null);
@@ -108,7 +107,7 @@ public class OrderStatusDispatcherTest {
     public void testActorNotifiedOnTransactionCompleteByName() {
         ActorRef actorRefSpy = spy(actor.ref());
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actorRefSpy, executionContext, database, rand, config, registry
+            4, actorRefSpy, executionContext, database, rand, config
         );
         when(rand.choice(60)).thenReturn(true);
         when(database.orderStatus(any(String.class), anyInt(), eq(4))).thenReturn(null);
@@ -122,10 +121,10 @@ public class OrderStatusDispatcherTest {
         verify(actorRefSpy).tell(any(TransactionCompleteMessage.class), any());
     }
 
-    @Test
+    /*@Test
     public void testMetricsGatheredCorrectlyWhenById() {
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, config, registry
+            4, actor.ref(), executionContext, database, rand, config
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.orderStatus(anyInt(), anyInt(), eq(4))).then(invocation -> {
@@ -161,7 +160,7 @@ public class OrderStatusDispatcherTest {
     @Test
     public void testMetricsGatheredCorrectlyWhenByName() {
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, config, registry
+            4, actor.ref(), executionContext, database, rand, config
         );
         when(rand.choice(60)).thenReturn(true);
         when(database.orderStatus(any(String.class), anyInt(), eq(4))).then(invocation -> {
@@ -192,5 +191,5 @@ public class OrderStatusDispatcherTest {
             completeTimer.getSnapshot().getValues()[0],
             Matchers.both(Matchers.lessThan(duration)).and(Matchers.greaterThanOrEqualTo(20000000L))
         );
-    }
+    }*/
 }

@@ -2,7 +2,6 @@ package net.jackw.olep.application;
 
 import akka.actor.AbstractActorWithTimers;
 import akka.actor.Props;
-import com.codahale.metrics.MetricRegistry;
 import net.jackw.olep.application.transaction.DeliveryDispatcher;
 import net.jackw.olep.application.transaction.NewOrderDispatcher;
 import net.jackw.olep.application.transaction.OrderStatusDispatcher;
@@ -25,14 +24,14 @@ public class Terminal extends AbstractActorWithTimers {
     private final OrderStatusDispatcher orderStatusDispatcher;
     private final StockLevelDispatcher stockLevelDispatcher;
 
-    public Terminal(int warehouseId, int districtId, Database db, DatabaseConfig config, MetricRegistry registry) {
+    public Terminal(int warehouseId, int districtId, Database db, DatabaseConfig config) {
         rand = new RandomDataGenerator();
 
-        newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config, registry);
-        paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config, registry);
-        deliveryDispatcher = new DeliveryDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config, registry);
-        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().dispatcher(), db, rand, config, registry);
-        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().dispatcher(), db, rand, config, registry);
+        newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
+        paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
+        deliveryDispatcher = new DeliveryDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
+        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().dispatcher(), db, rand, config);
+        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().dispatcher(), db, rand, config);
     }
 
     @Override
@@ -55,8 +54,8 @@ public class Terminal extends AbstractActorWithTimers {
             .build();
     }
 
-    public static Props props(int warehouseId, int districtId, Database db, DatabaseConfig config, MetricRegistry registry) {
-        return Props.create(Terminal.class, () -> new Terminal(warehouseId, districtId, db, config, registry));
+    public static Props props(int warehouseId, int districtId, Database db, DatabaseConfig config) {
+        return Props.create(Terminal.class, () -> new Terminal(warehouseId, districtId, db, config));
     }
 
     @Override
