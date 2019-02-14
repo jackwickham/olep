@@ -35,7 +35,7 @@ public class OrderStatusDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-        this.metricsManager = config.getMetricsManager();
+        this.metricsManager = config.getMetrics();
     }
 
     public void dispatch() {

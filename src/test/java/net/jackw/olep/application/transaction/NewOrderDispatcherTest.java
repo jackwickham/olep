@@ -13,6 +13,9 @@ import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.Metrics;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.junit.After;
 import org.junit.Before;
@@ -26,7 +29,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -97,10 +99,17 @@ public class NewOrderDispatcherTest {
         actor.expectMsgClass(TransactionCompleteMessage.class);
     }
 
-    /*@Test
-    public void testMetricsGatheredCorrectly() {
+    @Test
+    public void testMetricsGatheredCorrectlyWhenSuccessful() {
+        DatabaseConfig mockConfig = spy(config);
+        Metrics mockMetrics = mock(Metrics.class);
+        Timer mockTimer = mock(Timer.class);
+
+        when(mockConfig.getMetrics()).thenReturn(mockMetrics);
+        when(mockMetrics.startTimer()).thenReturn(mockTimer);
+
         NewOrderDispatcher dispatcher = new NewOrderDispatcher(
-            4, actor.ref(), actorSystem, database, rand, config
+            4, actor.ref(), actorSystem, database, rand, mockConfig
         );
         when(rand.choice(1)).thenReturn(false);
         when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
@@ -109,32 +118,57 @@ public class NewOrderDispatcherTest {
         verify(transactionStatus).register(listenerCaptor.capture());
         TransactionStatusListener<NewOrderResult> listener = listenerCaptor.getValue();
 
-        Map<String, Timer> timers = registry.getTimers();
-        Timer acceptedTimer = timers.get(MetricRegistry.name(NewOrderDispatcher.class, "accepted"));
-        Timer completeTimer = timers.get(MetricRegistry.name(NewOrderDispatcher.class, "complete"));
+        // So far, the timer should have been started but no metrics should have been recorded
+        verify(mockMetrics, times(1)).startTimer();
+        verifyNoMoreInteractions(mockMetrics);
 
-        assertNotNull(acceptedTimer);
-        assertNotNull(completeTimer);
-
-        // So far, the timers should have been registered but not used
-        assertEquals(0, acceptedTimer.getCount());
-        assertEquals(0, completeTimer.getCount());
-
-        // After delivery, nothing should have changed
+        // After delivery, no metrics should have been recorded yet
         listener.deliveredHandler();
-        assertEquals(0, acceptedTimer.getCount());
-        assertEquals(0, completeTimer.getCount());
+        verifyNoMoreInteractions(mockMetrics);
 
         // When it is accepted, only the accepted timer should be increased
         listener.acceptedHandler();
-        assertEquals(1, acceptedTimer.getCount());
-        assertEquals(0, completeTimer.getCount());
+        verify(mockMetrics, times(1)).recordDuration(DurationType.NEW_ORDER_ACCEPTED, mockTimer);
+        verifyNoMoreInteractions(mockMetrics);
 
         // Then when it completes, the completed timer should be increased too
         listener.completeHandler(null);
-        assertEquals(1, acceptedTimer.getCount());
-        assertEquals(1, completeTimer.getCount());
-    }*/
+        verify(mockMetrics, times(1)).recordDuration(DurationType.NEW_ORDER_COMPLETE, mockTimer);
+        verifyNoMoreInteractions(mockMetrics);
+    }
+
+    @Test
+    public void testMetricsGatheredCorrectlyWhenRollback() {
+        DatabaseConfig mockConfig = spy(config);
+        Metrics mockMetrics = mock(Metrics.class);
+        Timer mockTimer = mock(Timer.class);
+
+        when(mockConfig.getMetrics()).thenReturn(mockMetrics);
+        when(mockMetrics.startTimer()).thenReturn(mockTimer);
+
+        NewOrderDispatcher dispatcher = new NewOrderDispatcher(
+            4, actor.ref(), actorSystem, database, rand, mockConfig
+        );
+        when(rand.choice(1)).thenReturn(true); // Roll back
+        when(database.newOrder(anyInt(), anyInt(), eq(4), any())).thenReturn(transactionStatus);
+
+        dispatcher.dispatch();
+        verify(transactionStatus).register(listenerCaptor.capture());
+        TransactionStatusListener<NewOrderResult> listener = listenerCaptor.getValue();
+
+        // So far, the timer should have been started but no metrics should have been recorded
+        verify(mockMetrics, times(1)).startTimer();
+        verifyNoMoreInteractions(mockMetrics);
+
+        // After delivery, no metrics should have been recorded yet
+        listener.deliveredHandler();
+        verifyNoMoreInteractions(mockMetrics);
+
+        // When it is accepted, only the accepted timer should be increased
+        listener.rejectedHandler(new Exception());
+        verify(mockMetrics, times(1)).recordDuration(DurationType.NEW_ORDER_REJECTED, mockTimer);
+        verifyNoMoreInteractions(mockMetrics);
+    }
 
     @Test
     public void testTimeoutOccursWhenTooSlow() {

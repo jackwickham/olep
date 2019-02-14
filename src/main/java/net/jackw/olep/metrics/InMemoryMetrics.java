@@ -1,5 +1,7 @@
 package net.jackw.olep.metrics;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.ArrayList;
 
 public class InMemoryMetrics extends Metrics {
@@ -16,10 +18,12 @@ public class InMemoryMetrics extends Metrics {
         eventMetrics.add(new EventMetric(type));
     }
 
+    @VisibleForTesting
     public ArrayList<DurationMetric> getDurationMetrics() {
         return durationMetrics;
     }
 
+    @VisibleForTesting
     public ArrayList<EventMetric> getEventMetrics() {
         return eventMetrics;
     }

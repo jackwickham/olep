@@ -66,7 +66,7 @@ public class DatabaseConfig {
     @JsonProperty
     private String resultsDir = "results";
 
-    private Metrics metricsManager;
+    private Metrics metrics;
 
     /**
      * Get the number of items that the database will hold
@@ -191,8 +191,8 @@ public class DatabaseConfig {
     /**
      * Get the metrics manager instance for this configuration
      */
-    public Metrics getMetricsManager() {
-        return metricsManager;
+    public Metrics getMetrics() {
+        return metrics;
     }
 
     /**
@@ -245,7 +245,7 @@ public class DatabaseConfig {
      * Run after the config has been populated from the file
      */
     private void init(String mainClass) throws IOException {
-        metricsManager = Metrics.create(mainClass, this);
+        metrics = Metrics.create(mainClass, this);
     }
 
     private static String getCallingClass() {

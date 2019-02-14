@@ -13,6 +13,9 @@ import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_result.PaymentResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.Metrics;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.junit.After;
 import org.junit.Before;
@@ -116,10 +119,17 @@ public class PaymentDispatcherTest {
         actor.expectMsgClass(TransactionCompleteMessage.class);
     }
 
-    /*@Test
+    @Test
     public void testMetricsGatheredCorrectly() {
+        DatabaseConfig mockConfig = spy(config);
+        Metrics mockMetrics = mock(Metrics.class);
+        Timer mockTimer = mock(Timer.class);
+
+        when(mockConfig.getMetrics()).thenReturn(mockMetrics);
+        when(mockMetrics.startTimer()).thenReturn(mockTimer);
+
         PaymentDispatcher dispatcher = new PaymentDispatcher(
-            4, actor.ref(), actorSystem, database, rand, config
+            4, actor.ref(), actorSystem, database, rand, mockConfig
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.payment(anyInt(), anyInt(), eq(4), anyInt(), anyInt(), any())).thenReturn(transactionStatus);
@@ -128,32 +138,24 @@ public class PaymentDispatcherTest {
         verify(transactionStatus).register(listenerCaptor.capture());
         TransactionStatusListener<PaymentResult> listener = listenerCaptor.getValue();
 
-        Map<String, Timer> timers = registry.getTimers();
-        Timer acceptedTimer = timers.get(MetricRegistry.name(PaymentDispatcher.class, "accepted"));
-        Timer completeTimer = timers.get(MetricRegistry.name(PaymentDispatcher.class, "complete"));
+        // So far, the timer should have been started but no metrics should have been recorded
+        verify(mockMetrics, times(1)).startTimer();
+        verifyNoMoreInteractions(mockMetrics);
 
-        assertNotNull(acceptedTimer);
-        assertNotNull(completeTimer);
-
-        // So far, the timers should have been registered but not used
-        assertEquals(0, acceptedTimer.getCount());
-        assertEquals(0, completeTimer.getCount());
-
-        // After delivery, nothing should have changed
+        // After delivery, no metrics should have been recorded yet
         listener.deliveredHandler();
-        assertEquals(0, acceptedTimer.getCount());
-        assertEquals(0, completeTimer.getCount());
+        verifyNoMoreInteractions(mockMetrics);
 
         // When it is accepted, only the accepted timer should be increased
         listener.acceptedHandler();
-        assertEquals(1, acceptedTimer.getCount());
-        assertEquals(0, completeTimer.getCount());
+        verify(mockMetrics, times(1)).recordDuration(DurationType.PAYMENT_ACCEPTED, mockTimer);
+        verifyNoMoreInteractions(mockMetrics);
 
         // Then when it completes, the completed timer should be increased too
         listener.completeHandler(null);
-        assertEquals(1, acceptedTimer.getCount());
-        assertEquals(1, completeTimer.getCount());
-    }*/
+        verify(mockMetrics, times(1)).recordDuration(DurationType.PAYMENT_COMPLETE, mockTimer);
+        verifyNoMoreInteractions(mockMetrics);
+    }
 
     @Test
     public void testTimeoutOccursWhenTooSlow() {

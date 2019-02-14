@@ -7,8 +7,10 @@ import net.jackw.olep.application.OnDemandExecutionContext;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.Metrics;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
-import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,7 +20,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -82,38 +83,35 @@ public class StockLevelDispatcherTest {
         verify(actorRefSpy).tell(any(TransactionCompleteMessage.class), any());
     }
 
-    /*@Test
+    @Test
     public void testMetricsGatheredCorrectly() {
+        DatabaseConfig mockConfig = spy(config);
+        Metrics mockMetrics = mock(Metrics.class);
+        Timer mockTimer = mock(Timer.class);
+
+        when(mockConfig.getMetrics()).thenReturn(mockMetrics);
+        when(mockMetrics.startTimer()).thenReturn(mockTimer);
+
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actor.ref(), executionContext, database, rand, config
+            4, 8, actor.ref(), executionContext, database, rand, mockConfig
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).then(invocation -> {
-            Thread.sleep(20);
+            // The timer should have started but not finished
+            verify(mockMetrics, times(1)).startTimer();
+            verifyNoMoreInteractions(mockMetrics);
             return 5;
         });
 
         dispatcher.dispatch();
 
-        Map<String, Timer> timers = registry.getTimers();
-        Timer completeTimer = timers.get(MetricRegistry.name(StockLevelDispatcher.class, "complete"));
-
-        assertNotNull(completeTimer);
-
-        // The transaction should be incomplete, so the timer should not have been triggered
-        assertEquals(0, completeTimer.getCount());
+        // The timer shouldn't have started yet, because it's run in a separate thread
+        verifyNoMoreInteractions(mockMetrics);
 
         // Run the task
-        long startTime = System.nanoTime();
         executionContext.run();
-        long duration = System.nanoTime() - startTime;
 
-        // Once the transaction runs successfully, the timer should have been run
-        assertEquals(1, completeTimer.getCount());
-        // and the duration should be less than the whole set of tasks took to run, but greater than the 20ms that we
-        // pretended the transaction took
-        assertThat(
-            completeTimer.getSnapshot().getValues()[0],
-            Matchers.both(Matchers.lessThan(duration)).and(Matchers.greaterThanOrEqualTo(20000000L))
-        );
-    }*/
+        // Once the transaction runs successfully, the timer should be complete
+        verify(mockMetrics, times(1)).recordDuration(DurationType.STOCK_LEVEL_COMPLETE, mockTimer);
+        verifyNoMoreInteractions(mockMetrics);
+    }
 }
