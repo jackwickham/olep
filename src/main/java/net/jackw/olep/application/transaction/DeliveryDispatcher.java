@@ -2,7 +2,6 @@ package net.jackw.olep.application.transaction;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import com.codahale.metrics.MetricRegistry;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionType;
 import net.jackw.olep.common.Database;
@@ -10,7 +9,7 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.metrics.DurationType;
-import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Metrics;
 import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 
@@ -24,7 +23,7 @@ public class DeliveryDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-    private final MetricsManager metricsManager;
+    private final Metrics metricsManager;
 
     public DeliveryDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
@@ -36,7 +35,7 @@ public class DeliveryDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-        this.metricsManager = MetricsManager.getInstance();
+        this.metricsManager = config.getMetricsManager();
     }
 
     public void dispatch() {

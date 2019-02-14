@@ -7,3 +7,4 @@ predictableData: true
 verifierInstances: 1
 workerInstances: 1
 applicationInstances: 1
+resultsDir: ~

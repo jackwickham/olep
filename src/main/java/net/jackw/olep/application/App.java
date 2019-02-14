@@ -2,15 +2,12 @@ package net.jackw.olep.application;
 
 import akka.actor.ActorSystem;
 import net.jackw.olep.common.DatabaseConfig;
-import net.jackw.olep.metrics.MetricsManager;
 
 import java.io.IOException;
 
 public class App {
     public static void main(String[] args) throws IOException {
         DatabaseConfig config = DatabaseConfig.create(args);
-
-        MetricsManager.initialise("App", config);
 
         ActorSystem system = ActorSystem.create("olep");
 

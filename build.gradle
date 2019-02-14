@@ -55,9 +55,6 @@ dependencies {
     // Akka for the application
     compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.19'
     testCompile group: 'com.typesafe.akka', name: 'akka-testkit_2.12', version: '2.5.19'
-    // Metrics for performing the benchmarks
-    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.0.5'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: '4.0.5'
     // Chronicle map for storing data that may exceed the available memory
     compile group: 'net.openhft', name: 'chronicle-map', version: '3.17.0'
 

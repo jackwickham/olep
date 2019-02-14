@@ -7,7 +7,7 @@ import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.OrderStatusResult;
 import net.jackw.olep.metrics.DurationType;
-import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Metrics;
 import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.CommonFieldGenerators;
 import net.jackw.olep.utils.RandomDataGenerator;
@@ -23,7 +23,7 @@ public class OrderStatusDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-    private final MetricsManager metricsManager;
+    private final Metrics metricsManager;
 
     public OrderStatusDispatcher(
         int warehouseId, ActorRef actor, ExecutionContext executionContext, Database db, RandomDataGenerator rand,
@@ -35,7 +35,7 @@ public class OrderStatusDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-        this.metricsManager = MetricsManager.getInstance();
+        this.metricsManager = config.getMetricsManager();
     }
 
     public void dispatch() {

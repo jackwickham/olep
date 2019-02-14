@@ -3,8 +3,6 @@ package net.jackw.olep.application.transaction;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.testkit.TestProbe;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import net.jackw.olep.application.OnDemandExecutionContext;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.common.Database;

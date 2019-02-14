@@ -4,8 +4,6 @@ import akka.actor.ActorSystem;
 import akka.actor.Cancellable;
 import akka.actor.Scheduler;
 import akka.testkit.TestProbe;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionTimeoutMessage;

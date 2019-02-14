@@ -3,6 +3,7 @@ package net.jackw.olep.common;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import net.jackw.olep.metrics.Metrics;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -64,6 +65,8 @@ public class DatabaseConfig {
 
     @JsonProperty
     private String resultsDir = "results";
+
+    private Metrics metricsManager;
 
     /**
      * Get the number of items that the database will hold
@@ -186,6 +189,13 @@ public class DatabaseConfig {
     }
 
     /**
+     * Get the metrics manager instance for this configuration
+     */
+    public Metrics getMetricsManager() {
+        return metricsManager;
+    }
+
+    /**
      * Load the database config from the correct configuration file
      *
      * A config file can be provided as the first command line argument. If it is omitted, the config file is loaded
@@ -214,7 +224,9 @@ public class DatabaseConfig {
                 }
             }
 
-            return new ObjectMapper(new YAMLFactory()).readValue(configFile, DatabaseConfig.class);
+            DatabaseConfig config = new ObjectMapper(new YAMLFactory()).readValue(configFile, DatabaseConfig.class);
+            config.init(getCallingClass());
+            return config;
         } finally {
             if (configFile != null) {
                 configFile.close();
@@ -227,5 +239,24 @@ public class DatabaseConfig {
      */
     public static DatabaseConfig create(String[] cmdArgs) throws IOException {
         return create(Arrays.asList(cmdArgs));
+    }
+
+    /**
+     * Run after the config has been populated from the file
+     */
+    private void init(String mainClass) throws IOException {
+        metricsManager = Metrics.create(mainClass, this);
+    }
+
+    private static String getCallingClass() {
+        StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+        // Start at 3 to exclude .getStackTrace(), .getCallingClass() and the local caller
+        for (int i = 3; i < trace.length; i++) {
+            String className = trace[i].getClassName();
+            if (!className.equals(DatabaseConfig.class.getName())) {
+                return className.substring(className.lastIndexOf('.'));
+            }
+        }
+        throw new RuntimeException("Failed to find calling method name");
     }
 }

@@ -12,7 +12,7 @@ import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.metrics.DurationType;
-import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Metrics;
 import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 
@@ -26,7 +26,7 @@ public class NewOrderDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-    private final MetricsManager metricsManager;
+    private final Metrics metricsManager;
 
     public NewOrderDispatcher(
         int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
@@ -38,7 +38,7 @@ public class NewOrderDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-        this.metricsManager = MetricsManager.getInstance();
+        this.metricsManager = config.getMetricsManager();
     }
 
     public void dispatch() {

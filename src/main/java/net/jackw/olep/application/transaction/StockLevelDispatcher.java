@@ -6,7 +6,7 @@ import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.metrics.DurationType;
-import net.jackw.olep.metrics.MetricsManager;
+import net.jackw.olep.metrics.Metrics;
 import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 import scala.concurrent.ExecutionContext;
@@ -20,7 +20,7 @@ public class StockLevelDispatcher {
     private final Database db;
     private final RandomDataGenerator rand;
     private final DatabaseConfig config;
-    private final MetricsManager metricsManager;
+    private final Metrics metricsManager;
 
     public StockLevelDispatcher(
         int warehouseId, int districtId, ActorRef actor, ExecutionContext executionContext, Database db, RandomDataGenerator rand,
@@ -33,7 +33,7 @@ public class StockLevelDispatcher {
         this.db = db;
         this.rand = rand;
         this.config = config;
-        this.metricsManager = MetricsManager.getInstance();
+        this.metricsManager = config.getMetricsManager();
     }
 
     public void dispatch() {
