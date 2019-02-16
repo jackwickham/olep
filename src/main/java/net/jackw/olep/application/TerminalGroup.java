@@ -39,7 +39,12 @@ public class TerminalGroup extends AbstractActor {
         for (int i = 0; i < warehouseIdRange; i++) {
             int warehouse = startWarehouseId + i;
             for (int district = 1; district <= config.getDistrictsPerWarehouse(); district++) {
-                getContext().actorOf(Terminal.props(warehouse, district, db, config), "term-" + warehouse + "-" + district);
+                for (int term = 0; term < config.getTerminalsPerDistrict(); term++) {
+                    getContext().actorOf(
+                        Terminal.props(warehouse, district, db, config),
+                        "term-" + warehouse + "-" + district + "-" + term
+                    );
+                }
             }
         }
     }

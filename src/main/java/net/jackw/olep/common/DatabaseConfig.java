@@ -49,6 +49,12 @@ public class DatabaseConfig {
     private int viewThreads = 1;
 
     @JsonProperty
+    private int terminalsPerDistrict = 1;
+
+    @JsonProperty
+    private int warehousesPerDatabaseConnection = 200;
+
+    @JsonProperty
     private String storeBackingDir = "/tmp/olep/";
 
     @JsonProperty
@@ -144,6 +150,20 @@ public class DatabaseConfig {
      */
     public int getViewThreads() {
         return viewThreads;
+    }
+
+    /**
+     * Get the number of terminals that should be created by the application per district
+     */
+    public int getTerminalsPerDistrict() {
+        return terminalsPerDistrict;
+    }
+
+    /**
+     * Get the number of warehouses that should be multiplexed on a single database connection in the app
+     */
+    public int getWarehousesPerDatabaseConnection() {
+        return warehousesPerDatabaseConnection;
     }
 
     /**
