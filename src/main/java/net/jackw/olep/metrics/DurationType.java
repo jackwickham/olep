@@ -1,6 +1,7 @@
 package net.jackw.olep.metrics;
 
 public enum DurationType {
+    // Overall transaction timers
     DELIVERY_ACCEPTED,
     DELIVERY_COMPLETE,
     NEW_ORDER_ACCEPTED,
@@ -9,5 +10,18 @@ public enum DurationType {
     ORDER_STATUS_COMPLETE,
     PAYMENT_ACCEPTED,
     PAYMENT_COMPLETE,
-    STOCK_LEVEL_COMPLETE
+    STOCK_LEVEL_COMPLETE,
+
+    // Timers for transactions in different stages of the pipeline
+    VERIFIER_DELIVERY,
+    VERIFIER_NEW_ORDER,
+    VERIFIER_PAYMENT,
+    WORKER_DELIVERY,
+    WORKER_NEW_ORDER_LOCAL,
+    WORKER_NEW_ORDER_REMOTE,
+    WORKER_PAYMENT,
+    VIEW_DELIVERY,
+    VIEW_NEW_ORDER,
+    VIEW_PAYMENT,
+    VIEW_NEW_ORDER_REMOTE_STOCK
 }

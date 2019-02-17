@@ -13,6 +13,7 @@ import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
+import net.jackw.olep.metrics.InMemoryMetrics;
 import org.apache.kafka.streams.processor.MockProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
@@ -38,7 +39,7 @@ public class DeliveryProcessorTest {
 
     @Before
     public void setUp() {
-        processor = new DeliveryProcessor();
+        processor = new DeliveryProcessor(new InMemoryMetrics());
         context = new MockProcessorContext();
         newOrdersStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.NEW_ORDER_STORE),

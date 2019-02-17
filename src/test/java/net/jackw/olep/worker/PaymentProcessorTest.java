@@ -18,6 +18,7 @@ import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
+import net.jackw.olep.metrics.InMemoryMetrics;
 import org.apache.kafka.streams.processor.MockProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
@@ -57,7 +58,7 @@ public class PaymentProcessorTest {
 
     @Before
     public void setUp() throws InterruptedException {
-        processor = new PaymentProcessor(warehouseImmutableStore, districtImmutableStore, customerImmutableStore);
+        processor = new PaymentProcessor(warehouseImmutableStore, districtImmutableStore, customerImmutableStore, new InMemoryMetrics());
         context = new MockProcessorContext();
         customerMutableStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),

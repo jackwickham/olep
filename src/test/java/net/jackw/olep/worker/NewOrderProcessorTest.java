@@ -23,6 +23,7 @@ import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
+import net.jackw.olep.metrics.InMemoryMetrics;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.processor.MockProcessorContext;
@@ -74,7 +75,7 @@ public class NewOrderProcessorTest {
     @Before
     public void setUp() throws InterruptedException {
         processor = new NewOrderProcessor(
-            itemStore, warehouseImmutableStore, districtImmutableStore, customerImmutableStore, stockImmutableStore
+            itemStore, warehouseImmutableStore, districtImmutableStore, customerImmutableStore, stockImmutableStore, new InMemoryMetrics()
         );
         context = new MockProcessorContext();
 

@@ -16,6 +16,9 @@ import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.PaymentResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.Metrics;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -32,16 +35,20 @@ public class PaymentProcessor extends BaseTransactionProcessor<PaymentRequest> {
     private final SharedKeyValueStore<WarehouseSpecificKey, DistrictShared> districtImmutableStore;
     private final SharedCustomerStore customerImmutableStore;
 
+    private final Metrics metrics;
+
     private final RandomDataGenerator rand = new RandomDataGenerator();
 
     public PaymentProcessor(
         SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore,
         SharedKeyValueStore<WarehouseSpecificKey, DistrictShared> districtImmutableStore,
-        SharedCustomerStore customerImmutableStore
+        SharedCustomerStore customerImmutableStore,
+        Metrics metrics
     ) {
         this.warehouseImmutableStore = warehouseImmutableStore;
         this.districtImmutableStore = districtImmutableStore;
         this.customerImmutableStore = customerImmutableStore;
+        this.metrics = metrics;
     }
 
     @Override
@@ -57,6 +64,7 @@ public class PaymentProcessor extends BaseTransactionProcessor<PaymentRequest> {
 
     @Override
     public void process(TransactionWarehouseKey key, PaymentRequest value) {
+        Timer timer = metrics.startTimer();
         try {
             log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing payment transaction with id {}", key);
             final PaymentResult.PartialResult results = new PaymentResult.PartialResult();
@@ -129,6 +137,7 @@ public class PaymentProcessor extends BaseTransactionProcessor<PaymentRequest> {
         } catch (InterruptedException e) {
             throw new InterruptException(e);
         }
+        metrics.recordDuration(DurationType.WORKER_PAYMENT, timer);
     }
 
     private static Logger log = LogManager.getLogger();

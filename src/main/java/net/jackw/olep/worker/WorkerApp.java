@@ -129,12 +129,12 @@ public class WorkerApp extends StreamsApp {
             // Each transaction type is routed to a different processor
             .addProcessor("new-order-processor", () -> new NewOrderProcessor(
                 itemConsumer.getStore(), warehouseConsumer.getStore(), districtConsumer.getStore(),
-                customerConsumer.getStore(), stockConsumer.getStore()
+                customerConsumer.getStore(), stockConsumer.getStore(), config.getMetrics()
             ), "router")
             .addProcessor("payment-processor", () -> new PaymentProcessor(
-                warehouseConsumer.getStore(), districtConsumer.getStore(), customerConsumer.getStore()
+                warehouseConsumer.getStore(), districtConsumer.getStore(), customerConsumer.getStore(), config.getMetrics()
             ), "router")
-            .addProcessor("delivery-processor", () -> new DeliveryProcessor(), "router")
+            .addProcessor("delivery-processor", () -> new DeliveryProcessor(config.getMetrics()), "router")
             // State stores for worker-local state
             .addStateStore(nextOrderIdStoreBuilder, "new-order-processor")
             .addStateStore(stockQuantityStoreBuilder, "new-order-processor")

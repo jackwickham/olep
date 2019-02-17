@@ -12,6 +12,7 @@ import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.ApprovalMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
+import net.jackw.olep.metrics.InMemoryMetrics;
 import org.apache.kafka.streams.processor.MockProcessorContext;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -38,7 +39,7 @@ public class TransactionVerificationProcessorTest {
 
     @Before
     public void setUp() {
-        processor = new TransactionVerificationProcessor(itemStore);
+        processor = new TransactionVerificationProcessor(itemStore, new InMemoryMetrics());
         context = new MockProcessorContext();
         processor.init(context);
     }

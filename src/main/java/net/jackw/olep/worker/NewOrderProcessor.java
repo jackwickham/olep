@@ -16,6 +16,9 @@ import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.Metrics;
+import net.jackw.olep.metrics.Timer;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -39,6 +42,8 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
     private final SharedKeyValueStore<DistrictSpecificKey, CustomerShared> customerImmutableStore;
     private final SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore;
 
+    private final Metrics metrics;
+
     private final RandomDataGenerator rand = new RandomDataGenerator();
 
     public NewOrderProcessor(
@@ -46,13 +51,15 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
         SharedKeyValueStore<Integer, WarehouseShared> warehouseImmutableStore,
         SharedKeyValueStore<WarehouseSpecificKey, DistrictShared> districtImmutableStore,
         SharedKeyValueStore<DistrictSpecificKey, CustomerShared> customerImmutableStore,
-        SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore
+        SharedKeyValueStore<WarehouseSpecificKey, StockShared> stockImmutableStore,
+        Metrics metrics
     ) {
         this.itemStore = itemStore;
         this.warehouseImmutableStore = warehouseImmutableStore;
         this.districtImmutableStore = districtImmutableStore;
         this.customerImmutableStore = customerImmutableStore;
         this.stockImmutableStore = stockImmutableStore;
+        this.metrics = metrics;
     }
 
     @Override
@@ -73,9 +80,10 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
 
     @Override
     public void process(TransactionWarehouseKey key, NewOrderRequest value) {
+        Timer timer = metrics.startTimer();
         log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing new-order transaction {}", key);
+        boolean local = false;
         try {
-            boolean local = false;
             final NewOrderResult.PartialResult results = new NewOrderResult.PartialResult();
             WarehouseSpecificKey districtKey = new WarehouseSpecificKey(value.districtId, value.warehouseId);
 
@@ -175,6 +183,12 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
             // Uncheck it so we can throw it into Kafka
             // This exception could be thrown in practice
             throw new InterruptException(e);
+        }
+
+        if (local) {
+            metrics.recordDuration(DurationType.WORKER_NEW_ORDER_LOCAL, timer);
+        } else {
+            metrics.recordDuration(DurationType.WORKER_NEW_ORDER_REMOTE, timer);
         }
     }
 

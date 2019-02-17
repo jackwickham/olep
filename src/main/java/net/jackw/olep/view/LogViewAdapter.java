@@ -11,6 +11,9 @@ import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.modification.RemoteStockModification;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.Metrics;
+import net.jackw.olep.metrics.Timer;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -36,12 +39,14 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
     private final InMemoryRMIWrapper viewWrapper;
     private final ViewWriteAdapter viewAdapter;
     private final Consumer<Long, ModificationMessage> logConsumer;
+    private final Metrics metrics;
     private final Set<Long> recentTransactions;
 
-    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, InMemoryRMIWrapper viewWrapper) {
+    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, InMemoryRMIWrapper viewWrapper, Metrics metrics) {
         this.viewWrapper = viewWrapper;
         this.viewAdapter = viewWrapper.getAdapter();
         this.logConsumer = logConsumer;
+        this.metrics = metrics;
         this.recentTransactions = new LockingLRUSet<>(100);
 
         // Add a shutdown listener to gracefully handle Ctrl+C
@@ -81,15 +86,20 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
             log.info("Received duplicate transaction {}", key);
             return;
         }
+        Timer timer = metrics.startTimer();
         log.debug("Processing {} for transaction {}", message.getClass(), key);
         if (message instanceof NewOrderModification) {
             viewAdapter.newOrder((NewOrderModification) message);
+            metrics.recordDuration(DurationType.VIEW_NEW_ORDER, timer);
         } else if (message instanceof DeliveryModification) {
             viewAdapter.delivery((DeliveryModification) message);
+            metrics.recordDuration(DurationType.VIEW_DELIVERY, timer);
         } else if (message instanceof PaymentModification) {
             viewAdapter.payment((PaymentModification) message);
+            metrics.recordDuration(DurationType.VIEW_PAYMENT, timer);
         } else if (message instanceof RemoteStockModification) {
             viewAdapter.remoteStock((RemoteStockModification) message);
+            metrics.recordDuration(DurationType.VIEW_NEW_ORDER_REMOTE_STOCK, timer);
         } else {
             throw new IllegalArgumentException("Unrecognised message type " + message.getClass().getName());
         }
@@ -122,7 +132,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
 
             viewWrapper = new InMemoryRMIWrapper(registryServer, customerStoreConsumer.getStore());
 
-            return new LogViewAdapter(consumer, viewWrapper);
+            return new LogViewAdapter(consumer, viewWrapper, config.getMetrics());
         } catch (Exception e) {
             try (
                 Consumer c = consumer;

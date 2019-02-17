@@ -10,6 +10,9 @@ import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
+import net.jackw.olep.metrics.DurationType;
+import net.jackw.olep.metrics.Metrics;
+import net.jackw.olep.metrics.Timer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +24,13 @@ public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest>
     private NewOrdersStore newOrdersStore;
     private KeyValueStore<DistrictSpecificKey, CustomerMutable> customerMutableStore;
 
+    private Metrics metrics;
+
+    public DeliveryProcessor(Metrics metrics) {
+        this.metrics = metrics;
+    }
+
+
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
@@ -31,6 +41,7 @@ public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest>
 
     @Override
     public void process(TransactionWarehouseKey key, DeliveryRequest value) {
+        Timer timer = metrics.startTimer();
         log.debug(LogConfig.TRANSACTION_ID_MARKER, "Processing delivery transaction {}", key);
         final DeliveryResult.PartialResult results = new DeliveryResult.PartialResult();
 
@@ -54,6 +65,7 @@ public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest>
         }
 
         sendResults(key, results);
+        metrics.recordDuration(DurationType.WORKER_DELIVERY, timer);
     }
 
     private static Logger log = LogManager.getLogger();

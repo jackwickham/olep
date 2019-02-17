@@ -56,7 +56,11 @@ public class VerifierApp extends StreamsApp {
                 KafkaConfig.TRANSACTION_REQUEST_TOPIC
             )
             // Process takes candidate transactions, and decides whether they are acceptable
-            .addProcessor("process", () -> new TransactionVerificationProcessor(itemConsumer.getStore()), KafkaConfig.TRANSACTION_REQUEST_TOPIC)
+            .addProcessor(
+                "process",
+                () -> new TransactionVerificationProcessor(itemConsumer.getStore(), config.getMetrics()),
+                KafkaConfig.TRANSACTION_REQUEST_TOPIC
+            )
             .addSink(
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
                 KafkaConfig.ACCEPTED_TRANSACTION_TOPIC,
