@@ -9,6 +9,7 @@ import net.jackw.olep.application.transaction.PaymentDispatcher;
 import net.jackw.olep.application.transaction.StockLevelDispatcher;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
+import net.jackw.olep.metrics.EventType;
 import net.jackw.olep.utils.RandomDataGenerator;
 
 import java.time.Duration;
@@ -17,6 +18,7 @@ public class Terminal extends AbstractActorWithTimers {
     private static final Object NEXT_TRANSACTION_TIMER_KEY = "NextTransactionTimer";
 
     private final RandomDataGenerator rand;
+    private final DatabaseConfig config;
 
     private final NewOrderDispatcher newOrderDispatcher;
     private final PaymentDispatcher paymentDispatcher;
@@ -26,6 +28,7 @@ public class Terminal extends AbstractActorWithTimers {
 
     public Terminal(int warehouseId, int districtId, Database db, DatabaseConfig config) {
         rand = new RandomDataGenerator();
+        this.config = config;
 
         newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
         paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
@@ -46,6 +49,7 @@ public class Terminal extends AbstractActorWithTimers {
             .matchEquals(TransactionType.DELIVERY, _msg -> deliveryDispatcher.dispatch())
             .matchEquals(TransactionType.STOCK_LEVEL, _msg -> stockLevelDispatcher.dispatch())
             .match(TransactionTimeoutMessage.class, msg -> {
+                config.getMetrics().recordEvent(EventType.TRANSACTION_TIMEOUT);
                 throw new RuntimeException("Violation: failed to receive response to " + msg + " in time");
             })
             .match(IllegalTransactionResponseException.class, e -> {

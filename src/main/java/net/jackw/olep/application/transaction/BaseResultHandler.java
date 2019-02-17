@@ -33,12 +33,12 @@ public abstract class BaseResultHandler<T extends TransactionResultMessage> impl
      * @param status The transaction to attach to
      */
     public void attach(TransactionStatus<T> status) {
-        // Add a timeout, if we don't receive a message in time
+        // Add a timeout to raise a violation event if the event is not received within 90 seconds
         TransactionTimeoutMessage timeoutMessage = new TransactionTimeoutMessage(
             status.getTransactionId(), transactionType
         );
         scheduledTimeoutMessage = actorSystem.scheduler().scheduleOnce(
-            Duration.ofSeconds(8), actor, timeoutMessage, executionContext, ActorRef.noSender()
+            Duration.ofSeconds(90), actor, timeoutMessage, executionContext, ActorRef.noSender()
         );
         status.register(this);
     }

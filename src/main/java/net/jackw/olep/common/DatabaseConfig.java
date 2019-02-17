@@ -274,7 +274,7 @@ public class DatabaseConfig {
         for (int i = 3; i < trace.length; i++) {
             String className = trace[i].getClassName();
             if (!className.equals(DatabaseConfig.class.getName())) {
-                return className.substring(className.lastIndexOf('.'));
+                return className.substring(className.lastIndexOf('.') + 1);
             }
         }
         throw new RuntimeException("Failed to find calling method name");
