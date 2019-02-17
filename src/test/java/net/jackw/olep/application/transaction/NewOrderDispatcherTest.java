@@ -183,7 +183,7 @@ public class NewOrderDispatcherTest {
 
         dispatcher.dispatch();
 
-        verify(mockScheduler).scheduleOnce(eq(Duration.ofSeconds(8)), eq(actor.ref()), any(TransactionTimeoutMessage.class), any(), any());
+        verify(mockScheduler).scheduleOnce(eq(Duration.ofSeconds(90)), eq(actor.ref()), any(TransactionTimeoutMessage.class), any(), any());
     }
 
     @Test
