@@ -13,10 +13,13 @@ import net.jackw.olep.common.WarehousePartitioner;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 
 import java.io.IOException;
+import java.util.Properties;
 
 public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -84,6 +87,15 @@ public class VerifierApp extends StreamsApp {
     @Override
     protected int getThreadCount() {
         return config.getVerifierThreads();
+    }
+
+    @Override
+    protected Properties getStreamProperties() {
+        Properties props = super.getStreamProperties();
+        // Buffer verification results for up to 2ms and 64KiB
+        props.put(StreamsConfig.producerPrefix(ProducerConfig.LINGER_MS_CONFIG), 2);
+        props.put(StreamsConfig.producerPrefix(ProducerConfig.BATCH_SIZE_CONFIG), 65536);
+        return props;
     }
 
     public static void main(String[] args) throws IOException {

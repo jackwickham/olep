@@ -69,7 +69,7 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
             if (message instanceof PaymentRequest) {
                 metrics.recordDuration(DurationType.VERIFIER_PAYMENT, timer);
             } else {
-                metrics.recordDuration(DurationType.VERIFIER_PAYMENT, timer);
+                metrics.recordDuration(DurationType.VERIFIER_DELIVERY, timer);
             }
         } else {
             // ??? Don't recognise this transaction, so reject it

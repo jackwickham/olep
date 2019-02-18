@@ -37,12 +37,7 @@ public abstract class StreamsApp implements AutoCloseable {
 
     public KafkaStreams getStreams() {
         // Set up the properties of this application
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, getApplicationID());
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
-        props.put(StreamsConfig.STATE_DIR_CONFIG, config.getStreamsStateDir());
-        props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, getThreadCount());
+        Properties props = getStreamProperties();
 
         Topology topology = getTopology();
         log.debug(topology.describe());
@@ -71,6 +66,19 @@ public abstract class StreamsApp implements AutoCloseable {
      * Get the number of threads that should be created for this application
      */
     protected abstract int getThreadCount();
+
+    /**
+     * Get the properties that should be set on the Kafka Streams app
+     */
+    protected Properties getStreamProperties() {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, getApplicationID());
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
+        props.put(StreamsConfig.STATE_DIR_CONFIG, config.getStreamsStateDir());
+        props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, getThreadCount());
+        return props;
+    }
 
     /**
      * Cache for the generated node ID
