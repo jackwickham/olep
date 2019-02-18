@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -72,6 +73,7 @@ public class DatabaseConfig {
     @JsonProperty
     private String resultsDir = "results";
 
+    private String mainClass;
     private Metrics metrics;
 
     /**
@@ -212,6 +214,14 @@ public class DatabaseConfig {
      * Get the metrics manager instance for this configuration
      */
     public Metrics getMetrics() {
+        // Lazily create metrics
+        if (metrics == null) {
+            try {
+                metrics = Metrics.create(mainClass, this);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
         return metrics;
     }
 
@@ -245,7 +255,7 @@ public class DatabaseConfig {
             }
 
             DatabaseConfig config = new ObjectMapper(new YAMLFactory()).readValue(configFile, DatabaseConfig.class);
-            config.init(getCallingClass());
+            config.mainClass = getCallingClass();
             return config;
         } finally {
             if (configFile != null) {
@@ -259,13 +269,6 @@ public class DatabaseConfig {
      */
     public static DatabaseConfig create(String[] cmdArgs) throws IOException {
         return create(Arrays.asList(cmdArgs));
-    }
-
-    /**
-     * Run after the config has been populated from the file
-     */
-    private void init(String mainClass) throws IOException {
-        metrics = Metrics.create(mainClass, this);
     }
 
     private static String getCallingClass() {

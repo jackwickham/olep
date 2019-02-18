@@ -2,6 +2,7 @@ package net.jackw.olep.metrics;
 
 import net.jackw.olep.common.DatabaseConfig;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 
 /**
@@ -28,7 +29,17 @@ public abstract class Metrics {
      *
      * @param type The type of event that is being recorded
      */
-    public abstract void recordEvent(EventType type);
+    public void recordEvent(EventType type) {
+        recordEvent(type, "");
+    }
+
+    /**
+     * Record an instantaneous event
+     *
+     * @param type The type of event that is being recorded
+     * @param data Additional data about the event
+     */
+    public abstract void recordEvent(EventType type, @Nonnull String data);
 
     /**
      * Create a new metrics logger

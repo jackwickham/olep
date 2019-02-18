@@ -49,7 +49,7 @@ public class Terminal extends AbstractActorWithTimers {
             .matchEquals(TransactionType.DELIVERY, _msg -> deliveryDispatcher.dispatch())
             .matchEquals(TransactionType.STOCK_LEVEL, _msg -> stockLevelDispatcher.dispatch())
             .match(TransactionTimeoutMessage.class, msg -> {
-                config.getMetrics().recordEvent(EventType.TRANSACTION_TIMEOUT);
+                config.getMetrics().recordEvent(EventType.TRANSACTION_TIMEOUT, msg.toString());
                 throw new RuntimeException("Violation: failed to receive response to " + msg + " in time");
             })
             .match(IllegalTransactionResponseException.class, e -> {

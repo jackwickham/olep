@@ -3,6 +3,7 @@ package net.jackw.olep.metrics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.jackw.olep.common.DatabaseConfig;
 
+import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -42,7 +43,7 @@ public class DiskMetrics extends Metrics {
         eventWriter = new BufferedWriter(new OutputStreamWriter(
             new FileOutputStream(new File(resultsDir, "events.csv")), StandardCharsets.UTF_8
         ), WRITE_BUFFER_SIZE);
-        eventWriter.write("t,event\n");
+        eventWriter.write("t,event,data\n");
 
         // Also copy the config file to the results dir, to allow easy checking that it is the correct benchmark
         new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(new File(resultsDir, "config.json"), config);
@@ -79,10 +80,11 @@ public class DiskMetrics extends Metrics {
      * Record an instantaneous event
      *
      * @param type The type of event that is being recorded
+     * @param data Additional data about the event
      */
     @Override
-    public void recordEvent(EventType type) {
-        String line = System.currentTimeMillis() + "," + type.toString() + "\n";
+    public void recordEvent(EventType type, @Nonnull String data) {
+        String line = System.currentTimeMillis() + "," + type.toString() + "," + data + "\n";
         try {
             eventWriter.write(line);
         } catch (IOException e) {

@@ -14,8 +14,8 @@ public class InMemoryMetrics extends Metrics {
     }
 
     @Override
-    public synchronized void recordEvent(EventType type) {
-        eventMetrics.add(new EventMetric(type));
+    public synchronized void recordEvent(EventType type, String data) {
+        eventMetrics.add(new EventMetric(type, data));
     }
 
     @VisibleForTesting
@@ -40,9 +40,11 @@ public class InMemoryMetrics extends Metrics {
 
     public static class EventMetric {
         public final EventType type;
+        public final String data;
 
-        public EventMetric(EventType type) {
+        public EventMetric(EventType type, String data) {
             this.type = type;
+            this.data = data;
         }
     }
 }
