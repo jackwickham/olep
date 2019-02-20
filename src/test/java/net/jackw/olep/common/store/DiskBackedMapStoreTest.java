@@ -8,7 +8,9 @@ import java.util.List;
 
 public class DiskBackedMapStoreTest extends BaseMapStoreTest {
     public DiskBackedMapStoreTest() throws IOException {
-        super(DiskBackedMapStore.createIntegerKeyed(2, Val.class, "TestStore", new Val(0), DatabaseConfig.create()));
+        super(DiskBackedMapStore.createIntegerKeyed(
+            2, Val.class, "TestStore", new Val(0), DatabaseConfig.create("DiskBackedMapStoreTest")
+        ));
     }
 
     @After

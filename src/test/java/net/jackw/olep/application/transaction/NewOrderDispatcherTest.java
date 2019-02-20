@@ -58,7 +58,7 @@ public class NewOrderDispatcherTest {
 
     @Before
     public void loadConfigFile() throws IOException {
-        config = DatabaseConfig.create();
+        config = DatabaseConfig.create("NewOrderDispatcherTest");
     }
 
     @After

@@ -44,7 +44,7 @@ public class OrderStatusDispatcherTest {
 
     @Before
     public void loadConfigFile() throws IOException {
-        config = DatabaseConfig.create();
+        config = DatabaseConfig.create("OrderStatusDispatcherTest");
     }
 
     @After

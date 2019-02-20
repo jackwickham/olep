@@ -44,7 +44,7 @@ public class StockLevelDispatcherTest {
 
     @Before
     public void loadConfigFile() throws IOException {
-        config = DatabaseConfig.create();
+        config = DatabaseConfig.create("StockLevelDispatcherTest");
     }
 
     @After

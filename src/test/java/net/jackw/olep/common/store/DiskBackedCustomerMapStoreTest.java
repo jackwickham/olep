@@ -8,7 +8,7 @@ import java.util.List;
 
 public class DiskBackedCustomerMapStoreTest extends BaseCustomerStoreTest {
     public DiskBackedCustomerMapStoreTest() throws IOException {
-        super(new DiskBackedCustomerMapStore(DatabaseConfig.create()));
+        super(new DiskBackedCustomerMapStore(DatabaseConfig.create("DiskBackedCustomerMapStoreTest")));
     }
 
     @After
