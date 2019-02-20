@@ -1,6 +1,8 @@
 package net.jackw.olep.common.store;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.ForOverride;
 import net.jackw.olep.common.JsonDeserializer;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -15,6 +17,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CancellationException;
 
 /**
  * Consumer for a shared key-value store, manually implemented with a Kafka changelog topic
@@ -25,10 +28,8 @@ import java.util.Properties;
 public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseable {
     private Consumer<K, V> consumer;
     private Thread thread;
-
-    // Volatile is needed to ensure that this new value is guaranteed to be seen after the wakeup event is received
-    // See https://docs.oracle.com/javase/specs/jls/se11/html/jls-17.html#jls-17.4
-    private volatile boolean done = false;
+    private TopicPartition partition;
+    private SettableFuture<Void> readyFuture;
 
     /**
      * Construct a new shared store consumer, and subscribe to the corresponding topic
@@ -41,8 +42,10 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
     SharedStoreConsumer(Consumer<K, V> consumer, String nodeId, String topic) {
         this.consumer = consumer;
 
+        this.readyFuture = SettableFuture.create();
+
         // We only subscribe to one partition here, because shared store topics should only ever have one partition
-        TopicPartition partition = new TopicPartition(topic, 0);
+        partition = new TopicPartition(topic, 0);
         consumer.assign(List.of(partition));
         consumer.seekToBeginning(List.of(partition));
 
@@ -98,6 +101,9 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
 
     @Override
     public void run() {
+        boolean loadedAll = false;
+        long endOffset = consumer.endOffsets(List.of(partition)).get(partition);
+
         while (true) {
             try {
                 ConsumerRecords<K, V> receivedRecords = consumer.poll(Duration.ofHours(12));
@@ -108,17 +114,27 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
                         getWriteableStore().put(record.key(), record.value());
                     }
                 }
-            } catch (WakeupException e) {
-                if (done) {
-                    return;
+                if (!loadedAll && consumer.position(partition) >= endOffset) {
+                    // Make sure the end offset is still up to date
+                    endOffset = consumer.endOffsets(List.of(partition)).get(partition);
+                    if (consumer.position(partition) >= endOffset) {
+                        loadedAll = true;
+                        // Really are done, so let the users know
+                        readyFuture.set(null);
+
+                        // At this point, we don't expect any more records to get inserted, but we will keep listening
+                        // anyway, to satisfy the mutability requirement of TPC-C
+                    }
                 }
+            } catch (WakeupException e) {
+                readyFuture.setException(new CancellationException());
+                return;
             }
         }
     }
 
     @Override
     public void close() throws InterruptedException {
-        done = true;
         consumer.wakeup();
         thread.join();
     }
@@ -128,4 +144,12 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
      */
     @ForOverride
     protected abstract WritableKeyValueStore<K, V> getWriteableStore();
+
+    /**
+     * Get a future which will resolve only when all of the records in the store topic have been consumed, meaning that
+     * the store is up to date
+     */
+    public ListenableFuture<Void> getReadyFuture() {
+        return readyFuture;
+    }
 }
