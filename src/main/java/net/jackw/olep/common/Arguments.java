@@ -30,7 +30,7 @@ public class Arguments {
                 } else {
                     throw new RuntimeException("Unknown argument " + args[i]);
                 }
-            } else if (args.length == i-1) {
+            } else if (args.length == i+1) {
                 // last argument
                 databaseConfigFile = args[i];
             } else {
