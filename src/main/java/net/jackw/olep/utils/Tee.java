@@ -1,5 +1,6 @@
 package net.jackw.olep.utils;
 
+import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.message.transaction_result.TransactionResultKey;
@@ -46,7 +47,7 @@ public class Tee {
     }
 
     public static void main(String[] args) throws IOException {
-        DatabaseConfig config = DatabaseConfig.create(args);
-        run(config);
+        Arguments arguments = new Arguments(args);
+        run(arguments.getConfig());
     }
 }

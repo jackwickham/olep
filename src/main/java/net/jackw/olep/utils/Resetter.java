@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.utils.populate.PopulateStores;
@@ -17,7 +18,6 @@ import org.apache.kafka.common.KafkaException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -66,14 +66,8 @@ public class Resetter implements AutoCloseable {
     }
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
-        boolean resetImmutable = false;
-        List<String> argList = Arrays.asList(args);
-        if (args.length > 0 && args[0].equals("--all")) {
-            resetImmutable = true;
-            argList = argList.subList(1, argList.size());
-        }
-        DatabaseConfig config = DatabaseConfig.create(argList);
-        new Resetter(resetImmutable, true, true, config).reset();
+        Arguments arguments = new Arguments(args);
+        new Resetter(arguments.getAllFlag(), true, true, arguments.getConfig()).reset();
     }
 
     public void reset() throws InterruptedException, ExecutionException {

@@ -1,6 +1,7 @@
 package net.jackw.olep.view;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
@@ -145,8 +146,10 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
     }
 
     public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException, IOException {
-        DatabaseConfig config = DatabaseConfig.create(args);
-        try (LogViewAdapter adapter = init(config.getBootstrapServers(), config.getViewRegistryHost(), config)) {
+        Arguments arguments = new Arguments(args);
+        try (LogViewAdapter adapter = init(
+            arguments.getConfig().getBootstrapServers(), arguments.getConfig().getViewRegistryHost(), arguments.getConfig()
+        )) {
             adapter.start();
             adapter.join();
         }

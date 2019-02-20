@@ -1,5 +1,6 @@
 package net.jackw.olep.utils;
 
+import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.JsonSerializer;
 import net.jackw.olep.common.KafkaConfig;
@@ -159,8 +160,8 @@ public class LatencyTester implements AutoCloseable {
     }
 
     public static void main(String[] args) throws IOException {
-        DatabaseConfig config = DatabaseConfig.create(args);
-        new LatencyTester(config).start();
+        Arguments arguments = new Arguments(args);
+        new LatencyTester(arguments.getConfig()).start();
     }
 
     private class TransactionState {

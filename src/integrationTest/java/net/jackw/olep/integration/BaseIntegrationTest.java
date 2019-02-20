@@ -28,7 +28,7 @@ public abstract class BaseIntegrationTest {
      */
     @BeforeClass
     public static void resetImmutableTopics() throws InterruptedException, ExecutionException, IOException {
-        config = DatabaseConfig.create(List.of());
+        config = DatabaseConfig.create();
         new Resetter(true, false, true, config).reset();
     }
 

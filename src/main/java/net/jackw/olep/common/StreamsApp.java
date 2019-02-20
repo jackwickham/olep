@@ -1,10 +1,14 @@
 package net.jackw.olep.common;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
-import com.google.errorprone.annotations.ForOverride;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
@@ -47,12 +51,11 @@ public abstract class StreamsApp implements AutoCloseable {
     }
 
     /**
-     * Wait for the app to perform all of the necessary setup
-     *
-     * This method is called immediately before the Kafka streams app is started, and is expected to block
+     * Get the future that should resolve before the Kafka Streams application should start
      */
-    @ForOverride
-    protected void beforeStart() throws Exception { }
+    public ListenableFuture<?> getBeforeStartFuture() {
+        return Futures.immediateFuture(null);
+    }
 
     /**
      * Get the stream processor topology
@@ -98,18 +101,19 @@ public abstract class StreamsApp implements AutoCloseable {
         return nodeId;
     }
 
-    public void start() throws Exception {
+    public void start() throws InterruptedException, ExecutionException {
         streams = getStreams();
         streams.cleanUp();
 
-        beforeStart();
+        getBeforeStartFuture().get();
+        log.info("Starting Kafka streams");
         streams.start();
     }
 
     /**
      * Run the Kafka application
      */
-    public void run() {
+    public void run(Runnable readyCallback) {
         boolean error = false;
 
         try {
@@ -121,8 +125,12 @@ public abstract class StreamsApp implements AutoCloseable {
                 }
             });
 
-            // Run forever
             start();
+
+            // Send the notification that kafka is now running
+            readyCallback.run();
+
+            // Run forever
             appShutdownLatch.await();
             log.info("Shutting down");
         } catch (Throwable e) {
@@ -143,6 +151,10 @@ public abstract class StreamsApp implements AutoCloseable {
         }
     }
 
+    public void run() {
+        this.run(() -> {});
+    }
+
     @OverridingMethodsMustInvokeSuper
     @Override
     public void close() throws InterruptedException {
@@ -157,6 +169,22 @@ public abstract class StreamsApp implements AutoCloseable {
 
     protected String getBootstrapServers() {
         return config.getBootstrapServers();
+    }
+
+    public static void createReadyFile(String readyFile) {
+        if (readyFile != null && !readyFile.isBlank()) {
+            try {
+                File file = new File(readyFile);
+                boolean created = file.createNewFile();
+                if (created) {
+                    file.deleteOnExit();
+                } else {
+                    log.warn("Failed to create ready file: file already exists");
+                }
+            } catch (IOException e) {
+                log.warn("Failed to create ready file", e);
+            }
+        }
     }
 
     private static Logger log = LogManager.getLogger();

@@ -1,10 +1,12 @@
 package net.jackw.olep.common;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import net.jackw.olep.metrics.Metrics;
 
+import javax.annotation.Nullable;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -73,7 +75,9 @@ public class DatabaseConfig {
     @JsonProperty
     private String resultsDir = "results";
 
+    @JsonIgnore
     private String mainClass;
+    @JsonIgnore
     private Metrics metrics;
 
     /**
@@ -213,7 +217,7 @@ public class DatabaseConfig {
     /**
      * Get the metrics manager instance for this configuration
      */
-    public Metrics getMetrics() {
+    public synchronized Metrics getMetrics() {
         // Lazily create metrics
         if (metrics == null) {
             try {
@@ -226,37 +230,29 @@ public class DatabaseConfig {
     }
 
     /**
-     * Load the database config from the correct configuration file
+     * Load the database config from the correct configuration file from the class path
      *
-     * A config file can be provided as the first command line argument. If it is omitted, the config file is loaded
-     * from the classpath, using test-database-config.yml if it's available, and database-config.yml if not.
+     * The config file is loaded from the classpath, using test-database-config.yml if it's available, and
+     * database-config.yml if not.
      *
      * The config file should be a yml file.
      *
-     * @param cmdArgs The command line arguments to the program
      * @return The loaded database configuration
-     * @throws FileNotFoundException If the config file from the command line doesn't exist, or the default config file
-     *                               can't be loaded
+     * @throws FileNotFoundException If the default config file can't be loaded
      * @throws IOException If the file can't be read
      */
-    public static DatabaseConfig create(List<String> cmdArgs) throws IOException {
+    public static DatabaseConfig create(String mainClass) throws IOException {
         InputStream configFile = null;
         try {
-            if (cmdArgs.size() > 0) {
-                configFile = new FileInputStream(cmdArgs.get(0));
-            } else {
-                configFile = KafkaConfig.class.getClassLoader().getResourceAsStream("test-database-config.yml");
+            configFile = KafkaConfig.class.getClassLoader().getResourceAsStream("test-database-config.yml");
+            if (configFile == null) {
+                configFile = KafkaConfig.class.getClassLoader().getResourceAsStream("database-config.yml");
                 if (configFile == null) {
-                    configFile = KafkaConfig.class.getClassLoader().getResourceAsStream("database-config.yml");
-                    if (configFile == null) {
-                        throw new FileNotFoundException("Failed to load database-config.yml from classpath");
-                    }
+                    throw new FileNotFoundException("Failed to load database-config.yml from classpath");
                 }
             }
 
-            DatabaseConfig config = new ObjectMapper(new YAMLFactory()).readValue(configFile, DatabaseConfig.class);
-            config.mainClass = getCallingClass();
-            return config;
+            return load(configFile, mainClass);
         } finally {
             if (configFile != null) {
                 configFile.close();
@@ -265,21 +261,30 @@ public class DatabaseConfig {
     }
 
     /**
-     * @see #create(List)
+     * Load the database config from the provided file
+     *
+     * The config file should be a yml file.
+     *
+     * @return The loaded database configuration
+     * @throws FileNotFoundException If the config file doesn't exist
+     * @throws IOException If the file can't be read
      */
-    public static DatabaseConfig create(String[] cmdArgs) throws IOException {
-        return create(Arrays.asList(cmdArgs));
+    public static DatabaseConfig create(String file, String mainClass) throws IOException {
+        try (InputStream configFile = new FileInputStream(file)) {
+            return load(configFile, mainClass);
+        }
     }
 
-    private static String getCallingClass() {
-        StackTraceElement[] trace = Thread.currentThread().getStackTrace();
-        // Start at 3 to exclude .getStackTrace(), .getCallingClass() and the local caller
-        for (int i = 3; i < trace.length; i++) {
-            String className = trace[i].getClassName();
-            if (!className.equals(DatabaseConfig.class.getName())) {
-                return className.substring(className.lastIndexOf('.') + 1);
-            }
-        }
-        throw new RuntimeException("Failed to find calling method name");
+    /**
+     * Load the configuration from an input stream
+     *
+     * @param configFileStream The stream to load from
+     * @return The created config file
+     * @throws IOException If an error occurs while reading the file
+     */
+    private static DatabaseConfig load(InputStream configFileStream, String mainClass) throws IOException {
+        DatabaseConfig config = new ObjectMapper(new YAMLFactory()).readValue(configFileStream, DatabaseConfig.class);
+        config.mainClass = mainClass;
+        return config;
     }
 }

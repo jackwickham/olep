@@ -2,6 +2,8 @@ package net.jackw.olep.worker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
@@ -39,7 +41,6 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
 
 public class WorkerApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -79,11 +80,11 @@ public class WorkerApp extends StreamsApp {
      * Wait for all of the consumers to finish populating before starting to process items
      */
     @Override
-    protected void beforeStart() throws InterruptedException, ExecutionException {
-        Futures.allAsList(List.of(
+    public ListenableFuture<List<Void>> getBeforeStartFuture() {
+        return Futures.allAsList(List.of(
             itemConsumer.getReadyFuture(), warehouseConsumer.getReadyFuture(), districtConsumer.getReadyFuture(),
             customerConsumer.getReadyFuture(), stockConsumer.getReadyFuture()
-        )).get();
+        ));
     }
 
     @Override
@@ -180,12 +181,8 @@ public class WorkerApp extends StreamsApp {
     }
 
     public static void main(String[] args) throws IOException {
-        DatabaseConfig config = DatabaseConfig.create(args);
-        run(config);
-    }
-
-    public static void run(DatabaseConfig config) {
-        StreamsApp instance = new WorkerApp(config);
-        instance.run();
+        Arguments arguments = new Arguments(args);
+        StreamsApp instance = new WorkerApp(arguments.getConfig());
+        instance.run(() -> StreamsApp.createReadyFile(arguments.getReadyFileArg()));
     }
 }

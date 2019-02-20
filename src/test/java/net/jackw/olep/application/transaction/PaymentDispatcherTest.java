@@ -59,7 +59,7 @@ public class PaymentDispatcherTest {
 
     @Before
     public void loadConfigFile() throws IOException {
-        config = DatabaseConfig.create(List.of());
+        config = DatabaseConfig.create();
     }
 
     @After

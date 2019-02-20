@@ -1,5 +1,7 @@
 package net.jackw.olep.verifier;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.store.SharedItemStoreConsumer;
@@ -20,7 +22,6 @@ import org.apache.kafka.streams.Topology;
 
 import java.io.IOException;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
 
 public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -40,9 +41,10 @@ public class VerifierApp extends StreamsApp {
      * Wait for the items store to be fully populated before starting
      */
     @Override
-    protected void beforeStart() throws InterruptedException, ExecutionException {
-        itemConsumer.getReadyFuture().get();
+    public ListenableFuture<Void> getBeforeStartFuture() {
+        return itemConsumer.getReadyFuture();
     }
+
 
     @Override
     public String getApplicationID() {
@@ -108,12 +110,8 @@ public class VerifierApp extends StreamsApp {
     }
 
     public static void main(String[] args) throws IOException {
-        DatabaseConfig config = DatabaseConfig.create(args);
-        run(config);
-    }
-
-    public static void run(DatabaseConfig config) {
-        StreamsApp instance = new VerifierApp(config);
-        instance.run();
+        Arguments arguments = new Arguments(args);
+        StreamsApp instance = new VerifierApp(arguments.getConfig());
+        instance.run(() -> StreamsApp.createReadyFile(arguments.getReadyFileArg()));
     }
 }
