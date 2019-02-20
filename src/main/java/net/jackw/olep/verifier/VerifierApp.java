@@ -20,6 +20,7 @@ import org.apache.kafka.streams.Topology;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -33,6 +34,14 @@ public class VerifierApp extends StreamsApp {
         itemConsumer = SharedItemStoreConsumer.create(
             getBootstrapServers(), getApplicationID() + "-" + getNodeID(), config
         );
+    }
+
+    /**
+     * Wait for the items store to be fully populated before starting
+     */
+    @Override
+    protected void beforeStart() throws InterruptedException, ExecutionException {
+        itemConsumer.getReadyFuture().get();
     }
 
     @Override

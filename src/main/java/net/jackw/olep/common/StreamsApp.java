@@ -4,6 +4,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
+import com.google.errorprone.annotations.ForOverride;
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
@@ -46,11 +47,12 @@ public abstract class StreamsApp implements AutoCloseable {
     }
 
     /**
-     * By default, do nothing
+     * Wait for the app to perform all of the necessary setup
      *
-     * Classes can override this to perform some initial setup, such as consuming from immutable logs
+     * This method is called immediately before the Kafka streams app is started, and is expected to block
      */
-    public void setup() { }
+    @ForOverride
+    protected void beforeStart() throws Exception { }
 
     /**
      * Get the stream processor topology
@@ -96,9 +98,11 @@ public abstract class StreamsApp implements AutoCloseable {
         return nodeId;
     }
 
-    public void start() {
+    public void start() throws Exception {
         streams = getStreams();
         streams.cleanUp();
+
+        beforeStart();
         streams.start();
     }
 
@@ -106,9 +110,6 @@ public abstract class StreamsApp implements AutoCloseable {
      * Run the Kafka application
      */
     public void run() {
-        // Set up the streams
-        setup();
-
         boolean error = false;
 
         try {

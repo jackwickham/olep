@@ -1,6 +1,7 @@
 package net.jackw.olep.worker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.util.concurrent.Futures;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
@@ -36,7 +37,9 @@ import org.apache.kafka.streams.state.Stores;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 public class WorkerApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -70,6 +73,17 @@ public class WorkerApp extends StreamsApp {
         pseudoConsumer = new KafkaConsumer<>(
             pseudoConsumerProperties, Serdes.ByteArray().deserializer(), Serdes.ByteArray().deserializer()
         );
+    }
+
+    /**
+     * Wait for all of the consumers to finish populating before starting to process items
+     */
+    @Override
+    protected void beforeStart() throws InterruptedException, ExecutionException {
+        Futures.allAsList(List.of(
+            itemConsumer.getReadyFuture(), warehouseConsumer.getReadyFuture(), districtConsumer.getReadyFuture(),
+            customerConsumer.getReadyFuture(), stockConsumer.getReadyFuture()
+        )).get();
     }
 
     @Override

@@ -26,7 +26,7 @@ import static org.hamcrest.Matchers.*;
 
 public class NewOrderTest extends BaseIntegrationTest {
     @Before
-    public void startListeners() {
+    public void startListeners() throws Exception {
         startVerifier();
         startWorker();
         startView();

@@ -19,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 
 public class DeliveryTest extends BaseIntegrationTest {
     @Before
-    public void startProcessors() {
+    public void startProcessors() throws Exception {
         startVerifier();
         startWorker();
         startView();

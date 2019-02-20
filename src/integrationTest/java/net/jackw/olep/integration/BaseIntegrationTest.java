@@ -61,17 +61,15 @@ public abstract class BaseIntegrationTest {
     /**
      * Start a verifier instance, with a fresh state store
      */
-    protected void startVerifier() {
+    protected void startVerifier() throws Exception {
         VerifierApp verifier = new VerifierApp(config);
         verifierInstances.add(verifier);
-        verifier.setup();
         verifier.start();
     }
 
-    protected void startWorker() {
+    protected void startWorker() throws Exception {
         WorkerApp worker = new WorkerApp(config);
         workerInstances.add(worker);
-        worker.setup();
         worker.start();
     }
 
