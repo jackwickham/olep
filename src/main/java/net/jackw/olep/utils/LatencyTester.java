@@ -1,5 +1,6 @@
 package net.jackw.olep.utils;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.JsonSerializer;
@@ -83,12 +84,11 @@ public class LatencyTester implements AutoCloseable {
             resultConsumer.wakeup();
             acceptedTransactionConsumer.wakeup();
             mainThread.interrupt();
-            try {
-                mainThread.join();
-            } catch (InterruptedException e) { }
+            Uninterruptibles.joinUninterruptibly(mainThread);
         }));
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void start() {
         this.mainThread = Thread.currentThread();
 
