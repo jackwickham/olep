@@ -61,7 +61,7 @@ public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest>
 
             sendModification(key, new DeliveryModification(
                 order.orderId, i, value.warehouseId, value.carrierId, value.deliveryDate, order.customerId, order.totalAmount
-            ));
+            ), (short) i);
         }
 
         sendResults(key, results);

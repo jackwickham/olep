@@ -11,6 +11,7 @@ import net.jackw.olep.common.LockingLRUSet;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
+import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.PaymentModification;
@@ -25,13 +26,10 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.time.Duration;
 import java.util.Date;
@@ -44,13 +42,13 @@ import java.util.concurrent.ExecutionException;
 
 public class LogViewAdapter extends Thread implements AutoCloseable {
     private final ViewWriteAdapter viewAdapter;
-    private final Consumer<Long, ModificationMessage> logConsumer;
+    private final Consumer<ModificationKey, ModificationMessage> logConsumer;
     private final SharedCustomerStoreConsumer customerStoreConsumer;
     private final Metrics metrics;
     private final SettableFuture<Void> readyFuture;
-    private final Set<Long> recentTransactions;
+    private final Set<ModificationKey> recentTransactions;
 
-    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter,
+    public LogViewAdapter(Consumer<ModificationKey, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter,
                           SharedCustomerStoreConsumer customerStoreConsumer, Metrics metrics) {
         this.logConsumer = logConsumer;
         this.viewAdapter = viewAdapter;
@@ -92,8 +90,8 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         Map<TopicPartition, Long> endOffsets = logConsumer.endOffsets(logConsumer.assignment());
         while (true) {
             try {
-                ConsumerRecords<Long, ModificationMessage> records = logConsumer.poll(Duration.ofSeconds(10));
-                for (ConsumerRecord<Long, ModificationMessage> record : records) {
+                ConsumerRecords<ModificationKey, ModificationMessage> records = logConsumer.poll(Duration.ofSeconds(10));
+                for (ConsumerRecord<ModificationKey, ModificationMessage> record : records) {
                     processModification(record.key(), record.value());
 
                     if (!ready && record.offset() >= endOffsets.get(new TopicPartition(record.topic(), record.partition())) - 5) {
@@ -128,7 +126,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         return readyFuture;
     }
 
-    private void processModification(long key, ModificationMessage message) {
+    private void processModification(ModificationKey key, ModificationMessage message) {
         if (!recentTransactions.add(key)) {
             log.info("Received duplicate transaction {}", key);
             return;
@@ -160,13 +158,13 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "view-consumer");
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-        KafkaConsumer<Long, ModificationMessage> consumer = null;
+        KafkaConsumer<ModificationKey, ModificationMessage> consumer = null;
         SharedCustomerStoreConsumer customerStoreConsumer = null;
 
         try {
             consumer = new KafkaConsumer<>(
                 consumerProps,
-                Serdes.Long().deserializer(),
+                new ModificationKey.KeyDeserializer(),
                 new JsonDeserializer<>(ModificationMessage.class)
             );
             // TODO: support partitioning
@@ -213,6 +211,9 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         ) {
             logConsumer.wakeup();
             readyFuture.setException(new CancellationException());
+            if (Thread.currentThread() != this) {
+                this.join();
+            }
         }
     }
 

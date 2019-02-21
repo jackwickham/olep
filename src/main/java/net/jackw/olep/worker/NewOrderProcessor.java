@@ -168,14 +168,14 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
                     ));
                 } else {
                     // It's remote, so we just need to update the views with details about the new stock level
-                    sendModification(key, new RemoteStockModification(item.id, line.supplyingWarehouseId, stockQuantity));
+                    sendModification(key, new RemoteStockModification(item.id, line.supplyingWarehouseId, stockQuantity), (short) lineNumber);
                 }
             }
 
             if (local) {
                 newOrdersStore.add(districtKey, orderBuilder.buildNewOrder());
                 // Forward the transaction to the modification log
-                sendModification(key, orderBuilder.build());
+                sendModification(key, orderBuilder.build(), (short) 20);
             }
 
             sendResults(key, results);

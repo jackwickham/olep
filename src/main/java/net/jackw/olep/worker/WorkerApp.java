@@ -17,6 +17,7 @@ import net.jackw.olep.common.store.SharedStoreConsumer;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.TransactionResultPartitioner;
 import net.jackw.olep.common.store.SharedWarehouseStoreConsumer;
+import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -159,7 +160,7 @@ public class WorkerApp extends StreamsApp {
             .addSink(
                 KafkaConfig.MODIFICATION_LOG,
                 KafkaConfig.MODIFICATION_LOG,
-                Serdes.Long().serializer(),
+                new ModificationKey.KeySerializer(),
                 new JsonSerializer<>(),
                 "new-order-processor", "payment-processor", "delivery-processor"
             )

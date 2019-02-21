@@ -2,6 +2,7 @@ package net.jackw.olep.worker;
 
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.modification.ModificationMessage;
 import net.jackw.olep.message.transaction_request.TransactionRequestMessage;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
@@ -31,8 +32,8 @@ public abstract class BaseTransactionProcessor<V extends TransactionRequestMessa
      * @param key The transaction key
      * @param mod The modification
      */
-    protected void sendModification(TransactionWarehouseKey key, ModificationMessage mod) {
-        context.forward(key.transactionId, mod, To.child(KafkaConfig.MODIFICATION_LOG));
+    protected void sendModification(TransactionWarehouseKey key, ModificationMessage mod, short modificationId) {
+        context.forward(new ModificationKey(key.transactionId, modificationId), mod, To.child(KafkaConfig.MODIFICATION_LOG));
     }
 
     /**

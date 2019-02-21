@@ -129,7 +129,7 @@ public class PaymentProcessor extends BaseTransactionProcessor<PaymentRequest> {
             sendModification(key, new PaymentModification(
                 value.districtId, value.warehouseId, customer.id, value.customerDistrictId, value.customerWarehouseId,
                 value.amount, customerMutable.balance, customerMutable.data
-            ));
+            ), (short) 0);
 
             // TPC-C says we should create a history record (and cast it into the abyss)
             // We could do that, but for now it can be derived by a consumer if they so desire

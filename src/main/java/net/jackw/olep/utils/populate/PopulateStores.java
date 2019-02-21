@@ -15,6 +15,7 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
+import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.modification.ModificationMessage;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -43,7 +44,7 @@ public class PopulateStores implements AutoCloseable {
     private Producer<WarehouseSpecificKey, Integer> stockQuantityStoreProducer;
     private int storePartitions;
 
-    private Producer<Long, ModificationMessage> modificationLogProducer;
+    private Producer<ModificationKey, ModificationMessage> modificationLogProducer;
 
     private boolean populateImmutableStores;
     private boolean populateMutableStores;
@@ -76,7 +77,7 @@ public class PopulateStores implements AutoCloseable {
 
         storePartitions = nextOrderIdStoreProducer.partitionsFor(KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG).size();
 
-        modificationLogProducer = new KafkaProducer<>(props, Serdes.Long().serializer(), new JsonSerializer<>());
+        modificationLogProducer = new KafkaProducer<>(props, new ModificationKey.KeySerializer(), new JsonSerializer<>());
 
         customerIds = IntStream.range(1, config.getCustomersPerDistrict()+1).boxed().collect(Collectors.toCollection(ArrayList::new));
     }
@@ -224,16 +225,16 @@ public class PopulateStores implements AutoCloseable {
                 // mode doesn't create any pending orders, so they have to be created manually)
                 OrderFactory.DeliveredOrder order = orderFactory.makeDeliveredOrder(customerId, stockProvider);
                 modificationLogProducer.send(new ProducerRecord<>(
-                    KafkaConfig.MODIFICATION_LOG, 0, ++transactionId, order.newOrderModification
+                    KafkaConfig.MODIFICATION_LOG, 0, new ModificationKey(++transactionId, (short) 0), order.newOrderModification
                 ));
                 modificationLogProducer.send(new ProducerRecord<>(
-                    KafkaConfig.MODIFICATION_LOG, 0, ++transactionId, order.deliveryModification
+                    KafkaConfig.MODIFICATION_LOG, 0, new ModificationKey(++transactionId, (short) 0), order.deliveryModification
                 ));
             } else {
                 // For the remaining 3/10, the order is still outstanding, so we add it as a NewOrder too
                 OrderFactory.UndeliveredOrder order = orderFactory.makeUndeliveredOrder(customerId, stockProvider);
                 modificationLogProducer.send(new ProducerRecord<>(
-                    KafkaConfig.MODIFICATION_LOG, 0, ++transactionId, order.newOrderModification
+                    KafkaConfig.MODIFICATION_LOG, 0, new ModificationKey(++transactionId, (short) 0), order.newOrderModification
                 ));
                 newOrders.add(order.newOrder);
             }
