@@ -166,8 +166,9 @@ public class NewOrderProcessor extends BaseTransactionProcessor<NewOrderRequest>
                     results.addLine(lineNumber, new OrderLineResult.PartialResult(
                         item.name, item.price, lineAmount
                     ));
-                } else {
-                    // It's remote, so we just need to update the views with details about the new stock level
+                } else if (line.supplyingWarehouseId == key.warehouseId) { // TODO: Test to verify this works
+                    // It's remote, and we are the responsible warehouse, so we just need to update the views with
+                    // details about the new stock level
                     sendModification(key, new RemoteStockModification(item.id, line.supplyingWarehouseId, stockQuantity), (short) lineNumber);
                 }
             }

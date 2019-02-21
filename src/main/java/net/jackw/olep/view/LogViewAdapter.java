@@ -192,11 +192,12 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         try (LogViewAdapter adapter = init(
             arguments.getConfig().getBootstrapServers(), arguments.getConfig().getViewRegistryHost(), arguments.getConfig()
         )) {
+            adapter.start();
+
+            // Wait for the adapter to be ready
             adapter.getReadyFuture().get();
-            // Notify other processes if needed
             StreamsApp.createReadyFile(arguments.getReadyFileArg());
 
-            adapter.start();
             adapter.join();
         }
     }
