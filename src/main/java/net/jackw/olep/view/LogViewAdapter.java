@@ -99,7 +99,6 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
                     if (!ready && record.offset() >= endOffsets.get(new TopicPartition(record.topic(), record.partition())) - 5) {
                         // Simple approximation, it's ready now
                         ready = true;
-                        readyFuture.set(null);
 
                         if (!viewAdapter.register()) {
                             try {
@@ -109,6 +108,8 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
                             }
                             return;
                         }
+                        // Only set ready if it was successfully registered
+                        readyFuture.set(null);
                     }
                 }
             } catch (WakeupException e) {
@@ -175,7 +176,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
 
             customerStoreConsumer = SharedCustomerStoreConsumer.create(bootstrapServers, "view-adapter-TODO_PARTITION_ID-" + new Date().getTime(), config);
 
-            ViewWriteAdapter viewWriteAdapter = new InMemoryAdapter(customerStoreConsumer.getStore(), registryServer, "view-adapter-0");
+            ViewWriteAdapter viewWriteAdapter = new InMemoryAdapter(customerStoreConsumer.getStore(), registryServer, "view/TODO_PARTITION_NUMBER");
 
             return new LogViewAdapter(consumer, viewWriteAdapter, customerStoreConsumer, config.getMetrics());
         } catch (Exception e) {

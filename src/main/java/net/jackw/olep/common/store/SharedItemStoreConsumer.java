@@ -39,7 +39,7 @@ public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> 
      * @param config The current database configuration
      * @return A SharedWarehouseStore
      */
-    public static SharedItemStoreConsumer create(String bootstrapServers, String nodeId, DatabaseConfig config) {
+    public static synchronized SharedItemStoreConsumer create(String bootstrapServers, String nodeId, DatabaseConfig config) {
         if (instance == null) {
             instance = new SharedItemStoreConsumer(bootstrapServers, nodeId, config);
             instance.start();

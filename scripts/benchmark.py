@@ -77,8 +77,8 @@ def run(set_options):
         # Now start the application
         app_process = subprocess.Popen(["./gradlew", "runApp", f'--args={new_config_file.name}'], env=env)
 
-        # Wait 10s then make sure it's still running
-        time.sleep(10)
+        # Wait 20s then make sure it's still running
+        time.sleep(20)
         if app_process.poll() is not None:
             print("App shut down unexpectedly")
             # kill the database
@@ -87,7 +87,7 @@ def run(set_options):
             exit(1)
 
         # Now wait the remaining time
-        time.sleep(args.time - 10)
+        time.sleep(args.time - 20)
 
         # Make sure the processes are still running
         if app_process.poll() is not None:
