@@ -41,7 +41,7 @@ public class InMemoryAdapterTest {
 
     @Before
     public void instantiateAdapter() throws RemoteException {
-        adapter = new InMemoryAdapter(customerImmutableStore);
+        adapter = new InMemoryAdapter(customerImmutableStore, null, "mock-view-adapter");
     }
 
     @Test

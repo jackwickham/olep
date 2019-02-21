@@ -27,19 +27,20 @@ args = parser.parse_args()
 with open(args.config_file) as f:
     base_config_file = f.read()
 
-def all_combinations(base_options, set_options, remaining_options):
+def all_combinations(set_options, remaining_options):
     if len(remaining_options) == 0:
-        run(base_options, set_options)
+        run(set_options)
     else:
         option_name = remaining_options[0][0]
         values = remaining_options[0][1:]
         # For each value, generate the combinations of the remaining args
         for v in values:
             set_options[option_name] = v
-            all_combinations(base_options, set_options, remaining_options[1:])
+            all_combinations(set_options, remaining_options[1:])
 
-def run(base_options, set_options):
-    global args
+def run(set_options):
+    env = os.environ.copy()
+    env["TERM"] = "dumb"
 
     # Create the new config file
     with tempfile.NamedTemporaryFile(mode="w", prefix="config-", suffix=".yml", newline='\n') as new_config_file:
@@ -51,14 +52,16 @@ def run(base_options, set_options):
         print(f"Running with options {set_options}")
 
         # Run reset synchronously
-        subprocess.run(["./gradlew", "reset", f'--args=--all {new_config_file.name}'], check=True)
+        subprocess.run(["./gradlew", "reset", f'--args=--all {new_config_file.name}'], check=True, env=env)
+
+        print("Reset complete")
 
         # Choose a file to use for IPC, so the database can report when it's ready
         characters = "abcdefghijklmnopqrstuvwxyz0123456789_"
         ready_file = tempfile.gettempdir() + "/ready-" + "".join(random.choices(characters, k=8))
 
         # Start the runDatabase task asynchronously
-        database_process = subprocess.Popen(["./gradlew", "runDatabase", f'--args=--ready-file {ready_file} {new_config_file.name}'])
+        database_process = subprocess.Popen(["./gradlew", "runDatabase", f'--args=--ready-file {ready_file} {new_config_file.name}'], env=env)
 
         # Wait for it to either terminate or write to ready_file
         while database_process.poll() is None and not os.path.isfile(ready_file):
@@ -72,7 +75,7 @@ def run(base_options, set_options):
         print("Database populated successfully")
 
         # Now start the application
-        app_process = subprocess.Popen(["./gradlew", "runApp", f'--args={new_config_file.name}'])
+        app_process = subprocess.Popen(["./gradlew", "runApp", f'--args={new_config_file.name}'], env=env)
 
         # Wait 10s then make sure it's still running
         time.sleep(10)
@@ -110,4 +113,4 @@ def run(base_options, set_options):
 
 
 # Run it!
-all_combinations(base_config_file, dict(), args.config)
+all_combinations(dict(), args.config)

@@ -11,6 +11,13 @@ public interface ViewWriteAdapter extends AutoCloseable {
     void payment(PaymentModification modification);
     void remoteStock(RemoteStockModification modification);
 
+    /**
+     * Register this adapter, so it can serve read transactions
+     *
+     * @return true if the registration succeeded, and false otherwise
+     */
+    boolean register();
+
     @Override
     void close();
 }

@@ -18,7 +18,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
+import java.rmi.AccessException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,12 +36,20 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     private Map<DistrictSpecificKey, CustomerState> customerState;
     private SharedCustomerStore customerSharedStore;
 
-    public InMemoryAdapter(SharedCustomerStore customerSharedStore) throws RemoteException {
+    private final String registryServer;
+    private final String name;
+
+    private boolean bound = false;
+
+    public InMemoryAdapter(SharedCustomerStore customerSharedStore, String registryServer, String name) throws RemoteException {
         super();
         stockMap = new MapMaker().initialCapacity(1000).weakValues().makeMap();
         recentOrders = new ConcurrentHashMap<>();
         customerState = new ConcurrentHashMap<>();
         this.customerSharedStore = customerSharedStore;
+
+        this.registryServer = registryServer;
+        this.name = name;
     }
 
     ///// Reads /////
@@ -82,11 +94,6 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
             }
         }
         return belowThreshold;
-    }
-
-    @Override
-    public void close() {
-
     }
 
     ///// Writes //////
@@ -153,6 +160,34 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     @Override
     public void remoteStock(RemoteStockModification modification) {
         getStockObject(new WarehouseSpecificKey(modification.itemId, modification.warehouseId), modification.stockLevel);
+    }
+
+    @Override
+    public synchronized boolean register() {
+        try {
+            Registry registry = LocateRegistry.getRegistry(registryServer);
+            registry.rebind(name, this);
+            bound = true;
+            return true;
+        } catch (RemoteException e) {
+            log.error("Failed to bind view", e);
+            return false;
+        }
+    }
+
+    @Override
+    public synchronized void close() {
+        if (bound) {
+            try {
+                Registry registry = LocateRegistry.getRegistry(registryServer);
+                registry.unbind(name);
+            } catch (NotBoundException e) {
+                log.warn("NotBoundException when unbinding view");
+            } catch (RemoteException e) {
+                log.error("Failed to unbind view", e);
+            }
+            bound = false;
+        }
     }
 
     ///// Utils /////

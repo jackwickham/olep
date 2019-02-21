@@ -16,6 +16,7 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -29,32 +30,34 @@ public class RunDatabase {
 
         StandaloneRegistry.start();
 
-        List<ListenableFuture<?>> futures = new ArrayList<>(2);
-        CountDownLatch latch = new CountDownLatch(2);
+        List<ListenableFuture<?>> futures = Collections.synchronizedList(new ArrayList<>(3));
+        CountDownLatch threadStartLatch = new CountDownLatch(2);
 
         new Thread(() -> {
             VerifierApp app = new VerifierApp(config);
             futures.add(app.getBeforeStartFuture());
-            latch.countDown();
+            threadStartLatch.countDown();
             app.run();
         }, "verifier-main").start();
         new Thread(() -> {
             WorkerApp app = new WorkerApp(config);
             futures.add(app.getBeforeStartFuture());
-            latch.countDown();
+            threadStartLatch.countDown();
             app.run();
         }, "worker-main").start();
 
-        // Wait for the threads to have started and registered their futures
-        latch.await();
-
-        // Then when the futures are done, mark it as ready
-        Futures.allAsList(futures).addListener(() -> {
-            StreamsApp.createReadyFile(arguments.getReadyFileArg());
-        }, MoreExecutors.directExecutor());
-
         try (LogViewAdapter logViewAdapter = LogViewAdapter.init(config.getBootstrapServers(), config.getViewRegistryHost(), config)) {
             logViewAdapter.start();
+
+            futures.add(logViewAdapter.getReadyFuture());
+            // Wait for all the threads to have started and registered their futures
+            threadStartLatch.await();
+
+            // Then when the futures are done, mark it as ready
+            Futures.allAsList(futures).addListener(() -> {
+                StreamsApp.createReadyFile(arguments.getReadyFileArg());
+            }, MoreExecutors.directExecutor());
+
             // Block until Ctrl+C
             logViewAdapter.join();
         }

@@ -1,11 +1,14 @@
 package net.jackw.olep.view;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.LockingLRUSet;
+import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationMessage;
@@ -33,21 +36,27 @@ import java.rmi.RemoteException;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 
 public class LogViewAdapter extends Thread implements AutoCloseable {
-    private final InMemoryRMIWrapper viewWrapper;
     private final ViewWriteAdapter viewAdapter;
     private final Consumer<Long, ModificationMessage> logConsumer;
+    private final SharedCustomerStoreConsumer customerStoreConsumer;
     private final Metrics metrics;
+    private final SettableFuture<Void> readyFuture;
     private final Set<Long> recentTransactions;
 
-    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, InMemoryRMIWrapper viewWrapper, Metrics metrics) {
-        this.viewWrapper = viewWrapper;
-        this.viewAdapter = viewWrapper.getAdapter();
+    public LogViewAdapter(Consumer<Long, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter,
+                          SharedCustomerStoreConsumer customerStoreConsumer, Metrics metrics) {
         this.logConsumer = logConsumer;
+        this.viewAdapter = viewAdapter;
+        this.customerStoreConsumer = customerStoreConsumer;
         this.metrics = metrics;
+        this.readyFuture = SettableFuture.create();
         this.recentTransactions = new LockingLRUSet<>(100);
 
         // Add a shutdown listener to gracefully handle Ctrl+C
@@ -70,16 +79,52 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
      */
     @Override
     public void run() {
+        // Wait for the customer store to populate
+        try {
+            customerStoreConsumer.getReadyFuture().get();
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Failed while waiting for customer store to be populated", e);
+            return;
+        }
+
+        // Then populate the views from the modification log
+        boolean ready = false;
+        Map<TopicPartition, Long> endOffsets = logConsumer.endOffsets(logConsumer.assignment());
         while (true) {
             try {
-                ConsumerRecords<Long, ModificationMessage> records = logConsumer.poll(Duration.ofHours(6));
+                ConsumerRecords<Long, ModificationMessage> records = logConsumer.poll(Duration.ofSeconds(10));
                 for (ConsumerRecord<Long, ModificationMessage> record : records) {
                     processModification(record.key(), record.value());
+
+                    if (!ready && record.offset() >= endOffsets.get(new TopicPartition(record.topic(), record.partition())) - 5) {
+                        // Simple approximation, it's ready now
+                        ready = true;
+                        readyFuture.set(null);
+
+                        if (!viewAdapter.register()) {
+                            try {
+                                close();
+                            } catch (InterruptedException e) {
+                                log.error("Error when closing", e);
+                            }
+                            return;
+                        }
+                    }
                 }
             } catch (WakeupException e) {
                 break;
             }
         }
+    }
+
+    /**
+     * Get a future that resolves when the adapter has almost caught up to the latest items on the modification log
+     *
+     * The future just means that it had caught up at one point - if it becomes out of sync later, the future will not
+     * change state
+     */
+    public ListenableFuture<Void> getReadyFuture() {
+        return readyFuture;
     }
 
     private void processModification(long key, ModificationMessage message) {
@@ -108,14 +153,13 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public static LogViewAdapter init(String bootstrapServers, String registryServer, DatabaseConfig config) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException {
+    public static LogViewAdapter init(String bootstrapServers, String registryServer, DatabaseConfig config) throws RemoteException, InterruptedException {
         Properties consumerProps = new Properties();
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "view-consumer");
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         KafkaConsumer<Long, ModificationMessage> consumer = null;
-        InMemoryRMIWrapper viewWrapper = null;
         SharedCustomerStoreConsumer customerStoreConsumer = null;
 
         try {
@@ -131,13 +175,12 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
 
             customerStoreConsumer = SharedCustomerStoreConsumer.create(bootstrapServers, "view-adapter-TODO_PARTITION_ID-" + new Date().getTime(), config);
 
-            viewWrapper = new InMemoryRMIWrapper(registryServer, customerStoreConsumer.getStore());
+            ViewWriteAdapter viewWriteAdapter = new InMemoryAdapter(customerStoreConsumer.getStore(), registryServer, "view-adapter-0");
 
-            return new LogViewAdapter(consumer, viewWrapper, config.getMetrics());
+            return new LogViewAdapter(consumer, viewWriteAdapter, customerStoreConsumer, config.getMetrics());
         } catch (Exception e) {
             try (
                 Consumer c = consumer;
-                InMemoryRMIWrapper v = viewWrapper;
                 SharedCustomerStoreConsumer scs = customerStoreConsumer;
             ) { }
 
@@ -145,24 +188,30 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         }
     }
 
-    public static void main(String[] args) throws RemoteException, AlreadyBoundException, NotBoundException, InterruptedException, IOException {
+    public static void main(String[] args) throws InterruptedException, IOException, ExecutionException {
         Arguments arguments = new Arguments(args);
         try (LogViewAdapter adapter = init(
             arguments.getConfig().getBootstrapServers(), arguments.getConfig().getViewRegistryHost(), arguments.getConfig()
         )) {
+            adapter.getReadyFuture().get();
+            // Notify other processes if needed
+            StreamsApp.createReadyFile(arguments.getReadyFileArg());
+
             adapter.start();
             adapter.join();
         }
     }
 
     @Override
-    public void close() throws RemoteException, NotBoundException {
+    public void close() throws InterruptedException {
         // Use try-with-resources to ensure they all get safely closed
         try (
             Consumer c = logConsumer;
-            InMemoryRMIWrapper v = viewWrapper;
+            ViewWriteAdapter va = viewAdapter;
+            SharedCustomerStoreConsumer csc = customerStoreConsumer;
         ) {
             logConsumer.wakeup();
+            readyFuture.setException(new CancellationException());
         }
     }
 
