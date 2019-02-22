@@ -16,6 +16,7 @@ import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
+import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.OrderLineModification;
 import net.jackw.olep.message.modification.RemoteStockModification;
@@ -181,7 +182,7 @@ public class NewOrderProcessorTest {
         assertThat(forwardsTo, Matchers.hasKey(KafkaConfig.MODIFICATION_LOG));
         assertThat(forwardsTo, Matchers.hasKey(KafkaConfig.TRANSACTION_RESULT_TOPIC));
 
-        assertEquals(50L, forwardsTo.get(KafkaConfig.MODIFICATION_LOG).key);
+        assertEquals(new ModificationKey(50L, (short) 20), forwardsTo.get(KafkaConfig.MODIFICATION_LOG).key);
 
         NewOrderModification modification = (NewOrderModification) forwardsTo.get(KafkaConfig.MODIFICATION_LOG).value;
         assertEquals(5, modification.customerId);
@@ -221,7 +222,10 @@ public class NewOrderProcessorTest {
     public void testRemoteWarehouseItemNewStockLevelsAreAddedToModificationLog() {
         NewOrderRequest request = new NewOrderRequest(5, 4, 4, ImmutableList.of(
             new NewOrderRequest.OrderLine(0, 3, 3),
-            new NewOrderRequest.OrderLine(1, 3, 5)
+            new NewOrderRequest.OrderLine(1, 3, 5),
+            // Items from other warehouses shouldn't result in more modifications
+            new NewOrderRequest.OrderLine(2, 4, 7),
+            new NewOrderRequest.OrderLine(2, 5, 9)
         ), 5L);
         processor.process(new TransactionWarehouseKey(50L, 3), request);
 

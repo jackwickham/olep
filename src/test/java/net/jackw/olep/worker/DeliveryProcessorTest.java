@@ -9,6 +9,7 @@ import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.message.modification.DeliveryModification;
+import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
@@ -110,12 +111,12 @@ public class DeliveryProcessorTest {
             ),
             new ForwardedMessageMatcher<>(
                 KafkaConfig.MODIFICATION_LOG,
-                1L,
+                new ModificationKey(1L, (short) 3),
                 new DeliveryModification(5, 3, 1, 18, 1L, 14, new BigDecimal("28.73"))
             ),
             new ForwardedMessageMatcher<>(
                 KafkaConfig.MODIFICATION_LOG,
-                1L,
+                new ModificationKey(1L, (short) 5),
                 new DeliveryModification(11, 5, 1, 18,  1L, 1, new BigDecimal("11.11"))
             )
         ));

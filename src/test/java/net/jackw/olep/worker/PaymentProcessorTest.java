@@ -13,6 +13,7 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
+import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
@@ -160,7 +161,7 @@ public class PaymentProcessorTest {
                 resultMessage = (PaymentResult.PartialResult) forward.keyValue().value;
             } else if (forward.childName().equals(KafkaConfig.MODIFICATION_LOG)) {
                 // Make sure this looks like a modification, and the key is correct
-                assertEquals(10L, forward.keyValue().key);
+                assertEquals(new ModificationKey(10L, (short) 0), forward.keyValue().key);
                 assertThat(forward.keyValue().value, Matchers.instanceOf(PaymentModification.class));
                 modificationMessage = (PaymentModification) forward.keyValue().value;
             } else {
