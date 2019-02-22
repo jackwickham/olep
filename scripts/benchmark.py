@@ -16,12 +16,18 @@ if not os.path.isfile("./gradlew"):
 
 parser = argparse.ArgumentParser(description="Run a benchmark on the olep database")
 parser.add_argument("config_file", help="The yml file that is the base config file for the benchmark run")
+parser.add_argument("results_dir", help="The directory where the results of this run should be placed")
+parser.add_argument("--overwrite-results-dir", help="Overwrite existing results in the provided directory", action='store_true')
 parser.add_argument("-c", "--config", nargs="+", action="append",
     help="A config option that should be changed between benchmark runs, and the values it should be given. Multiple " \
     + "options can be specified, and the lattice of them will be tested",
     required=True, metavar=("SETTING", "VALUE"))
 parser.add_argument("-t", "--time", default=610, help="Number of seconds to run the benchmark for", type=int)
 args = parser.parse_args()
+
+if not args.overwrite_results_dir and os.path.isdir(args.results_dir) and os.listdir(args.results_dir) != []:
+    print("Error: results dir already exists. Add --overwrite-results-dir to force its use")
+    exit(1)
 
 # Load the original config file into memory
 with open(args.config_file) as f:
@@ -44,9 +50,13 @@ def run(set_options):
 
     # Create the new config file
     with tempfile.NamedTemporaryFile(mode="w", prefix="config-", suffix=".yml", newline='\n') as new_config_file:
+        run_id = "-".join([str(v) for v in set_options.values()])
+
         new_config_file.write(base_config_file)
         for key, value in set_options.items():
             new_config_file.write(f"\n{key}: {value}")
+        new_config_file.write(f"\nbaseResultsDir: {args.results_dir}")
+        new_config_file.write(f"\nrunId: {run_id}\n")
         new_config_file.flush()
 
         print(f"Running with options {set_options}")

@@ -52,7 +52,7 @@ public abstract class Metrics {
         if (config.getResultsDir() == null || config.getResultsDir().isBlank()) {
             return new InMemoryMetrics();
         } else {
-            return new DiskMetrics(mainClass, config);
+            return new DiskMetrics(mainClass, config.getResultsDir(), config);
         }
     }
 }

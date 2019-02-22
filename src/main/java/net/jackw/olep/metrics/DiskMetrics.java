@@ -11,8 +11,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class DiskMetrics extends Metrics {
     /**
@@ -23,25 +21,22 @@ public class DiskMetrics extends Metrics {
     private BufferedWriter durationWriter;
     private BufferedWriter eventWriter;
 
-    public DiskMetrics(String mainClass, DatabaseConfig config) throws IOException {
+    public DiskMetrics(String mainClass, String resultsDirName, DatabaseConfig config) throws IOException {
         // First make the results dir
-        String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
-        File resultsDir = new File(String.format(
-            "%s/%s-%d-%s/", config.getResultsDir(), date, config.getWarehouseCount(), mainClass
-        ));
-        if (!resultsDir.mkdirs()) {
+        File resultsDir = new File(resultsDirName);
+        if (!resultsDir.exists() && !resultsDir.mkdirs()) {
             throw new IOException("Failed to create results dir " + resultsDir.getPath());
         }
 
         // Create the file of duration events
         durationWriter = new BufferedWriter(new OutputStreamWriter(
-            new FileOutputStream(new File(resultsDir, "durations.csv")), StandardCharsets.UTF_8
+            new FileOutputStream(new File(resultsDir, mainClass + "-durations.csv")), StandardCharsets.UTF_8
         ), WRITE_BUFFER_SIZE);
         durationWriter.write("t,event,duration\n");
 
         // And the file of instantaneous events
         eventWriter = new BufferedWriter(new OutputStreamWriter(
-            new FileOutputStream(new File(resultsDir, "events.csv")), StandardCharsets.UTF_8
+            new FileOutputStream(new File(resultsDir, mainClass + "-events.csv")), StandardCharsets.UTF_8
         ), WRITE_BUFFER_SIZE);
         eventWriter.write("t,event,data\n");
 

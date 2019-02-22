@@ -12,8 +12,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Arrays;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class DatabaseConfig {
     private DatabaseConfig() { }
@@ -73,7 +73,10 @@ public class DatabaseConfig {
     private String viewRegistryHost = "127.0.0.1";
 
     @JsonProperty
-    private String resultsDir = "results";
+    private String baseResultsDir = "results";
+
+    @JsonProperty
+    private String runId = null;
 
     @JsonIgnore
     private String mainClass;
@@ -210,12 +213,33 @@ public class DatabaseConfig {
     /**
      * Get the directory where the benchmark results should be placed
      */
+    @JsonIgnore
+    @Nullable
     public String getResultsDir() {
-        return resultsDir;
+        if (baseResultsDir == null || baseResultsDir.isBlank()) {
+            return null;
+        }
+        return baseResultsDir + "/" + getRunId();
+    }
+
+    /**
+     * Get the name of this test run, which is used
+     */
+    public String getRunId() {
+        if (runId == null) {
+            String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
+            return String.format(
+                "%s-%d-%s", date, getWarehouseCount(), mainClass
+            );
+        } else {
+            return runId;
+        }
     }
 
     /**
      * Get the metrics manager instance for this configuration
+     *
+     * Synchronised to ensure that only one metrics class ever gets constructed
      */
     public synchronized Metrics getMetrics() {
         // Lazily create metrics
