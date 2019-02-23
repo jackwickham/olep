@@ -87,6 +87,7 @@ repositories {
 task runVerifier(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.jackw.olep.verifier.VerifierApp"
+    maxHeapSize = "14G"
 }
 
 task runApplication(type: JavaExec, dependsOn: 'classes') {
@@ -97,6 +98,7 @@ task runApplication(type: JavaExec, dependsOn: 'classes') {
 task runWorker(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.jackw.olep.worker.WorkerApp"
+    maxHeapSize = "14G"
 }
 
 task reset(type: JavaExec, dependsOn: 'classes') {
@@ -108,6 +110,19 @@ task runDatabase(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.jackw.olep.utils.RunDatabase"
     mustRunAfter reset
+    maxHeapSize = "14G"
+}
+
+task runView(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.view.LogViewAdapter"
+    mustRunAfter reset
+    maxHeapSize = "14G"
+}
+
+task runRegistry(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.jackw.olep.view.StandaloneRegistry"
 }
 
 
