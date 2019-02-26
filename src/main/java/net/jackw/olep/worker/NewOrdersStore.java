@@ -2,10 +2,15 @@ package net.jackw.olep.worker;
 
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class NewOrdersStore {
     private KeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> store;
@@ -50,5 +55,29 @@ public class NewOrdersStore {
             store.put(district, queue);
             return result;
         }
+    }
+
+    /**
+     * Get the oldest order associated with each of the specified districts
+     *
+     * This method batches writes to rocksdb, which might make it perform better
+     *
+     * @param districts A list of districts to load the orders for
+     * @return A map of district ID to the oldest new order associated with that district
+     */
+    public Map<WarehouseSpecificKey, NewOrder> pollAll(List<WarehouseSpecificKey> districts) {
+        Map<WarehouseSpecificKey, NewOrder> results = new HashMap<>(districts.size());
+        List<KeyValue<WarehouseSpecificKey, ArrayDeque<NewOrder>>> updatedQueues = new ArrayList<>(districts.size());
+        for (WarehouseSpecificKey district : districts) {
+            ArrayDeque<NewOrder> queue = store.get(district);
+            if (queue != null && !queue.isEmpty()) {
+                results.put(district, queue.remove());
+                updatedQueues.add(new KeyValue<>(district, queue));
+            }
+        }
+        if (!updatedQueues.isEmpty()) {
+            store.putAll(updatedQueues);
+        }
+        return results;
     }
 }

@@ -18,7 +18,10 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest> {
     private NewOrdersStore newOrdersStore;
@@ -47,21 +50,25 @@ public class DeliveryProcessor extends BaseTransactionProcessor<DeliveryRequest>
 
         results.processedOrders = new HashMap<>(10);
 
+        List<WarehouseSpecificKey> districts = new ArrayList<>(10);
         for (int i = 1; i <= 10; i++) {
-            NewOrder order = newOrdersStore.poll(new WarehouseSpecificKey(i, value.warehouseId));
-            if (order == null) {
-                continue;
-            }
-            results.processedOrders.put(i, order.orderId);
+            districts.add(new WarehouseSpecificKey(i, value.warehouseId));
+        }
+        Map<WarehouseSpecificKey, NewOrder> newOrders = newOrdersStore.pollAll(districts);
 
-            DistrictSpecificKey customerKey = new DistrictSpecificKey(order.customerId, i, value.warehouseId);
+        for (Map.Entry<WarehouseSpecificKey, NewOrder> entry : newOrders.entrySet()) {
+            NewOrder order = entry.getValue();
+            int districtId = entry.getKey().id;
+            results.processedOrders.put(districtId, order.orderId);
+
+            DistrictSpecificKey customerKey = new DistrictSpecificKey(order.customerId, districtId, value.warehouseId);
             CustomerMutable oldCustomer = customerMutableStore.get(customerKey);
             CustomerMutable newCustomer = new CustomerMutable(oldCustomer.balance.add(order.totalAmount), oldCustomer.data);
             customerMutableStore.put(customerKey, newCustomer);
 
             sendModification(key, new DeliveryModification(
-                order.orderId, i, value.warehouseId, value.carrierId, value.deliveryDate, order.customerId, order.totalAmount
-            ), (short) i);
+                order.orderId, districtId, value.warehouseId, value.carrierId, value.deliveryDate, order.customerId, order.totalAmount
+            ), (short) districtId);
         }
 
         sendResults(key, results);
