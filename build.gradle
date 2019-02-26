@@ -20,11 +20,19 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
+
+    acceptanceTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
 }
 
 configurations {
     integrationTestImplementation.extendsFrom implementation
-    integrationTestsRuntimeOnly.extendsFrom runtimeOnly
+    integrationTestRuntimeOnly.extendsFrom runtimeOnly
+
+    acceptanceTestImplementation.extendsFrom implementation
+    acceptanceTestRuntimeOnly.extendsFrom runtimeOnly
 }
 
 // Targeting Java 11
@@ -74,6 +82,10 @@ dependencies {
     integrationTestCompile 'junit:junit:4.12'
     integrationTestCompile 'org.hamcrest:hamcrest:2.1'
     integrationTestCompile 'org.hamcrest:hamcrest-junit:2.0.0.0'
+    // and acceptance tests
+    acceptanceTestCompile 'junit:junit:4.12'
+    acceptanceTestCompile 'org.hamcrest:hamcrest:2.1'
+    acceptanceTestCompile 'org.hamcrest:hamcrest-junit:2.0.0.0'
 }
 
 // In this section you declare where to find the dependencies of your project
@@ -137,3 +149,15 @@ task integrationTest(type: Test) {
 }
 
 check.dependsOn integrationTest
+
+// Acceptance tests task configuration
+task acceptanceTest(type: Test) {
+    description = 'Runs acceptance tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.acceptanceTest.output.classesDirs
+    classpath = sourceSets.acceptanceTest.runtimeClasspath
+    shouldRunAfter test, integrationTest
+}
+
+check.dependsOn acceptanceTest
