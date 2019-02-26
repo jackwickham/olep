@@ -125,8 +125,10 @@ public class Resetter implements AutoCloseable {
         }
         if (resetMutableTopics) {
             // Topics involved with transactions are partitioned based on the warehouse they are associated with
-            int transactionRequestPartitions = config.getVerifierInstances() * config.getVerifierThreads() * 8;
-            int acceptedTransactionPartitions = config.getWorkerInstances() * config.getWorkerThreads() * 8;
+            int transactionRequestPartitions = config.getTransactionRequestTopicPartitions();
+            int acceptedTransactionPartitions = config.getAcceptedTransactionTopicPartitions();
+            int modificationLogPartitions = config.getModificationTopicPartitions();
+            int transactionResultPartitions = config.getTransactionResultTopicPartitions();
 
             futures.add(createTopic(new NewTopic(
                 KafkaConfig.TRANSACTION_REQUEST_TOPIC, transactionRequestPartitions, TRANSACTION_REPLICATION_FACTOR
@@ -136,12 +138,10 @@ public class Resetter implements AutoCloseable {
             ), adminClient, 0));
             // Modification log probably wants to be partitioned more later
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.MODIFICATION_LOG, 1, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.MODIFICATION_LOG, modificationLogPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
-            // The transaction results can be filtered by the application, but aim to have ~1 partition per application DB connection
-            int expectedDbConnections = (config.getWarehouseCount() + 199) / 200; // ceiling division
             futures.add(createTopic(new NewTopic(
-                KafkaConfig.TRANSACTION_RESULT_TOPIC, expectedDbConnections, TRANSACTION_REPLICATION_FACTOR
+                KafkaConfig.TRANSACTION_RESULT_TOPIC, transactionResultPartitions, TRANSACTION_REPLICATION_FACTOR
             ), adminClient, 0));
 
             // Also create worker changelogs, which need to be partitioned the same as the accepted transaction topic

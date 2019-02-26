@@ -58,6 +58,18 @@ public class DatabaseConfig {
     private int warehousesPerDatabaseConnection = 200;
 
     @JsonProperty
+    private int transactionRequestTopicPartitions = -1;
+
+    @JsonProperty
+    private int acceptedTransactionTopicPartitions = -1;
+
+    @JsonProperty
+    private int modificationTopicPartitions = -1;
+
+    @JsonProperty
+    private int transactionResultTopicPartitions = -1;
+
+    @JsonProperty
     private String storeBackingDir = "/tmp/olep/";
 
     @JsonProperty
@@ -173,6 +185,51 @@ public class DatabaseConfig {
      */
     public int getWarehousesPerDatabaseConnection() {
         return warehousesPerDatabaseConnection;
+    }
+
+    /**
+     * Get the number of partitions that should be created for the transaction request topic
+     */
+    public int getTransactionRequestTopicPartitions() {
+        if (transactionRequestTopicPartitions > -1) {
+            return transactionRequestTopicPartitions;
+        } else {
+            return getVerifierInstances() * getVerifierThreads() * 8;
+        }
+    }
+
+    /**
+     * Get the number of partitions that should be created for the accepted transactions topic
+     */
+    public int getAcceptedTransactionTopicPartitions() {
+        if (acceptedTransactionTopicPartitions > -1) {
+            return acceptedTransactionTopicPartitions;
+        } else {
+            return getWorkerInstances() * getWorkerThreads() * 8;
+        }
+    }
+
+    /**
+     * Get the number of partitions that should be created for the modification log
+     */
+    public int getModificationTopicPartitions() {
+        if (modificationTopicPartitions > -1) {
+            return modificationTopicPartitions;
+        } else {
+            return 1;
+        }
+    }
+
+    /**
+     * Get the number of partitions that should be created for the transaction result topic
+     */
+    public int getTransactionResultTopicPartitions() {
+        if (transactionResultTopicPartitions > -1) {
+            return transactionResultTopicPartitions;
+        } else {
+            // ~ 1 topic per database connection (ceiling division)
+            return (getWarehouseCount() + getWarehousesPerDatabaseConnection() - 1) / getWarehousesPerDatabaseConnection();
+        }
     }
 
     /**
