@@ -1,6 +1,7 @@
 package net.jackw.olep.verifier;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Uninterruptibles;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.StreamsApp;
@@ -19,9 +20,13 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 public class VerifierApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -41,7 +46,7 @@ public class VerifierApp extends StreamsApp {
      * Wait for the items store to be fully populated before starting
      */
     @Override
-    public ListenableFuture<Void> getBeforeStartFuture() {
+    protected ListenableFuture<Void> getBeforeStartFuture() {
         return itemConsumer.getReadyFuture();
     }
 
@@ -109,9 +114,9 @@ public class VerifierApp extends StreamsApp {
         return props;
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         Arguments arguments = new Arguments(args);
         StreamsApp instance = new VerifierApp(arguments.getConfig());
-        instance.run(() -> StreamsApp.createReadyFile(arguments.getReadyFileArg()));
+        instance.runForever(arguments.getReadyFileArg());
     }
 }

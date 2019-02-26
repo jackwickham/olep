@@ -37,11 +37,14 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 public class WorkerApp extends StreamsApp {
     private SharedStoreConsumer<Integer, Item> itemConsumer;
@@ -181,9 +184,9 @@ public class WorkerApp extends StreamsApp {
         return config.getWorkerThreads();
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         Arguments arguments = new Arguments(args);
         StreamsApp instance = new WorkerApp(arguments.getConfig());
-        instance.run(() -> StreamsApp.createReadyFile(arguments.getReadyFileArg()));
+        instance.runForever(arguments.getReadyFileArg());
     }
 }

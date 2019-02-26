@@ -56,18 +56,6 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         this.metrics = metrics;
         this.readyFuture = SettableFuture.create();
         this.recentTransactions = new LockingLRUSet<>(100);
-
-        // Add a shutdown listener to gracefully handle Ctrl+C
-        Runtime.getRuntime().addShutdownHook(new Thread("view-adapter-shutdown-hook") {
-            @Override
-            public void run() {
-                try {
-                    close();
-                } catch (Exception e) {
-                    log.error(e);
-                }
-            }
-        });
     }
 
     /**
@@ -150,7 +138,6 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
         }
     }
 
-    @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
     public static LogViewAdapter init(String bootstrapServers, String registryServer, DatabaseConfig config) throws RemoteException, InterruptedException {
         Properties consumerProps = new Properties();
@@ -193,6 +180,18 @@ public class LogViewAdapter extends Thread implements AutoCloseable {
             arguments.getConfig().getBootstrapServers(), arguments.getConfig().getViewRegistryHost(), arguments.getConfig()
         )) {
             adapter.start();
+
+            // Add a shutdown listener to gracefully handle Ctrl+C
+            Runtime.getRuntime().addShutdownHook(new Thread("view-adapter-shutdown-hook") {
+                @Override
+                public void run() {
+                    try {
+                        adapter.close();
+                    } catch (Exception e) {
+                        log.error(e);
+                    }
+                }
+            });
 
             // Wait for the adapter to be ready
             adapter.getReadyFuture().get();

@@ -7,8 +7,10 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.MustBeClosed;
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
@@ -21,11 +23,6 @@ import org.apache.logging.log4j.Logger;
  */
 public abstract class StreamsApp implements AutoCloseable {
     /**
-     * A latch to catch when the application is shutting down
-     */
-    private final CountDownLatch appShutdownLatch;
-
-    /**
      * The streams used by this stream processor
      */
     private KafkaStreams streams;
@@ -35,12 +32,14 @@ public abstract class StreamsApp implements AutoCloseable {
      */
     private DatabaseConfig config;
 
+    private CountDownLatch shutdownLatch = new CountDownLatch(1);
+
+    @MustBeClosed
     protected StreamsApp(DatabaseConfig config) {
-        appShutdownLatch = new CountDownLatch(1);
         this.config = config;
     }
 
-    public KafkaStreams getStreams() {
+    protected KafkaStreams createStreams() {
         // Set up the properties of this application
         Properties props = getStreamProperties();
 
@@ -53,7 +52,7 @@ public abstract class StreamsApp implements AutoCloseable {
     /**
      * Get the future that should resolve before the Kafka Streams application should start
      */
-    public ListenableFuture<?> getBeforeStartFuture() {
+    protected ListenableFuture<?> getBeforeStartFuture() {
         return Futures.immediateFuture(null);
     }
 
@@ -101,9 +100,34 @@ public abstract class StreamsApp implements AutoCloseable {
         return nodeId;
     }
 
+    /**
+     * Start the process
+     *
+     * This call will block until the immutable stores are fully populated (they started when the class was created)
+     */
     public void start() throws InterruptedException, ExecutionException {
-        streams = getStreams();
+        streams = createStreams();
         streams.cleanUp();
+
+        streams.setStateListener((newState, oldState) -> {
+            if (newState == KafkaStreams.State.ERROR) {
+                log.fatal("Kafka streams have transitioned to error state");
+                try {
+                    close();
+                } catch (InterruptedException e) {
+                    log.error("Interrupted exception while closing from error state");
+                }
+            }
+        });
+
+        streams.setUncaughtExceptionHandler((thread, throwable) -> {
+            try {
+                log.fatal("Uncaught exception in kafka stream thread", throwable);
+                close();
+            } catch (InterruptedException e) {
+                log.error("Interrupted exception while closing from uncaught exception in thread");
+            }
+        });
 
         getBeforeStartFuture().get();
         log.info("Starting Kafka streams");
@@ -111,48 +135,30 @@ public abstract class StreamsApp implements AutoCloseable {
     }
 
     /**
-     * Run the Kafka application
+     * Start the process, then block until it shuts down
+     *
+     * @param readyFile The file to write a ready state to, or null
      */
-    public void run(Runnable readyCallback) {
-        boolean error = false;
+    public void runForever(String readyFile) throws InterruptedException, ExecutionException {
+        start();
 
-        try {
-            // Add a shutdown listener to gracefully handle Ctrl+C
-            Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
-                @Override
-                public void run() {
-                    appShutdownLatch.countDown();
+        // Once we get here, we are ready (or will be very soon)
+        StreamsApp.createReadyFile(readyFile);
+
+        // Add a shutdown listener to gracefully handle Ctrl+C
+        Runtime.getRuntime().addShutdownHook(new Thread("shutdown-hook") {
+            @Override
+            public void run() {
+                try {
+                    close();
+                } catch (InterruptedException e) {
+                    log.error("Interrupted while trying to close app", e);
                 }
-            });
-
-            start();
-
-            // Send the notification that kafka is now running
-            readyCallback.run();
-
-            // Run forever
-            appShutdownLatch.await();
-            log.info("Shutting down");
-        } catch (Throwable e) {
-            log.fatal(e);
-            error = true;
-        } finally {
-            try {
-                close();
-            } catch (InterruptedException e) {
-                // Nothing we can do now
-                log.fatal("Uncaught exception while shutting down", e);
-                error = true;
             }
-        }
+        });
 
-        if (error) {
-            System.exit(1);
-        }
-    }
-
-    public void run() {
-        this.run(() -> {});
+        // Just wait for Ctrl+C (block forever)
+        shutdownLatch.await();
     }
 
     @OverridingMethodsMustInvokeSuper
@@ -160,11 +166,13 @@ public abstract class StreamsApp implements AutoCloseable {
     public void close() throws InterruptedException {
         if (streams != null) {
             streams.close();
+            streams = null;
+            shutdownLatch.countDown();
         }
     }
 
     public void cleanup() {
-        getStreams().cleanUp();
+        createStreams().cleanUp();
     }
 
     protected String getBootstrapServers() {
@@ -185,6 +193,11 @@ public abstract class StreamsApp implements AutoCloseable {
                 log.warn("Failed to create ready file", e);
             }
         }
+    }
+
+    @VisibleForTesting
+    public KafkaStreams getStreams() {
+        return streams;
     }
 
     private static Logger log = LogManager.getLogger();
