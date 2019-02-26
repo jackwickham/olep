@@ -2,6 +2,9 @@ package net.jackw.olep.common;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -32,7 +35,15 @@ public abstract class StreamsApp implements AutoCloseable {
      */
     private DatabaseConfig config;
 
+    /**
+     * Latch that will go to zero after the streams app shuts down
+     */
     private CountDownLatch shutdownLatch = new CountDownLatch(1);
+
+    /**
+     * The state change listeners that should be called when the streams app transitions
+     */
+    private List<KafkaStreams.StateListener> streamStateChangeListeners = Collections.synchronizedList(new ArrayList<>());
 
     @MustBeClosed
     protected StreamsApp(DatabaseConfig config) {
@@ -100,6 +111,10 @@ public abstract class StreamsApp implements AutoCloseable {
         return nodeId;
     }
 
+    public void addStreamStateChangeListener(KafkaStreams.StateListener listener) {
+        streamStateChangeListeners.add(listener);
+    }
+
     /**
      * Start the process
      *
@@ -117,6 +132,9 @@ public abstract class StreamsApp implements AutoCloseable {
                 } catch (InterruptedException e) {
                     log.error("Interrupted exception while closing from error state");
                 }
+            }
+            for (KafkaStreams.StateListener listener : streamStateChangeListeners) {
+                listener.onChange(newState, oldState);
             }
         });
 
@@ -158,6 +176,13 @@ public abstract class StreamsApp implements AutoCloseable {
         });
 
         // Just wait for Ctrl+C (block forever)
+        shutdownLatch.await();
+    }
+
+    /**
+     * Block the current thread until the streams app shuts down
+     */
+    public void awaitShutdown() throws InterruptedException {
         shutdownLatch.await();
     }
 

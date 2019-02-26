@@ -1,14 +1,15 @@
 package net.jackw.olep.acceptance.atomicity;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import net.jackw.olep.acceptance.BaseAcceptanceTest;
+import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.records.CustomerMutable;
+import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.utils.RandomDataGenerator;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.concurrent.ExecutionException;
 
@@ -25,6 +26,7 @@ public class AtomicityTest extends BaseAcceptanceTest {
      * been changed appropriately.
      */
     @Test
+    @SuppressWarnings("AssertionFailureIgnored")
     public void testPaymentAtomicallyUpdates() throws InterruptedException, ExecutionException {
         RandomDataGenerator rand = new RandomDataGenerator();
         int warehouseId = rand.uniform(1, getConfig().getWarehouseCount());
@@ -34,31 +36,20 @@ public class AtomicityTest extends BaseAcceptanceTest {
         int customerDistrictId = rand.uniform(1, getConfig().getDistrictsPerWarehouse());
         BigDecimal amount = new BigDecimal("12.34");
 
-        // Send the transaction twice, and make sure we get the correct new values the second time (meaning that the
-        // first was successful)
-        SettableFuture<BigDecimal> balanceAfterFirstPayment = SettableFuture.create();
+        ReadOnlyKeyValueStore<DistrictSpecificKey, CustomerMutable> customerMutableStore = getWorkerApp().getStreams()
+            .store(KafkaConfig.CUSTOMER_MUTABLE_STORE, QueryableStoreTypes.keyValueStore());
+        // CustomerMutable is itself immutable, so we can safely store a reference to it here
+        CustomerMutable oldCustomer = customerMutableStore.get(new DistrictSpecificKey(customerId, customerDistrictId, customerWarehouseId));
+
         SettableFuture<Void> success = SettableFuture.create();
 
         getDb().payment(customerId, districtId, warehouseId, customerDistrictId, customerWarehouseId, amount).addCompleteHandler(res -> {
-            balanceAfterFirstPayment.set(res.customerBalance);
-        });
-        getDb().payment(customerId, districtId, warehouseId, customerDistrictId, customerWarehouseId, amount).addCompleteHandler(res -> {
-            Futures.addCallback(balanceAfterFirstPayment, new FutureCallback<BigDecimal>() {
-                @Override
-                public void onSuccess(BigDecimal result) {
-                    try {
-                        assertEquals(result.add(new BigDecimal("12.34")), res.customerBalance);
-                        success.set(null);
-                    } catch (Exception e) {
-                        success.setException(e);
-                    }
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    success.setException(t);
-                }
-            }, MoreExecutors.directExecutor());
+            try {
+                assertEquals(oldCustomer.balance.subtract(amount), res.customerBalance);
+                success.set(null);
+            } catch (Throwable e) {
+                success.setException(e);
+            }
         });
 
         success.get();

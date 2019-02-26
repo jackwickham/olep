@@ -3,6 +3,7 @@ package net.jackw.olep.utils;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
@@ -15,13 +16,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 
 /**
  * Run all components of the database (verifier, worker, view and registry)
@@ -37,7 +34,9 @@ public class RunDatabase {
 
         final VerifierApp verifierApp = new VerifierApp(config);
         final WorkerApp workerApp = new WorkerApp(config);
-        LogViewAdapter logViewAdapter = LogViewAdapter.init(config.getBootstrapServers(), config.getViewRegistryHost(), config);
+        final LogViewAdapter logViewAdapter = LogViewAdapter.init(
+            config.getBootstrapServers(), config.getViewRegistryHost(), config
+        );
 
         // Add a shutdown listener to gracefully handle Ctrl+C
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -50,13 +49,14 @@ public class RunDatabase {
             }
         }));
 
+        ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2));
         // Create futures that will resolve when the verifier and worker apps are set up and (more or less) ready to
         // process messages
-        futures.add(ListenableFutureTask.create(() -> {
+        futures.add(executorService.submit(() -> {
             verifierApp.start();
             return null;
         }));
-        futures.add(ListenableFutureTask.create(() -> {
+        futures.add(executorService.submit(() -> {
             workerApp.start();
             return null;
         }));
