@@ -37,9 +37,9 @@ public class NewOrderTest extends BaseIntegrationTest {
         PredictableItemFactory itemFactory = PredictableItemFactory.getInstance();
         PredictableWarehouseFactory warehouseFactory = PredictableWarehouseFactory.getInstance();
         PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
-        PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getCustomerNameRange());
+        PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getConfig().getCustomerNameRange());
 
-        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
@@ -60,7 +60,7 @@ public class NewOrderTest extends BaseIntegrationTest {
             TransactionStatus<NewOrderResult> status = db.newOrder(3, 2, 1, orderLines);
 
             status.register(resultHandler.successListener(new NewOrderResultMatcher(
-                3, 2, 1, new DateMatcher(startTime), equalTo(1), equalTo(customer.lastName),
+                3, 2, 1, new DateMatcher(startTime), both(greaterThan(10)).and(lessThan(15)), equalTo(customer.lastName),
                 equalTo(customer.credit), equalTo(customer.discount), equalTo(warehouseFactory.getWarehouseShared(1).tax),
                 equalTo(districtFactory.getDistrictShared(2).tax), contains(lineResultMatchers)
             )));
@@ -74,9 +74,9 @@ public class NewOrderTest extends BaseIntegrationTest {
         PredictableItemFactory itemFactory = PredictableItemFactory.getInstance();
         PredictableWarehouseFactory warehouseFactory = PredictableWarehouseFactory.getInstance();
         PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
-        PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getCustomerNameRange());
+        PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getConfig().getCustomerNameRange());
 
-        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
@@ -97,7 +97,7 @@ public class NewOrderTest extends BaseIntegrationTest {
             TransactionStatus<NewOrderResult> status = db.newOrder(3, 2, 1, orderLines);
 
             status.register(resultHandler.successListener(new NewOrderResultMatcher(
-                3, 2, 1, new DateMatcher(startTime), equalTo(1), equalTo(customer.lastName),
+                3, 2, 1, new DateMatcher(startTime), both(greaterThan(10)).and(lessThan(15)), equalTo(customer.lastName),
                 equalTo(customer.credit), equalTo(customer.discount), equalTo(warehouseFactory.getWarehouseShared(1).tax),
                 equalTo(districtFactory.getDistrictShared(2).tax), contains(lineResultMatchers)
             )));
@@ -108,7 +108,7 @@ public class NewOrderTest extends BaseIntegrationTest {
 
     @Test
     public void testInvalidItem() throws Throwable {
-        try (EventDatabase db = new EventDatabase(getEventBootsrapServers(), getViewBootstrapServers())) {
+        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);

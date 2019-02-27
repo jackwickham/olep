@@ -12,7 +12,6 @@ import org.junit.Rule;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -42,16 +41,8 @@ public abstract class BaseIntegrationTest {
         StandaloneRegistry.start();
     }
 
-    protected String getEventBootsrapServers() {
-        return config.getBootstrapServers();
-    }
-
-    protected String getViewBootstrapServers() {
-        return config.getViewRegistryHost();
-    }
-
-    protected static int getCustomerNameRange() {
-        return 5;
+    protected static DatabaseConfig getConfig() {
+        return config;
     }
 
     private List<VerifierApp> verifierInstances = new ArrayList<>();

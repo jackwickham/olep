@@ -1,5 +1,5 @@
 itemCount: 10
-warehouseCount: 10
+warehouseCount: 30
 districtsPerWarehouse: 5
 customersPerDistrict: 10
 customerNameRange: 5

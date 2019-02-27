@@ -12,19 +12,14 @@ import net.jackw.olep.verifier.VerifierApp;
 import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.StandaloneRegistry;
 import net.jackw.olep.worker.WorkerApp;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.processor.StateRestoreListener;
 import org.junit.After;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class BaseAcceptanceTest {
     private static Database db;
@@ -61,15 +56,6 @@ public class BaseAcceptanceTest {
         }));
         futures.add(executorService.submit(() -> {
             workerApp.start();
-            // We need to be able to access the stores, which means the stream threads need to be running
-            // It seems to go CREATED -> RUNNING -> REBALANCING -> RUNNING before it's ready, so wait for that
-            /*CountDownLatch readyLatch = new CountDownLatch(1);
-            workerApp.addStreamStateChangeListener((newState, oldState) -> {
-                if (newState == KafkaStreams.State.RUNNING && oldState == KafkaStreams.State.REBALANCING) {
-                    readyLatch.countDown();
-                }
-            });*/
-
             return null;
         }));
 
