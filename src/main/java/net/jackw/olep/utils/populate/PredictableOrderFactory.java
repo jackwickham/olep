@@ -112,4 +112,9 @@ public class PredictableOrderFactory implements OrderFactory {
     public static void resetInstances() {
         instances = new HashMap<>();
     }
+
+    @Override
+    public int getNextOrderId() {
+        return nextId;
+    }
 }

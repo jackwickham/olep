@@ -7,6 +7,7 @@ import net.jackw.olep.message.modification.NewOrderModification;
 public interface OrderFactory {
     UndeliveredOrder makeUndeliveredOrder(int customerId, StockProvider stockProvider);
     DeliveredOrder makeDeliveredOrder(int customerId, StockProvider stockProvider);
+    int getNextOrderId();
 
     public static class UndeliveredOrder {
         public final NewOrderModification newOrderModification;

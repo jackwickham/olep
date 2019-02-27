@@ -106,6 +106,11 @@ public class VerifierApp extends StreamsApp {
     }
 
     @Override
+    protected int getStateStoreCount() {
+        return 0;
+    }
+
+    @Override
     protected Properties getStreamProperties() {
         Properties props = super.getStreamProperties();
         // Buffer verification results for up to 2ms and 64KiB

@@ -2,10 +2,8 @@ package net.jackw.olep.acceptance;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.SettableFuture;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.EventDatabase;
@@ -14,9 +12,11 @@ import net.jackw.olep.verifier.VerifierApp;
 import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.StandaloneRegistry;
 import net.jackw.olep.worker.WorkerApp;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.processor.StateRestoreListener;
 import org.junit.After;
-import org.junit.Before;
+import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,18 +24,19 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class BaseAcceptanceTest {
-    private Database db;
-    private DatabaseConfig config;
-    private VerifierApp verifierApp;
-    private WorkerApp workerApp;
-    private LogViewAdapter logViewAdapter;
+    private static Database db;
+    private static DatabaseConfig config;
+    private static VerifierApp verifierApp;
+    private static WorkerApp workerApp;
+    private static LogViewAdapter logViewAdapter;
 
-    @Before
+    @BeforeClass
     @SuppressWarnings("MustBeClosedChecker")
-    public void startDb() throws IOException, InterruptedException, ExecutionException {
-        config = DatabaseConfig.create(getClass().getSimpleName());
+    public static void startDb() throws IOException, InterruptedException, ExecutionException {
+        config = DatabaseConfig.create("acceptance-test");
 
         // Reset everything
         new Resetter(true, true, true, config).reset();
@@ -62,13 +63,13 @@ public class BaseAcceptanceTest {
             workerApp.start();
             // We need to be able to access the stores, which means the stream threads need to be running
             // It seems to go CREATED -> RUNNING -> REBALANCING -> RUNNING before it's ready, so wait for that
-            CountDownLatch readyLatch = new CountDownLatch(1);
+            /*CountDownLatch readyLatch = new CountDownLatch(1);
             workerApp.addStreamStateChangeListener((newState, oldState) -> {
                 if (newState == KafkaStreams.State.RUNNING && oldState == KafkaStreams.State.REBALANCING) {
                     readyLatch.countDown();
                 }
-            });
-            readyLatch.await();
+            });*/
+
             return null;
         }));
 
@@ -81,6 +82,8 @@ public class BaseAcceptanceTest {
 
         // Connect to the DB, and we're ready to start
         db = new EventDatabase(config.getBootstrapServers(), config.getViewRegistryHost());
+
+        CurrentTestState.init(db, config, verifierApp, workerApp, logViewAdapter);
     }
 
     @After
@@ -89,6 +92,8 @@ public class BaseAcceptanceTest {
         verifierApp.close();
         workerApp.close();
         logViewAdapter.close();
+
+        CurrentTestState.clear();
     }
 
     public Database getDb() {

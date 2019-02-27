@@ -156,7 +156,10 @@ public class PopulateStores implements AutoCloseable {
 
             populateCustomers(district);
             if (populateMutableStores) {
-                populateOrders(district, stockQuantities);
+                int nextOrderId = populateOrders(district, stockQuantities);
+                nextOrderIdStoreProducer.send(new ProducerRecord<>(
+                    KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG, storePartition(warehouse.id), district.getKey(), nextOrderId
+                ));
             }
         }
     }
@@ -208,7 +211,7 @@ public class PopulateStores implements AutoCloseable {
         return stockQuantities;
     }
 
-    private void populateOrders(DistrictShared district, int[] stockQuantities) {
+    private int populateOrders(DistrictShared district, int[] stockQuantities) {
         OrderFactory orderFactory;
         if (config.isPredictableData()) {
             orderFactory = PredictableOrderFactory.instanceFor(district, config.getItemCount());
@@ -240,6 +243,7 @@ public class PopulateStores implements AutoCloseable {
             }
         }
         newOrderStoreProducer.send(new ProducerRecord<>(KafkaConfig.NEW_ORDER_CHANGELOG, storePartition(district.warehouseId), district.getKey(), newOrders));
+        return orderFactory.getNextOrderId();
     }
 
     @Override

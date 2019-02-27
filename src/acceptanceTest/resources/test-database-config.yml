@@ -1,0 +1,11 @@
+itemCount: 100
+warehouseCount: 50
+districtsPerWarehouse: 10
+customersPerDistrict: 100
+customerNameRange: 20
+predictableData: false
+verifierInstances: 1
+workerInstances: 1
+applicationInstances: 1
+# No results
+baseResultsDir: ~

@@ -7,17 +7,24 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Table;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.MustBeClosed;
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.processor.StateRestoreListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -39,11 +46,6 @@ public abstract class StreamsApp implements AutoCloseable {
      * Latch that will go to zero after the streams app shuts down
      */
     private CountDownLatch shutdownLatch = new CountDownLatch(1);
-
-    /**
-     * The state change listeners that should be called when the streams app transitions
-     */
-    private List<KafkaStreams.StateListener> streamStateChangeListeners = Collections.synchronizedList(new ArrayList<>());
 
     @MustBeClosed
     protected StreamsApp(DatabaseConfig config) {
@@ -83,6 +85,11 @@ public abstract class StreamsApp implements AutoCloseable {
     protected abstract int getThreadCount();
 
     /**
+     * Get the number of state stores that this processor has
+     */
+    protected abstract int getStateStoreCount();
+
+    /**
      * Get the properties that should be set on the Kafka Streams app
      */
     protected Properties getStreamProperties() {
@@ -111,10 +118,6 @@ public abstract class StreamsApp implements AutoCloseable {
         return nodeId;
     }
 
-    public void addStreamStateChangeListener(KafkaStreams.StateListener listener) {
-        streamStateChangeListeners.add(listener);
-    }
-
     /**
      * Start the process
      *
@@ -133,9 +136,6 @@ public abstract class StreamsApp implements AutoCloseable {
                     log.error("Interrupted exception while closing from error state");
                 }
             }
-            for (KafkaStreams.StateListener listener : streamStateChangeListeners) {
-                listener.onChange(newState, oldState);
-            }
         });
 
         streams.setUncaughtExceptionHandler((thread, throwable) -> {
@@ -147,9 +147,34 @@ public abstract class StreamsApp implements AutoCloseable {
             }
         });
 
+        Multimap<String, Integer> initialisedMutableStores = Multimaps.synchronizedSetMultimap(
+            HashMultimap.create(getStateStoreCount(), config.getAcceptedTransactionTopicPartitions())
+        );
+        CountDownLatch readyMutableStores = new CountDownLatch(getStateStoreCount() * config.getAcceptedTransactionTopicPartitions());
+
+        streams.setGlobalStateRestoreListener(new StateRestoreListener() {
+            @Override
+            public void onRestoreStart(TopicPartition topicPartition, String storeName, long startingOffset, long endingOffset) { }
+
+            @Override
+            public void onBatchRestored(TopicPartition topicPartition, String storeName, long batchEndOffset, long numRestored) { }
+
+            @Override
+            public void onRestoreEnd(TopicPartition topicPartition, String storeName, long totalRestored) {
+                if (initialisedMutableStores.put(topicPartition.topic(), topicPartition.partition())) {
+                    // This store became ready for the first time
+                    readyMutableStores.countDown();
+                }
+            }
+        });
+
         getBeforeStartFuture().get();
         log.info("Starting Kafka streams");
         streams.start();
+
+        readyMutableStores.await();
+
+        log.info("Mutable state stores populated");
     }
 
     /**
@@ -197,7 +222,9 @@ public abstract class StreamsApp implements AutoCloseable {
     }
 
     public void cleanup() {
-        createStreams().cleanUp();
+        KafkaStreams streams = createStreams();
+        streams.cleanUp();
+        streams.close();
     }
 
     protected String getBootstrapServers() {

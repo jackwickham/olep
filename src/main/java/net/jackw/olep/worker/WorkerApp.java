@@ -184,6 +184,11 @@ public class WorkerApp extends StreamsApp {
         return config.getWorkerThreads();
     }
 
+    @Override
+    protected int getStateStoreCount() {
+        return 4;
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         Arguments arguments = new Arguments(args);
         StreamsApp instance = new WorkerApp(arguments.getConfig());
