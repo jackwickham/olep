@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
-public class BaseAcceptanceTest {
+public abstract class BaseAcceptanceTest {
     private static Database db;
     private static DatabaseConfig config;
     private static VerifierApp verifierApp;
@@ -51,10 +51,12 @@ public class BaseAcceptanceTest {
         // Create futures that will resolve when the verifier and worker apps are set up and (more or less) ready to
         // process messages
         futures.add(executorService.submit(() -> {
+            verifierApp.cleanup();
             verifierApp.start();
             return null;
         }));
         futures.add(executorService.submit(() -> {
+            workerApp.cleanup();
             workerApp.start();
             return null;
         }));
