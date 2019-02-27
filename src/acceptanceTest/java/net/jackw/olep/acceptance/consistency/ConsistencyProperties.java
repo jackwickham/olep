@@ -7,6 +7,8 @@ import net.jackw.olep.common.records.WarehouseSpecificKey;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
@@ -17,6 +19,11 @@ import static org.junit.Assert.*;
  * TPC-C §3.3
  */
 public abstract class ConsistencyProperties {
+    @BeforeClass
+    public static void checkPartOfSuite() {
+        Assume.assumeTrue(CurrentTestState.hasInstance());
+    }
+
     // 3.3.2.1 doesn't apply
 
     /**
