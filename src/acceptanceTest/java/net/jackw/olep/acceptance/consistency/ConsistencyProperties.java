@@ -3,6 +3,7 @@ package net.jackw.olep.acceptance.consistency;
 import net.jackw.olep.acceptance.CurrentTestState;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.NewOrder;
+import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.OrderStatusResult;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import org.apache.kafka.streams.KafkaStreams;
@@ -92,6 +93,10 @@ public abstract class ConsistencyProperties {
      * For any row in the ORDER table, O_CARRIER_ID is set to a null value if and only if there is a corresponding row
      * in the NEW-ORDER table defined by (O_W_ID, O_D_ID, O_ID) = (NO_W_ID, NO_D_ID, NO_O_ID).
      *
+     * §3.3.2.7
+     * For any row in the ORDER-LINE table, OL_DELIVERY_D is set to a null date/time if and only if the corresponding
+     * row in the ORDER table has O_CARRIER_ID set to a null value
+     *
      * This only applies here for orders that are in the order status store
      */
     @Test
@@ -106,7 +111,6 @@ public abstract class ConsistencyProperties {
                 ArrayDeque<NewOrder> newOrderQueue = newOrderStore.get(districtKey);
                 for (int customerId = 1; customerId <= CurrentTestState.getInstance().config.getCustomersPerDistrict(); customerId++) {
                     OrderStatusResult orderStatus = CurrentTestState.getInstance().db.orderStatus(customerId, districtId, warehouseId);
-                    boolean nullCarrierId = orderStatus.latestOrderCarrierId == null;
                     boolean isPending = false;
                     for (NewOrder order : newOrderQueue) {
                         if (order.orderId == orderStatus.latestOrderId) {
@@ -114,9 +118,15 @@ public abstract class ConsistencyProperties {
                             break;
                         }
                     }
-                    assertEquals(isPending, nullCarrierId);
+                    assertEquals(isPending, orderStatus.latestOrderCarrierId == null);
+                    for (OrderLine line : orderStatus.latestOrderLines) {
+                        assertEquals(isPending, line.deliveryDate == null);
+                    }
                 }
             }
         }
     }
+
+    // 3.3.2.6 doesn't apply
+    // 3.3.2.8 -- 3.3.2.12 don't apply, though the modification log could be parsed and treated as the HISTORY table
 }

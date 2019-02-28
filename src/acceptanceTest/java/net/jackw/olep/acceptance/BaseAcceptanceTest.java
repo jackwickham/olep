@@ -12,8 +12,6 @@ import net.jackw.olep.verifier.VerifierApp;
 import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.StandaloneRegistry;
 import net.jackw.olep.worker.WorkerApp;
-import org.junit.After;
-import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -74,10 +72,10 @@ public abstract class BaseAcceptanceTest {
     }
 
     public static void shutdown() throws InterruptedException {
-        db.close();
         verifierApp.close();
         workerApp.close();
         logViewAdapter.close();
+        db.close();
 
         CurrentTestState.clear();
     }
