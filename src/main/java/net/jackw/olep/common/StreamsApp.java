@@ -128,8 +128,7 @@ public abstract class StreamsApp implements AutoCloseable {
         streams = createStreams();
         streams.cleanUp();
 
-        CountDownLatch readyLatch = new CountDownLatch(getStateStoreCount() * config.getAcceptedTransactionTopicPartitions() + 1);
-        AtomicBoolean stateRunning = new AtomicBoolean(false);
+        CountUpDownLatch readyLatch = new CountUpDownLatch(getStateStoreCount() * config.getAcceptedTransactionTopicPartitions() + 1);
 
         streams.setStateListener((newState, oldState) -> {
             if (newState == KafkaStreams.State.ERROR) {
@@ -139,8 +138,10 @@ public abstract class StreamsApp implements AutoCloseable {
                 } catch (InterruptedException e) {
                     log.error("Interrupted exception while closing from error state");
                 }
-            } else if (oldState == KafkaStreams.State.REBALANCING && newState == KafkaStreams.State.RUNNING && !stateRunning.compareAndExchange(false, true)) {
+            } else if (newState == KafkaStreams.State.RUNNING) {
                 readyLatch.countDown();
+            } else if (oldState == KafkaStreams.State.RUNNING) {
+                readyLatch.countUp();
             }
         });
 
