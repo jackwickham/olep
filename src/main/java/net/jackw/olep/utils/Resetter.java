@@ -167,7 +167,7 @@ public class Resetter implements AutoCloseable {
     private ListenableFuture<Void> createTopic(NewTopic topic, AdminClient adminClient, int attempts) {
         CreateTopicsResult createResult = adminClient.createTopics(List.of(topic));
         ListenableFuture<Void> result = JdkFutureAdapters.listenInPoolThread(createResult.all(), MoreExecutors.directExecutor());
-        if (attempts > 10) {
+        if (attempts > 5) {
             // No more retries
             return result;
         }

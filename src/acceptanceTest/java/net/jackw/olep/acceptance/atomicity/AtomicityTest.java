@@ -8,8 +8,11 @@ import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.utils.RandomDataGenerator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.concurrent.ExecutionException;
 
@@ -56,4 +59,14 @@ public class AtomicityTest extends BaseAcceptanceTest {
     }
 
     // 3.2.2.2 (rolling back) isn't applicable
+
+    @BeforeClass
+    public static void runStartDb() throws InterruptedException, ExecutionException, IOException {
+        startDb();
+    }
+
+    @AfterClass
+    public static void runShutdown() throws InterruptedException {
+        shutdown();
+    }
 }

@@ -28,7 +28,6 @@ public abstract class BaseAcceptanceTest {
     private static WorkerApp workerApp;
     private static LogViewAdapter logViewAdapter;
 
-    @BeforeClass
     @SuppressWarnings("MustBeClosedChecker")
     public static void startDb() throws IOException, InterruptedException, ExecutionException {
         config = DatabaseConfig.create("acceptance-test");
@@ -74,8 +73,7 @@ public abstract class BaseAcceptanceTest {
         CurrentTestState.init(db, config, verifierApp, workerApp, logViewAdapter);
     }
 
-    @After
-    public void shutdown() throws InterruptedException {
+    public static void shutdown() throws InterruptedException {
         db.close();
         verifierApp.close();
         workerApp.close();

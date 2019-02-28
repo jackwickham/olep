@@ -10,6 +10,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
@@ -127,6 +128,9 @@ public abstract class StreamsApp implements AutoCloseable {
         streams = createStreams();
         streams.cleanUp();
 
+        CountDownLatch readyLatch = new CountDownLatch(getStateStoreCount() * config.getAcceptedTransactionTopicPartitions() + 1);
+        AtomicBoolean stateRunning = new AtomicBoolean(false);
+
         streams.setStateListener((newState, oldState) -> {
             if (newState == KafkaStreams.State.ERROR) {
                 log.fatal("Kafka streams have transitioned to error state");
@@ -135,6 +139,8 @@ public abstract class StreamsApp implements AutoCloseable {
                 } catch (InterruptedException e) {
                     log.error("Interrupted exception while closing from error state");
                 }
+            } else if (oldState == KafkaStreams.State.REBALANCING && newState == KafkaStreams.State.RUNNING && !stateRunning.compareAndExchange(false, true)) {
+                readyLatch.countDown();
             }
         });
 
@@ -150,7 +156,6 @@ public abstract class StreamsApp implements AutoCloseable {
         Multimap<String, Integer> initialisedMutableStores = Multimaps.synchronizedSetMultimap(
             HashMultimap.create(getStateStoreCount(), config.getAcceptedTransactionTopicPartitions())
         );
-        CountDownLatch readyMutableStores = new CountDownLatch(getStateStoreCount() * config.getAcceptedTransactionTopicPartitions());
 
         streams.setGlobalStateRestoreListener(new StateRestoreListener() {
             @Override
@@ -163,7 +168,7 @@ public abstract class StreamsApp implements AutoCloseable {
             public void onRestoreEnd(TopicPartition topicPartition, String storeName, long totalRestored) {
                 if (initialisedMutableStores.put(topicPartition.topic(), topicPartition.partition())) {
                     // This store became ready for the first time
-                    readyMutableStores.countDown();
+                    readyLatch.countDown();
                 }
             }
         });
@@ -172,7 +177,7 @@ public abstract class StreamsApp implements AutoCloseable {
         log.info("Starting Kafka streams");
         streams.start();
 
-        readyMutableStores.await();
+        readyLatch.await();
 
         log.info("Mutable state stores populated");
     }
