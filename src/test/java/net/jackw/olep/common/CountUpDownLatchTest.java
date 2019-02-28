@@ -2,6 +2,7 @@ package net.jackw.olep.common;
 
 import org.junit.Test;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
@@ -23,6 +24,13 @@ public class CountUpDownLatchTest {
         CountUpDownLatch latch = new CountUpDownLatch(2);
         latch.countDown();
         assertEquals(1, latch.getCount());
+    }
+
+    @Test
+    public void testCountAlwaysNonNegative() {
+        CountUpDownLatch latch = new CountUpDownLatch(0);
+        latch.countDown();
+        assertEquals(0, latch.getCount());
     }
 
     @Test
@@ -57,7 +65,7 @@ public class CountUpDownLatchTest {
     }
 
     @Test(timeout = 100L)
-    public void testAwaitingThreadsReleasedWhenThreadBecomesZero() throws InterruptedException {
+    public void testAwaitingThreadsReleasedWhenCountBecomesZero() throws InterruptedException {
         final CountUpDownLatch latch = new CountUpDownLatch(2);
         final AtomicBoolean beenReleased = new AtomicBoolean(false);
         new Thread(() -> {
@@ -105,5 +113,47 @@ public class CountUpDownLatchTest {
 
         latch.await();
         assertTrue(beenReleased.get());
+    }
+
+    @Test
+    public void testAwaitWithTimeoutWhenZeroCountDoesntBlock() throws InterruptedException {
+        CountUpDownLatch latch = new CountUpDownLatch(0);
+        Thread.currentThread().interrupt();
+        assertTrue(latch.await(10, TimeUnit.MILLISECONDS));
+        assertTrue(Thread.interrupted());
+    }
+
+    @Test(expected = InterruptedException.class)
+    public void testAwaitWithTimeoutWhenCountPositiveDoesBlock() throws InterruptedException {
+        CountUpDownLatch latch = new CountUpDownLatch(1);
+        Thread.currentThread().interrupt();
+        latch.await(10, TimeUnit.MILLISECONDS);
+    }
+
+    @Test(timeout = 100L)
+    public void testAwaitingWithTimeoutThreadsReleasedWhenCountBecomesZero() throws InterruptedException {
+        final CountUpDownLatch latch = new CountUpDownLatch(2);
+        final AtomicBoolean beenReleased = new AtomicBoolean(false);
+        new Thread(() -> {
+            try {
+                Thread.sleep(20);
+                latch.countDown();
+
+                Thread.sleep(20);
+                beenReleased.set(true);
+                latch.countDown();
+            } catch (InterruptedException e) {
+                throw new RuntimeException();
+            }
+        }, "latch-release-thread").start();
+
+        assertTrue(latch.await(80, TimeUnit.MILLISECONDS));
+        assertTrue(beenReleased.get());
+    }
+
+    @Test(timeout = 100L)
+    public void testReturnsFalseWhenTimeout() throws InterruptedException {
+        final CountUpDownLatch latch = new CountUpDownLatch(1);
+        assertFalse(latch.await(10, TimeUnit.MILLISECONDS));
     }
 }

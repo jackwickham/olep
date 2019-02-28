@@ -2,6 +2,7 @@ package net.jackw.olep.common;
 
 import com.google.common.base.Preconditions;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -30,19 +31,14 @@ public class CountUpDownLatch {
      * If the counter reaches zero, waiting threads will be woken up. If the counter subsequently increases before the
      * waiting threads have left `await`, it is unspecified as to whether that thread will resume this time.
      *
-     * @throws IllegalStateException If the latch would become negative. The count as externally observed may briefly
-     *                               become negative, but will be incremented again, so this call has no long term
-     *                               side effects
+     * If the count is currently zero, this method will not change it.
      */
     public void countDown() {
-        int newValue = count.decrementAndGet();
+        int newValue = count.updateAndGet(v -> v == 0 ? 0 : v - 1);
         if (newValue == 0) {
             synchronized (count) {
                 count.notifyAll();
             }
-        } else if (newValue < 0) {
-            count.incrementAndGet();
-            throw new IllegalStateException("Latch dropped below 0");
         }
     }
 
@@ -66,6 +62,29 @@ public class CountUpDownLatch {
             while (count.get() > 0) {
                 count.wait();
             }
+        }
+    }
+
+    /**
+     * Wait up to approximately the provided duration for the counter to become zero
+     *
+     * @param timeout The maximum time to wait
+     * @param unit The units of the timeout
+     * @return true if the latch reached zero, and false otherwise
+     * @throws InterruptedException If the current thread is interrupted while waiting
+     */
+    public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+        long end = System.nanoTime() + unit.toNanos(timeout);
+        synchronized (count) {
+            while (count.get() > 0) {
+                long remaining = end - System.nanoTime();
+                if (remaining < 0) {
+                    return false;
+                } else {
+                    count.wait(remaining / 1000000, (int)(remaining % 1000000));
+                }
+            }
+            return true;
         }
     }
 

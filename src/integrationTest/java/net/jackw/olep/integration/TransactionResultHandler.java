@@ -1,20 +1,17 @@
 package net.jackw.olep.integration;
 
+import net.jackw.olep.common.CountUpDownLatch;
 import net.jackw.olep.edge.TransactionRejectedException;
 import net.jackw.olep.edge.TransactionStatusListener;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
-import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.StringDescription;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class TransactionResultHandler {
-    private CountDownLatch latch = null;
+    private final CountUpDownLatch latch = new CountUpDownLatch(0);
     private Throwable failure = null;
-    private int listeners = 0;
 
     /**
      * Wait for all of the attached listeners to be fulfilled
@@ -22,9 +19,6 @@ public class TransactionResultHandler {
      * This method throws exceptions if any of the assertions failed
      */
     public void await() throws Throwable {
-        if (latch == null) {
-            latch = new CountDownLatch(listeners);
-        }
         if (!latch.await(60, TimeUnit.SECONDS)) {
             // Latch timed out
             throw new AssertionError(String.format("%d transaction results were not received", latch.getCount()));
@@ -40,7 +34,7 @@ public class TransactionResultHandler {
      * The transaction result will be tested with the provided matcher.
      */
     public <T extends TransactionResultMessage> TransactionStatusListener<T> successListener(Matcher<T> matcher) {
-        listeners++;
+        latch.countUp();
         return new TransactionSuccessListener<>(matcher);
     }
 
@@ -48,7 +42,7 @@ public class TransactionResultHandler {
      * Get a new transaction status listener which is waiting for the transaction to be rejected
      */
     public <T extends TransactionResultMessage> TransactionStatusListener<T> rejectedListener() {
-        listeners++;
+        latch.countUp();
         return new TransactionRejectedListener<>();
     }
 
@@ -70,7 +64,7 @@ public class TransactionResultHandler {
         @Override
         public void completeHandler(T result) {
             try {
-                MatcherAssert.assertThat("", result, matcher);
+                MatcherAssert.assertThat(result, matcher);
                 latch.countDown();
             } catch (Throwable e) {
                 reportFailure(e);
