@@ -64,7 +64,7 @@ public abstract class BaseAcceptanceTest {
         Futures.allAsList(futures).get();
 
         // Connect to the DB, and we're ready to start
-        db = new EventDatabase(config.getBootstrapServers(), config.getViewRegistryHost());
+        db = new EventDatabase(config);
 
         CurrentTestState.init(db, config, verifierApp, workerApp, logViewAdapter);
     }

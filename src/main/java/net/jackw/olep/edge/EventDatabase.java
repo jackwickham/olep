@@ -3,6 +3,7 @@ package net.jackw.olep.edge;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.Database;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_request.PaymentRequest;
@@ -16,27 +17,36 @@ import java.math.BigDecimal;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.Date;
 import java.util.List;
 
 public class EventDatabase implements Database {
+    private final DatabaseConfig config;
     private final DatabaseConnection eventConnection;
-    private final ViewReadAdapter viewAdapter;
+    private final Registry registry;
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    public EventDatabase(String eventBootstrapServers, String viewServer) {
+    public EventDatabase(DatabaseConfig config) {
+        this.config = config;
         try {
-            viewAdapter = loadViewAdapter(viewServer);
-            eventConnection = new DatabaseConnection(eventBootstrapServers);
+            eventConnection = new DatabaseConnection(config.getBootstrapServers());
+            registry = LocateRegistry.getRegistry(config.getViewRegistryHost());
         } catch (Exception e) {
             close();
             throw new RuntimeException(e);
         }
     }
 
-    private ViewReadAdapter loadViewAdapter(String server) throws RemoteException, NotBoundException {
-        return (ViewReadAdapter) LocateRegistry.getRegistry(server).lookup("view/TODO_PARTITION_NUMBER");
+    private ViewReadAdapter getViewForWarehouse(int warehouse) throws RemoteException {
+        int partition = warehouse % config.getModificationTopicPartitions();
+        try {
+            return (ViewReadAdapter) registry.lookup("view/" + partition);
+        } catch (NotBoundException e) {
+            // :(
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -99,7 +109,7 @@ public class EventDatabase implements Database {
     @Override
     public int stockLevel(int districtId, int warehouseId, int stockThreshold) {
         try {
-            return viewAdapter.stockLevel(districtId, warehouseId, stockThreshold);
+            return getViewForWarehouse(warehouseId).stockLevel(districtId, warehouseId, stockThreshold);
         } catch (RemoteException e) {
             throw new RuntimeException(e);
         }
@@ -108,7 +118,7 @@ public class EventDatabase implements Database {
     @Override
     public OrderStatusResult orderStatus(int customerId, int districtId, int warehouseId) {
         try {
-            return viewAdapter.orderStatus(customerId, districtId, warehouseId);
+            return getViewForWarehouse(warehouseId).orderStatus(customerId, districtId, warehouseId);
         } catch (RemoteException e) {
             throw new RuntimeException(e);
         }
@@ -117,7 +127,7 @@ public class EventDatabase implements Database {
     @Override
     public OrderStatusResult orderStatus(String customerLastName, int districtId, int warehouseId) {
         try {
-            return viewAdapter.orderStatus(customerLastName, districtId, warehouseId);
+            return getViewForWarehouse(warehouseId).orderStatus(customerLastName, districtId, warehouseId);
         } catch (RemoteException e) {
             throw new RuntimeException(e);
         }
@@ -125,10 +135,6 @@ public class EventDatabase implements Database {
 
     @Override
     public void close() {
-        // Use try-with-resources to ensure that they are closed
-        try (
-            DatabaseConnection d = eventConnection;
-            //ViewReadAdapter v = viewAdapter;
-        ) { }
+        eventConnection.close();
     }
 }

@@ -33,8 +33,8 @@ public class Terminal extends AbstractActorWithTimers {
         newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
         paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
         deliveryDispatcher = new DeliveryDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
-        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().dispatcher(), db, rand, config);
-        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().dispatcher(), db, rand, config);
+        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
+        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().getSystem(), db, rand, config);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class Terminal extends AbstractActorWithTimers {
             .matchEquals(TransactionType.STOCK_LEVEL, _msg -> stockLevelDispatcher.dispatch())
             .match(TransactionTimeoutMessage.class, msg -> {
                 config.getMetrics().recordEvent(EventType.TRANSACTION_TIMEOUT, msg.toString());
-                throw new RuntimeException("Violation: failed to receive response to " + msg + " in time");
+                throw new TransactionTimeoutException("Violation: failed to receive response to " + msg + " in time");
             })
             .match(IllegalTransactionResponseException.class, e -> {
                 throw e;

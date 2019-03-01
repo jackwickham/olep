@@ -8,3 +8,4 @@ verifierInstances: 1
 workerInstances: 1
 applicationInstances: 1
 baseResultsDir: ~
+modificationTopicPartitions: 1

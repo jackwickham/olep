@@ -1,10 +1,15 @@
 package net.jackw.olep.application;
 
 import akka.actor.AbstractActor;
+import akka.actor.OneForOneStrategy;
 import akka.actor.Props;
+import akka.actor.SupervisorStrategy;
+import akka.japi.pf.DeciderBuilder;
 import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.EventDatabase;
+
+import java.util.function.Consumer;
 
 /**
  * A group of terminals that share a database connection, to optimise resource use
@@ -13,14 +18,16 @@ public class TerminalGroup extends AbstractActor {
     private int startWarehouseId;
     private int warehouseIdRange;
     private DatabaseConfig config;
+    private Consumer<Throwable> onFailure;
     private Database db;
 
     @SuppressWarnings("MustBeClosedChecker")
-    public TerminalGroup(int startWarehouseId, int warehouseIdRange, DatabaseConfig config) {
+    public TerminalGroup(int startWarehouseId, int warehouseIdRange, DatabaseConfig config, Consumer<Throwable> onFailure) {
         this.startWarehouseId = startWarehouseId;
         this.warehouseIdRange = warehouseIdRange;
         this.config = config;
-        this.db = new EventDatabase(config.getBootstrapServers(), config.getViewRegistryHost());
+        this.onFailure = onFailure;
+        this.db = new EventDatabase(config);
     }
 
     @Override
@@ -30,8 +37,8 @@ public class TerminalGroup extends AbstractActor {
             .build();
     }
 
-    public static Props props(int startWarehouseId, int range, DatabaseConfig config) {
-        return Props.create(TerminalGroup.class, () -> new TerminalGroup(startWarehouseId, range, config));
+    public static Props props(int startWarehouseId, int range, DatabaseConfig config, Consumer<Throwable> onFailure) {
+        return Props.create(TerminalGroup.class, () -> new TerminalGroup(startWarehouseId, range, config, onFailure));
     }
 
     @Override
@@ -52,5 +59,17 @@ public class TerminalGroup extends AbstractActor {
     @Override
     public void postStop() {
         db.close();
+    }
+
+    @Override
+    public SupervisorStrategy supervisorStrategy() {
+        return new OneForOneStrategy(DeciderBuilder
+            .match(TransactionTimeoutException.class, e -> {
+                onFailure.accept(e);
+                return SupervisorStrategy.restart();
+            })
+            .matchAny(t -> SupervisorStrategy.escalate())
+            .build()
+        );
     }
 }

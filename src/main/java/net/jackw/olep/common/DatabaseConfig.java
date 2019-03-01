@@ -216,7 +216,7 @@ public class DatabaseConfig {
         if (modificationTopicPartitions > -1) {
             return modificationTopicPartitions;
         } else {
-            return 1;
+            return getViewThreads() * 8;
         }
     }
 

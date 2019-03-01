@@ -39,7 +39,7 @@ public class NewOrderTest extends BaseIntegrationTest {
         PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
         PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getConfig().getCustomerNameRange());
 
-        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
+        try (EventDatabase db = new EventDatabase(getConfig())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
@@ -76,7 +76,7 @@ public class NewOrderTest extends BaseIntegrationTest {
         PredictableDistrictFactory districtFactory = PredictableDistrictFactory.instanceFor(1);
         PredictableCustomerFactory customerFactory = PredictableCustomerFactory.instanceFor(2, 1, getConfig().getCustomerNameRange());
 
-        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
+        try (EventDatabase db = new EventDatabase(getConfig())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);
@@ -108,7 +108,7 @@ public class NewOrderTest extends BaseIntegrationTest {
 
     @Test
     public void testInvalidItem() throws Throwable {
-        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
+        try (EventDatabase db = new EventDatabase(getConfig())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             List<NewOrderRequest.OrderLine> orderLines = new ArrayList<>(5);

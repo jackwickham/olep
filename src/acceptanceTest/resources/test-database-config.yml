@@ -7,5 +7,6 @@ predictableData: false
 verifierInstances: 1
 workerInstances: 1
 applicationInstances: 1
+modificationTopicPartitions: 1
 # No results
 baseResultsDir: ~

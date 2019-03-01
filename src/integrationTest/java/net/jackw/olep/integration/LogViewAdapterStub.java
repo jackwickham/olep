@@ -11,7 +11,7 @@ import java.rmi.registry.Registry;
 
 public class LogViewAdapterStub implements ViewReadAdapter, Serializable, AutoCloseable {
     private Registry registry;
-    private static final String name = "view/TODO_PARTITION_NUMBER";
+    private static final String name = "view/0";
 
     public LogViewAdapterStub(Registry registry) {
         this.registry = registry;

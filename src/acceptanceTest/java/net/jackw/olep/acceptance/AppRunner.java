@@ -9,6 +9,7 @@ import scala.concurrent.duration.Duration;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class AppRunner {
     private long durationMillis;
@@ -20,13 +21,26 @@ public abstract class AppRunner {
     }
 
     @Test
-    public void runApp() throws InterruptedException, TimeoutException {
+    public void runApp() throws Throwable {
+        AtomicReference<Throwable> error = new AtomicReference<>();
+        final Thread testThread = Thread.currentThread();
+
         ActorSystem system = ActorSystem.create(getClass().getSimpleName());
+        system.actorOf(RootActor.props(config, e -> {
+            error.set(e);
+            testThread.interrupt();
+        }));
 
-        system.actorOf(RootActor.props(config));
-
-        Thread.sleep(durationMillis);
+        try {
+            Thread.sleep(durationMillis);
+        } catch (InterruptedException e) {
+            // continue
+        }
 
         Await.ready(system.terminate(), Duration.create(20, TimeUnit.SECONDS));
+
+        if (error.get() != null) {
+            throw error.get();
+        }
     }
 }

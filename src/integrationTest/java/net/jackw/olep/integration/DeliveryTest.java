@@ -27,7 +27,7 @@ public class DeliveryTest extends BaseIntegrationTest {
 
     @Test
     public void testNothingMarkedAsDeliveredWhenNoPendingOrders() throws Throwable {
-        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
+        try (EventDatabase db = new EventDatabase(getConfig())) {
             TransactionResultHandler resultHandler = new TransactionResultHandler();
 
             TransactionStatus<DeliveryResult> deliveryStatus = db.delivery(1, 4);
@@ -39,7 +39,7 @@ public class DeliveryTest extends BaseIntegrationTest {
 
     @Test
     public void testCorrectResultWhenRecordsInserted() throws Throwable {
-        try (EventDatabase db = new EventDatabase(getConfig().getBootstrapServers(), getConfig().getViewRegistryHost())) {
+        try (EventDatabase db = new EventDatabase(getConfig())) {
             // Populate DB
             final CountDownLatch latch = new CountDownLatch(5);
             List<TransactionStatus<NewOrderResult>> orders = List.of(
