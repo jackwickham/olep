@@ -146,12 +146,15 @@ public abstract class StreamsApp implements AutoCloseable {
         });
 
         streams.setUncaughtExceptionHandler((thread, throwable) -> {
-            try {
-                log.fatal("Uncaught exception in kafka stream thread", throwable);
-                close();
-            } catch (InterruptedException e) {
-                log.error("Interrupted exception while closing from uncaught exception in thread");
-            }
+            log.fatal("Uncaught exception in kafka stream thread", throwable);
+            // Run close in a new thread to prevent deadlock
+            new Thread(() -> {
+                try {
+                    close();
+                } catch (InterruptedException e) {
+                    log.error("Interrupted exception while closing from uncaught exception in thread");
+                }
+            });
         });
 
         Multimap<String, Integer> initialisedMutableStores = Multimaps.synchronizedSetMultimap(
