@@ -16,7 +16,9 @@ public interface ViewWriteAdapter extends AutoCloseable {
      *
      * @return true if the registration succeeded, and false otherwise
      */
-    boolean register();
+    boolean register(int partition);
+
+    void unregister(int partition);
 
     @Override
     void close();

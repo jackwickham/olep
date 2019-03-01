@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
+import net.jackw.olep.common.ModificationPartitioner;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
@@ -165,6 +166,7 @@ public class WorkerApp extends StreamsApp {
                 KafkaConfig.MODIFICATION_LOG,
                 new ModificationKey.KeySerializer(),
                 new JsonSerializer<>(),
+                new ModificationPartitioner(),
                 "new-order-processor", "payment-processor", "delivery-processor"
             )
             .addSink(

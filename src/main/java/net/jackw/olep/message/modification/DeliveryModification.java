@@ -39,6 +39,11 @@ public class DeliveryModification implements ModificationMessage {
     }
 
     @Override
+    public int getViewWarehouse() {
+        return warehouseId;
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hash(orderId, districtId, warehouseId, carrierId, deliveryDate, customerId, orderTotal);
     }

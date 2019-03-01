@@ -227,17 +227,22 @@ public class PopulateStores implements AutoCloseable {
                 // For 7/10 of the customers, the order has been delivered already (and to simplify testing, predictable
                 // mode doesn't create any pending orders, so they have to be created manually)
                 OrderFactory.DeliveredOrder order = orderFactory.makeDeliveredOrder(customerId, stockProvider);
+                int modificationPartition = order.newOrderModification.warehouseId % config.getModificationTopicPartitions();
                 modificationLogProducer.send(new ProducerRecord<>(
-                    KafkaConfig.MODIFICATION_LOG, 0, new ModificationKey(++transactionId, (short) 0), order.newOrderModification
+                    KafkaConfig.MODIFICATION_LOG, modificationPartition,
+                    new ModificationKey(++transactionId, (short) 0), order.newOrderModification
                 ));
                 modificationLogProducer.send(new ProducerRecord<>(
-                    KafkaConfig.MODIFICATION_LOG, 0, new ModificationKey(++transactionId, (short) 0), order.deliveryModification
+                    KafkaConfig.MODIFICATION_LOG, modificationPartition,
+                    new ModificationKey(++transactionId, (short) 0), order.deliveryModification
                 ));
             } else {
                 // For the remaining 3/10, the order is still outstanding, so we add it as a NewOrder too
                 OrderFactory.UndeliveredOrder order = orderFactory.makeUndeliveredOrder(customerId, stockProvider);
+                int modificationPartition = order.newOrderModification.warehouseId % config.getModificationTopicPartitions();
                 modificationLogProducer.send(new ProducerRecord<>(
-                    KafkaConfig.MODIFICATION_LOG, 0, new ModificationKey(++transactionId, (short) 0), order.newOrderModification
+                    KafkaConfig.MODIFICATION_LOG, modificationPartition,
+                    new ModificationKey(++transactionId, (short) 0), order.newOrderModification
                 ));
                 newOrders.add(order.newOrder);
             }

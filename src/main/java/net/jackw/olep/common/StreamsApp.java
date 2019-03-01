@@ -154,7 +154,7 @@ public abstract class StreamsApp implements AutoCloseable {
                 } catch (InterruptedException e) {
                     log.error("Interrupted exception while closing from uncaught exception in thread");
                 }
-            });
+            }).start();
         });
 
         Multimap<String, Integer> initialisedMutableStores = Multimaps.synchronizedSetMultimap(

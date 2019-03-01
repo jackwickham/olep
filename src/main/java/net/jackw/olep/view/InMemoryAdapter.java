@@ -3,6 +3,7 @@ package net.jackw.olep.view;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.store.SharedCustomerStore;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerShared;
@@ -18,12 +19,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.math.BigDecimal;
-import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Queue;
@@ -36,20 +37,19 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     private Map<DistrictSpecificKey, CustomerState> customerState;
     private SharedCustomerStore customerSharedStore;
 
-    private final String registryServer;
-    private final String name;
+    private final DatabaseConfig config;
 
-    private boolean bound = false;
+    private final Set<Integer> registeredPartitions;
 
-    public InMemoryAdapter(SharedCustomerStore customerSharedStore, String registryServer, String name) throws RemoteException {
+    public InMemoryAdapter(SharedCustomerStore customerSharedStore, DatabaseConfig config) throws RemoteException {
         super();
         stockMap = new MapMaker().initialCapacity(1000).weakValues().makeMap();
         recentOrders = new ConcurrentHashMap<>();
         customerState = new ConcurrentHashMap<>();
         this.customerSharedStore = customerSharedStore;
+        registeredPartitions = Collections.synchronizedSet(new HashSet<>());
 
-        this.registryServer = registryServer;
-        this.name = name;
+        this.config = config;
     }
 
     ///// Reads /////
@@ -163,11 +163,11 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     }
 
     @Override
-    public synchronized boolean register() {
+    public synchronized boolean register(int partition) {
         try {
-            Registry registry = LocateRegistry.getRegistry(registryServer);
-            registry.rebind(name, this);
-            bound = true;
+            Registry registry = LocateRegistry.getRegistry(config.getViewRegistryHost());
+            registry.rebind("view/" + partition, this);
+            registeredPartitions.add(partition);
             return true;
         } catch (RemoteException e) {
             log.error("Failed to bind view", e);
@@ -176,18 +176,36 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
     }
 
     @Override
-    public synchronized void close() {
-        if (bound) {
-            try {
-                Registry registry = LocateRegistry.getRegistry(registryServer);
-                registry.unbind(name);
-            } catch (NotBoundException e) {
-                log.warn("NotBoundException when unbinding view");
-            } catch (RemoteException e) {
-                log.error("Failed to unbind view", e);
-            }
-            bound = false;
+    public synchronized void unregister(int partition) {
+        if (registeredPartitions.remove(partition)) {
+            // Unbind in the registry first
+            unbindPartition(partition);
         }
+        // Update adapter stores
+        for (WarehouseSpecificKey district : recentOrders.keySet()) {
+            if (district.warehouseId % config.getModificationTopicPartitions() == partition) {
+                // No longer belongs here
+                recentOrders.remove(district);
+            }
+        }
+        for (WarehouseSpecificKey district : stockMap.keySet()) {
+            if (district.warehouseId % config.getModificationTopicPartitions() == partition) {
+                stockMap.remove(district);
+            }
+        }
+        for (DistrictSpecificKey customer : customerState.keySet()) {
+            if (customer.warehouseId % config.getModificationTopicPartitions() == partition) {
+                customerState.remove(customer);
+            }
+        }
+    }
+
+    @Override
+    public synchronized void close() {
+        for (int partition: registeredPartitions) {
+            unbindPartition(partition);
+        }
+        registeredPartitions.clear();
     }
 
     ///// Utils /////
@@ -197,6 +215,20 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
         WarehouseItemStock stock = stockMap.computeIfAbsent(key, k -> new WarehouseItemStock());
         stock.setStock(newStock);
         return stock;
+    }
+
+    /**
+     * Unregister partition in registry
+     */
+    private void unbindPartition(int partition) {
+        try {
+            Registry registry = LocateRegistry.getRegistry(config.getViewRegistryHost());
+            registry.unbind("view/" + partition);
+        } catch (NotBoundException e) {
+            log.warn("Received NotBoundException while trying to unregister partition " + partition);
+        } catch (RemoteException e) {
+            log.error("Failed to unbind partition " + partition, e);
+        }
     }
 
 

@@ -1,6 +1,7 @@
 package net.jackw.olep.view;
 
 import com.google.common.collect.ImmutableList;
+import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.store.SharedCustomerStore;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Credit;
@@ -41,7 +42,7 @@ public class InMemoryAdapterTest {
 
     @Before
     public void instantiateAdapter() throws RemoteException {
-        adapter = new InMemoryAdapter(customerImmutableStore, null, "mock-view-adapter");
+        adapter = new InMemoryAdapter(customerImmutableStore, mock(DatabaseConfig.class));
     }
 
     @Test

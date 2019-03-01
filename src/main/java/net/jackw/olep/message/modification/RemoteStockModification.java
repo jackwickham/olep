@@ -18,4 +18,9 @@ public class RemoteStockModification implements ModificationMessage {
         this.warehouseId = warehouseId;
         this.stockLevel = stockLevel;
     }
+
+    @Override
+    public int getViewWarehouse() {
+        return warehouseId;
+    }
 }

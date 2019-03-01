@@ -39,6 +39,11 @@ public class PaymentModification implements ModificationMessage {
     }
 
     @Override
+    public int getViewWarehouse() {
+        return warehouseId;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
             .add("districtId", districtId)

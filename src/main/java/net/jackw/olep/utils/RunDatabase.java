@@ -34,9 +34,7 @@ public class RunDatabase {
 
         final VerifierApp verifierApp = new VerifierApp(config);
         final WorkerApp workerApp = new WorkerApp(config);
-        final LogViewAdapter logViewAdapter = LogViewAdapter.init(
-            config.getBootstrapServers(), config.getViewRegistryHost(), config
-        );
+        final LogViewAdapter logViewAdapter = LogViewAdapter.init(config);
 
         // Add a shutdown listener to gracefully handle Ctrl+C
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

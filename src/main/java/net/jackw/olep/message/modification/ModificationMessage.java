@@ -23,4 +23,6 @@ import net.jackw.olep.message.transaction_request.PaymentRequest;
     @JsonSubTypes.Type(value = RemoteStockModification.class, name="remote-stock")
 })
 @Immutable
-public interface ModificationMessage {}
+public interface ModificationMessage {
+    int getViewWarehouse();
+}

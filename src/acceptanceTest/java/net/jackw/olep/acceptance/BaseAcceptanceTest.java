@@ -40,9 +40,7 @@ public abstract class BaseAcceptanceTest {
 
         verifierApp = new VerifierApp(config);
         workerApp = new WorkerApp(config);
-        logViewAdapter = LogViewAdapter.init(
-            config.getBootstrapServers(), "127.0.0.1", config
-        );
+        logViewAdapter = LogViewAdapter.init(config);
 
         ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2));
         // Create futures that will resolve when the verifier and worker apps are set up and (more or less) ready to

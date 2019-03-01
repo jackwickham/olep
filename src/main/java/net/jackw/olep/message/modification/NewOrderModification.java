@@ -30,4 +30,9 @@ public class NewOrderModification implements ModificationMessage {
         this.date = date;
         this.orderId = orderId;
     }
+
+    @Override
+    public int getViewWarehouse() {
+        return warehouseId;
+    }
 }
