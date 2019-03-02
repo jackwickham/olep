@@ -42,6 +42,7 @@ public class DeliveryTest extends BaseIntegrationTest {
         try (EventDatabase db = new EventDatabase(getConfig())) {
             // Populate DB
             final CountDownLatch latch = new CountDownLatch(5);
+            System.err.println("Starting transactions");
             List<TransactionStatus<NewOrderResult>> orders = List.of(
                 db.newOrder(1, 1, 1, List.of()),
                 db.newOrder(1, 2, 1, List.of()),
@@ -54,11 +55,16 @@ public class DeliveryTest extends BaseIntegrationTest {
             AtomicReference<Throwable> errorRef = new AtomicReference<>();
 
             for (TransactionStatus<NewOrderResult> status : orders) {
+                status.addAcceptedHandler(() -> {
+                    System.err.println("accepted");
+                });
                 status.addCompleteHandler(result -> {
+                    System.err.println("complete");
                     orderIds[result.districtId - 1] = result.orderId;
                     latch.countDown();
                 });
                 status.addRejectedHandler(err -> {
+                    System.err.println("rejected");
                     errorRef.set(err);
                     latch.countDown();
                 });
