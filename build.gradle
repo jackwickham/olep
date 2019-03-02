@@ -127,7 +127,7 @@ task runDatabase(type: JavaExec, dependsOn: 'classes') {
 
 task runView(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
-    main = "net.jackw.olep.view.LogViewAdapter"
+    main = "net.jackw.olep.view.ViewApp"
     mustRunAfter reset
     maxHeapSize = "14G"
 }

@@ -55,7 +55,7 @@ public class StockLevelDispatcherTest {
     @Test
     public void testDispatcherSendsStockLevelTransaction() {
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actor.ref(), executionContext, database, rand, config
+            4, 8, actor.ref(), actorSystem, executionContext, database, rand, config
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).thenReturn(5);
 
@@ -70,7 +70,7 @@ public class StockLevelDispatcherTest {
     public void testActorNotifiedOnTransactionComplete() {
         ActorRef actorRefSpy = spy(actor.ref());
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actorRefSpy, executionContext, database, rand, config
+            4, 8, actorRefSpy, actorSystem, executionContext, database, rand, config
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).thenReturn(5);
 
@@ -93,7 +93,7 @@ public class StockLevelDispatcherTest {
         when(mockMetrics.startTimer()).thenReturn(mockTimer);
 
         StockLevelDispatcher dispatcher = new StockLevelDispatcher(
-            4, 8, actor.ref(), executionContext, database, rand, mockConfig
+            4, 8, actor.ref(), actorSystem, executionContext, database, rand, mockConfig
         );
         when(database.stockLevel(eq(8), eq(4), anyInt())).then(invocation -> {
             // The timer should have started but not finished

@@ -11,6 +11,7 @@ import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.verifier.VerifierApp;
 import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.StandaloneRegistry;
+import net.jackw.olep.view.ViewApp;
 import net.jackw.olep.worker.WorkerApp;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,14 +35,14 @@ public class RunDatabase {
 
         final VerifierApp verifierApp = new VerifierApp(config);
         final WorkerApp workerApp = new WorkerApp(config);
-        final LogViewAdapter logViewAdapter = LogViewAdapter.init(config);
+        final ViewApp viewApp = new ViewApp(config);
 
         // Add a shutdown listener to gracefully handle Ctrl+C
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 workerApp.close();
                 verifierApp.close();
-                logViewAdapter.close();
+                viewApp.close();
             } catch (Exception e) {
                 log.error(e);
             }
@@ -60,17 +61,18 @@ public class RunDatabase {
         }));
 
         // logViewAdapter.start() does all the work in a new thread
-        logViewAdapter.start();
+        viewApp.start();
 
-        futures.add(logViewAdapter.getReadyFuture());
+        futures.add(viewApp.getReadyFuture());
 
         // Then when the futures are done, mark it as ready
         Futures.allAsList(futures).addListener(() -> {
             StreamsApp.createReadyFile(arguments.getReadyFileArg());
+            log.info("Everything is ready to process transactions!");
         }, MoreExecutors.directExecutor());
 
         // Block until Ctrl+C
-        logViewAdapter.join();
+        workerApp.awaitShutdown();
     }
 
     private static Logger log = LogManager.getLogger();

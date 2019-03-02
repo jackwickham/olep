@@ -32,13 +32,13 @@ public class OrderStatusDispatcher {
     private final Metrics metricsManager;
 
     public OrderStatusDispatcher(
-        int warehouseId, ActorRef actor, ActorSystem actorSystem, Database db, RandomDataGenerator rand,
-        DatabaseConfig config
+        int warehouseId, ActorRef actor, ActorSystem actorSystem, ExecutionContext executionContext, Database db,
+        RandomDataGenerator rand, DatabaseConfig config
     ) {
         this.warehouseId = warehouseId;
         this.actor = actor;
         this.actorSystem = actorSystem;
-        this.executionContext = actorSystem.getDispatcher();
+        this.executionContext = executionContext;
         this.db = db;
         this.rand = rand;
         this.config = config;

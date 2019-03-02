@@ -1,5 +1,6 @@
 package net.jackw.olep.message.modification;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.errorprone.annotations.Immutable;
@@ -24,5 +25,6 @@ import net.jackw.olep.message.transaction_request.PaymentRequest;
 })
 @Immutable
 public interface ModificationMessage {
+    @JsonIgnore
     int getViewWarehouse();
 }

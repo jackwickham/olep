@@ -49,7 +49,7 @@ public class DatabaseConfig {
     private int workerThreads = 2;
 
     @JsonProperty
-    private int viewThreads = 1;
+    private int viewThreads = 2;
 
     @JsonProperty
     private int terminalsPerDistrict = 1;

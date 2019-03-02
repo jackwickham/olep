@@ -1,5 +1,6 @@
 package net.jackw.olep.message.modification;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
@@ -39,6 +40,7 @@ public class DeliveryModification implements ModificationMessage {
     }
 
     @Override
+    @JsonIgnore
     public int getViewWarehouse() {
         return warehouseId;
     }

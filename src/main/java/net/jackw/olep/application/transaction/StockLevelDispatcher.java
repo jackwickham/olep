@@ -30,14 +30,14 @@ public class StockLevelDispatcher {
     private final Metrics metricsManager;
 
     public StockLevelDispatcher(
-        int warehouseId, int districtId, ActorRef actor, ActorSystem actorSystem, Database db,
-        RandomDataGenerator rand, DatabaseConfig config
+        int warehouseId, int districtId, ActorRef actor, ActorSystem actorSystem, ExecutionContext executionContext,
+        Database db, RandomDataGenerator rand, DatabaseConfig config
     ) {
         this.warehouseId = warehouseId;
         this.districtId = districtId;
         this.actor = actor;
         this.actorSystem = actorSystem;
-        this.executionContext = actorSystem.getDispatcher();
+        this.executionContext = executionContext;
         this.db = db;
         this.rand = rand;
         this.config = config;

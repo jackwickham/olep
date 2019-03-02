@@ -4,6 +4,7 @@ import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.verifier.VerifierApp;
 import net.jackw.olep.view.LogViewAdapter;
+import net.jackw.olep.view.ViewApp;
 import net.jackw.olep.worker.WorkerApp;
 
 /**
@@ -24,18 +25,18 @@ public class CurrentTestState {
     public final DatabaseConfig config;
     public final VerifierApp verifierApp;
     public final WorkerApp workerApp;
-    public final LogViewAdapter logViewAdapter;
+    public final ViewApp viewApp;
 
-    public CurrentTestState(Database db, DatabaseConfig config, VerifierApp verifierApp, WorkerApp workerApp, LogViewAdapter logViewAdapter) {
+    private CurrentTestState(Database db, DatabaseConfig config, VerifierApp verifierApp, WorkerApp workerApp, ViewApp viewApp) {
         this.db = db;
         this.config = config;
         this.verifierApp = verifierApp;
         this.workerApp = workerApp;
-        this.logViewAdapter = logViewAdapter;
+        this.viewApp = viewApp;
     }
 
-    public static void init(Database db, DatabaseConfig config, VerifierApp verifierApp, WorkerApp workerApp, LogViewAdapter logViewAdapter) {
-        instance = new CurrentTestState(db, config, verifierApp, workerApp, logViewAdapter);
+    public static void init(Database db, DatabaseConfig config, VerifierApp verifierApp, WorkerApp workerApp, ViewApp viewApp) {
+        instance = new CurrentTestState(db, config, verifierApp, workerApp, viewApp);
     }
 
     public static void clear() {

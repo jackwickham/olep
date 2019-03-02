@@ -2,12 +2,11 @@ package net.jackw.olep.view;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
+import net.jackw.olep.common.InterThreadWorkQueue;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.LockingLRUSet;
-import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationKey;
@@ -30,7 +29,6 @@ import org.apache.kafka.common.errors.WakeupException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.rmi.RemoteException;
 import java.time.Duration;
 import java.util.Collection;
@@ -60,6 +58,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
     private final AtomicInteger assignedPartitionCount = new AtomicInteger(0);
     private final Thread partitionEndOffsetUpdateThread;
     private final ExecutorService executorService;
+    private final InterThreadWorkQueue mainThreadWorkQueue;
 
     public LogViewAdapter(Consumer<ModificationKey, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter,
                           SharedCustomerStoreConsumer customerStoreConsumer, Metrics metrics) {
@@ -76,6 +75,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
         this.endOffsets = new ConcurrentHashMap<>();
 
         this.executorService = Executors.newCachedThreadPool();
+        this.mainThreadWorkQueue = new InterThreadWorkQueue(4);
 
         logConsumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG), this);
 
@@ -111,7 +111,8 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
         while (true) {
             // ! Critical path ! \\
             try {
-                ConsumerRecords<ModificationKey, ModificationMessage> records = logConsumer.poll(Duration.ofSeconds(10));
+                mainThreadWorkQueue.execute();
+                ConsumerRecords<ModificationKey, ModificationMessage> records = logConsumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<ModificationKey, ModificationMessage> record : records) {
                     processModification(record.key(), record.value());
                     int partition = record.partition();
@@ -168,6 +169,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
     private void checkReadiness() {
         if (assignedPartitionCount.get() == readyPartitions.size()) {
             // We're ready, so let listeners know
+            // TODO: This is being set too early, while partitions == 0
             readyFuture.set(null);
         }
     }
@@ -205,54 +207,90 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
     }
 
     @Override
-    public synchronized void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-        int actuallyRemovedPartitions = 0;
-        for (TopicPartition topicPartition : partitions) {
-            readyPartitions.remove(topicPartition.partition());
-            if (endOffsets.remove(topicPartition.partition()) != null) {
-                ++actuallyRemovedPartitions;
+    public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+        synchronized (endOffsets) {
+            int actuallyRemovedPartitions = 0;
+            for (TopicPartition topicPartition : partitions) {
+                readyPartitions.remove(topicPartition.partition());
+                if (endOffsets.remove(topicPartition.partition()) != null) {
+                    ++actuallyRemovedPartitions;
+                }
+                viewAdapter.unregister(topicPartition.partition());
             }
-            viewAdapter.unregister(topicPartition.partition());
+            assignedPartitionCount.addAndGet(-actuallyRemovedPartitions);
         }
-        assignedPartitionCount.addAndGet(-actuallyRemovedPartitions);
         checkReadiness();
     }
 
     @Override
-    public synchronized void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-        assignedPartitionCount.addAndGet(partitions.size());
-        int notReassigned = 0;
-        for (Map.Entry<TopicPartition, Long> entry : logConsumer.endOffsets(partitions).entrySet()) {
-            if (endOffsets.put(entry.getKey().partition(), entry.getValue()) != null) {
-                // We were already subscribed to this partition
-                ++notReassigned;
+    public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+        boolean interrupted = false;
+        synchronized (endOffsets) {
+            assignedPartitionCount.addAndGet(partitions.size());
+            Map<TopicPartition, Long> latestEndOffsets;
+            try {
+                if (Thread.currentThread() == this) {
+                    // Avoid deadlock
+                    latestEndOffsets = logConsumer.endOffsets(partitions);
+                } else {
+                    latestEndOffsets = mainThreadWorkQueue.request(
+                        () -> logConsumer.endOffsets(partitions)
+                    );
+                }
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while trying to get latest offsets");
+                latestEndOffsets = Map.of();
+                interrupted = true;
             }
-            if (logConsumer.position(entry.getKey()) == entry.getValue()) {
-                // We're already caught up on this partition
-                readyPartitions.add(entry.getKey().partition());
+            int notReassigned = 0;
+            for (TopicPartition topicPartition : partitions) {
+                if (endOffsets.put(
+                    topicPartition.partition(),
+                    latestEndOffsets.getOrDefault(topicPartition, 0L)
+                ) != null) {
+                    // We were already subscribed to this partition
+                    ++notReassigned;
+                }
+                if (logConsumer.position(topicPartition) >= latestEndOffsets.getOrDefault(topicPartition, 0L)) {
+                    // We're already caught up on this partition
+                    markReady(topicPartition.partition());
+                }
             }
-            // Don't register with the views here
+            // Correct for any that were still subscribed, then check whether we're done
+            assignedPartitionCount.addAndGet(-notReassigned);
         }
-        // Correct for any that were still subscribed
-        assignedPartitionCount.addAndGet(-notReassigned);
         checkReadiness();
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
      * Get the end offsets for the partitions assigned to this adapter
      */
-    private synchronized void updateEndOffsets() {
-        Collection<TopicPartition> assignedPartitions = endOffsets.keySet()
-            .stream()
-            .map(p -> new TopicPartition(KafkaConfig.MODIFICATION_LOG, p))
-            .collect(Collectors.toList());
-        endOffsets.putAll(logConsumer.endOffsets(assignedPartitions)
-            .entrySet()
-            .stream()
-            .collect(Collectors.toMap(
-                e -> e.getKey().partition(),
-                Map.Entry::getValue
-            )));
+    private void updateEndOffsets() {
+        synchronized (endOffsets) {
+            Collection<TopicPartition> assignedPartitions = endOffsets.keySet()
+                .stream()
+                .map(p -> new TopicPartition(KafkaConfig.MODIFICATION_LOG, p))
+                .collect(Collectors.toList());
+            try {
+                Map<TopicPartition, Long> latestEndOffsets = mainThreadWorkQueue.request(
+                    () -> logConsumer.endOffsets(assignedPartitions)
+                );
+                endOffsets.putAll(latestEndOffsets
+                    .entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(
+                        e -> e.getKey().partition(),
+                        Map.Entry::getValue
+                    )));
+            } catch (InterruptedException e) {
+                // Can't throw it, so just remark as interrupted
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     @SuppressWarnings("MustBeClosedChecker")
@@ -291,33 +329,8 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
         }
     }
 
-    public static void main(String[] args) throws InterruptedException, IOException, ExecutionException {
-        Arguments arguments = new Arguments(args);
-        try (LogViewAdapter adapter = init(arguments.getConfig())) {
-            adapter.start();
-
-            // Add a shutdown listener to gracefully handle Ctrl+C
-            Runtime.getRuntime().addShutdownHook(new Thread("view-adapter-shutdown-hook") {
-                @Override
-                public void run() {
-                    try {
-                        adapter.close();
-                    } catch (Exception e) {
-                        log.error(e);
-                    }
-                }
-            });
-
-            // Wait for the adapter to be ready
-            adapter.getReadyFuture().get();
-            StreamsApp.createReadyFile(arguments.getReadyFileArg());
-
-            adapter.join();
-        }
-    }
-
     @Override
-    public void close() throws InterruptedException {
+    public synchronized void close() throws InterruptedException {
         // Use try-with-resources to ensure they all get safely closed
         try (
             Consumer c = logConsumer;

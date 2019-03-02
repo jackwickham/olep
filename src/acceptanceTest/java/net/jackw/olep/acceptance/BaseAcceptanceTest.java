@@ -9,8 +9,8 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.EventDatabase;
 import net.jackw.olep.utils.Resetter;
 import net.jackw.olep.verifier.VerifierApp;
-import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.StandaloneRegistry;
+import net.jackw.olep.view.ViewApp;
 import net.jackw.olep.worker.WorkerApp;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ public abstract class BaseAcceptanceTest {
     private static DatabaseConfig config;
     private static VerifierApp verifierApp;
     private static WorkerApp workerApp;
-    private static LogViewAdapter logViewAdapter;
+    private static ViewApp viewApp;
 
     @SuppressWarnings("MustBeClosedChecker")
     public static void startDb() throws IOException, InterruptedException, ExecutionException {
@@ -40,7 +40,7 @@ public abstract class BaseAcceptanceTest {
 
         verifierApp = new VerifierApp(config);
         workerApp = new WorkerApp(config);
-        logViewAdapter = LogViewAdapter.init(config);
+        viewApp = new ViewApp(config);
 
         ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2));
         // Create futures that will resolve when the verifier and worker apps are set up and (more or less) ready to
@@ -56,9 +56,9 @@ public abstract class BaseAcceptanceTest {
             return null;
         }));
 
-        logViewAdapter.start();
+        viewApp.start();
 
-        futures.add(logViewAdapter.getReadyFuture());
+        futures.add(viewApp.getReadyFuture());
 
         // Then wait for everything to be ready...
         Futures.allAsList(futures).get();
@@ -66,13 +66,13 @@ public abstract class BaseAcceptanceTest {
         // Connect to the DB, and we're ready to start
         db = new EventDatabase(config);
 
-        CurrentTestState.init(db, config, verifierApp, workerApp, logViewAdapter);
+        CurrentTestState.init(db, config, verifierApp, workerApp, viewApp);
     }
 
     public static void shutdown() throws InterruptedException {
         verifierApp.close();
         workerApp.close();
-        logViewAdapter.close();
+        viewApp.close();
         db.close();
 
         CurrentTestState.clear();

@@ -16,7 +16,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.stubbing.Answer;
+import scala.concurrent.ExecutionContextExecutor;
 
 import java.io.IOException;
 import java.util.List;
@@ -55,7 +58,7 @@ public class OrderStatusDispatcherTest {
     @Test
     public void testDispatcherSendsOrderStatusTransactionById() {
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, config
+            4, actor.ref(), actorSystem, executionContext, database, rand, config
         );
         // Send transaction by ID
         when(rand.choice(60)).thenReturn(false);
@@ -71,7 +74,7 @@ public class OrderStatusDispatcherTest {
     @Test
     public void testDispatcherSendsOrderStatusTransactionByName() {
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, config
+            4, actor.ref(), actorSystem, executionContext, database, rand, config
         );
         // Send transaction by name
         when(rand.choice(60)).thenReturn(true);
@@ -88,7 +91,7 @@ public class OrderStatusDispatcherTest {
     public void testActorNotifiedOnTransactionCompleteById() {
         ActorRef actorRefSpy = spy(actor.ref());
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actorRefSpy, executionContext, database, rand, config
+            4, actorRefSpy, actorSystem, executionContext, database, rand, config
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.orderStatus(anyInt(), anyInt(), eq(4))).thenReturn(null);
@@ -106,7 +109,7 @@ public class OrderStatusDispatcherTest {
     public void testActorNotifiedOnTransactionCompleteByName() {
         ActorRef actorRefSpy = spy(actor.ref());
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actorRefSpy, executionContext, database, rand, config
+            4, actorRefSpy, actorSystem, executionContext, database, rand, config
         );
         when(rand.choice(60)).thenReturn(true);
         when(database.orderStatus(any(String.class), anyInt(), eq(4))).thenReturn(null);
@@ -130,7 +133,7 @@ public class OrderStatusDispatcherTest {
         when(mockMetrics.startTimer()).thenReturn(mockTimer);
 
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, mockConfig
+            4, actor.ref(), actorSystem, executionContext, database, rand, mockConfig
         );
         when(rand.choice(60)).thenReturn(false);
         when(database.orderStatus(anyInt(), anyInt(), eq(4))).then(invocation -> {
@@ -163,7 +166,7 @@ public class OrderStatusDispatcherTest {
         when(mockMetrics.startTimer()).thenReturn(mockTimer);
 
         OrderStatusDispatcher dispatcher = new OrderStatusDispatcher(
-            4, actor.ref(), executionContext, database, rand, mockConfig
+            4, actor.ref(), actorSystem, executionContext, database, rand, mockConfig
         );
         when(rand.choice(60)).thenReturn(true);
         when(database.orderStatus(any(String.class), anyInt(), eq(4))).then(invocation -> {

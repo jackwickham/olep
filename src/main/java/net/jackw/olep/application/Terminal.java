@@ -33,8 +33,12 @@ public class Terminal extends AbstractActorWithTimers {
         newOrderDispatcher = new NewOrderDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
         paymentDispatcher = new PaymentDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
         deliveryDispatcher = new DeliveryDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
-        orderStatusDispatcher = new OrderStatusDispatcher(warehouseId, getSelf(), getContext().getSystem(), db, rand, config);
-        stockLevelDispatcher = new StockLevelDispatcher(warehouseId, districtId, getSelf(), getContext().getSystem(), db, rand, config);
+        orderStatusDispatcher = new OrderStatusDispatcher(
+            warehouseId, getSelf(), getContext().getSystem(), getContext().getDispatcher(), db, rand, config
+        );
+        stockLevelDispatcher = new StockLevelDispatcher(
+            warehouseId, districtId, getSelf(), getContext().getSystem(), getContext().getDispatcher(), db, rand, config
+        );
     }
 
     @Override
