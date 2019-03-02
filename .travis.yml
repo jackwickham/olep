@@ -13,7 +13,7 @@ before_install:
   - bin/kafka-server-start.sh config/server.properties >/dev/null 2>/dev/null &
   - cd ../
   - # Also want s3cmd for saving test results to the S3 bucket on failure
-    sudo apt-get install s3cmd
+    sudo pip install s3cmd
 
 after_failure:
   - s3cmd put --acl-public --access_key=$S3_ACCESS_KEY --secret_key=$S3_SECRET_KEY --recursive build/reports/tests s3://olep-test-reports/$TRAVIS_BUILD_ID/
