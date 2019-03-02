@@ -129,6 +129,9 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
             } catch (WakeupException e) {
                 readyFuture.setException(new CancellationException());
                 return;
+            } catch (Exception e) {
+                readyFuture.setException(e);
+                throw e;
             }
         }
     }

@@ -88,7 +88,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
             } catch (InterruptedException e) {
                 // Pass
             }
-        });
+        }, "partition-end-offset-update");
         partitionEndOffsetUpdateThread.start();
     }
 
@@ -165,11 +165,13 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
     /**
      * Check whether all of the partitions are now registered in the RMI registry, and set the readyFuture if so
+     *
+     * This method requires that num partitions >= num view threads, so at least one partition is assigned to each view
      */
     private void checkReadiness() {
-        if (assignedPartitionCount.get() == readyPartitions.size()) {
+        int partitionCount = assignedPartitionCount.get();
+        if (partitionCount > 0 && partitionCount == readyPartitions.size()) {
             // We're ready, so let listeners know
-            // TODO: This is being set too early, while partitions == 0
             readyFuture.set(null);
         }
     }
@@ -208,6 +210,11 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
     @Override
     public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+        log.debug("Partitions {} revoked", partitions);
+        if (partitions.isEmpty()) {
+            // Initially, an empty set of partitions are revoked, and there's no point doing anything with that
+            return;
+        }
         synchronized (endOffsets) {
             int actuallyRemovedPartitions = 0;
             for (TopicPartition topicPartition : partitions) {
@@ -224,6 +231,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
     @Override
     public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+        log.debug("Partitions {} assigned", partitions);
         boolean interrupted = false;
         synchronized (endOffsets) {
             assignedPartitionCount.addAndGet(partitions.size());

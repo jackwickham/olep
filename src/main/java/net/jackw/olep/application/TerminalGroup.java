@@ -65,7 +65,9 @@ public class TerminalGroup extends AbstractActor {
     public SupervisorStrategy supervisorStrategy() {
         return new OneForOneStrategy(DeciderBuilder
             .match(TransactionTimeoutException.class, e -> {
-                onFailure.accept(e);
+                if (onFailure != null) {
+                    onFailure.accept(e);
+                }
                 return SupervisorStrategy.restart();
             })
             .matchAny(t -> SupervisorStrategy.escalate())
