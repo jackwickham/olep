@@ -34,8 +34,8 @@ public class CountUpDownLatch {
      * If the count is currently zero, this method will not change it.
      */
     public void countDown() {
-        int newValue = count.updateAndGet(v -> v == 0 ? 0 : v - 1);
-        if (newValue == 0) {
+        int oldValue = count.getAndUpdate(v -> v == 0 ? 0 : v - 1);
+        if (oldValue == 1) {
             synchronized (count) {
                 count.notifyAll();
             }
@@ -78,7 +78,7 @@ public class CountUpDownLatch {
         synchronized (count) {
             while (count.get() > 0) {
                 long remaining = end - System.nanoTime();
-                if (remaining < 0) {
+                if (remaining <= 0) {
                     return false;
                 } else {
                     count.wait(remaining / 1000000, (int)(remaining % 1000000));

@@ -16,5 +16,5 @@ before_install:
     sudo pip install s3cmd
 
 after_failure:
-  - s3cmd put --no-mime-magic --access_key=$S3_ACCESS_KEY --secret_key=$S3_SECRET_KEY --recursive build/reports/tests s3://olep-test-reports/$TRAVIS_BUILD_ID/
-  - echo "Uploaded test reports to s3://olep-test-reports/$TRAVIS_BUILD_ID/"
+  - s3cmd put --no-mime-magic --access_key=$S3_ACCESS_KEY --secret_key=$S3_SECRET_KEY --recursive build/reports/tests/ s3://olep-test-reports/$TRAVIS_BUILD_ID/
+  - echo "Test report uploaded to https://olep-test-reports.s3.amazonaws.com/$TRAVIS_BUILD_ID/test/index.html"
