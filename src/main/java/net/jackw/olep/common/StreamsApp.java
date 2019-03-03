@@ -2,21 +2,15 @@ package net.jackw.olep.common;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Properties;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import com.google.common.collect.Table;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.MustBeClosed;
@@ -47,6 +41,11 @@ public abstract class StreamsApp implements AutoCloseable {
      * Latch that will go to zero after the streams app shuts down
      */
     private CountDownLatch shutdownLatch = new CountDownLatch(1);
+
+    /**
+     * Latch that is closed when the streams app is running, and open when it's rebalancing or otherwise not running
+     */
+    private Latch streamsRunningLatch = new Latch(false);
 
     @MustBeClosed
     protected StreamsApp(DatabaseConfig config) {
@@ -120,6 +119,13 @@ public abstract class StreamsApp implements AutoCloseable {
     }
 
     /**
+     * Get a latch that will be closed when the streams app is in state RUNNING, and open otherwise
+     */
+    public Latch getStreamsRunningLatch() {
+        return streamsRunningLatch;
+    }
+
+    /**
      * Start the process
      *
      * This call will block until the immutable stores are fully populated (they started when the class was created)
@@ -139,8 +145,10 @@ public abstract class StreamsApp implements AutoCloseable {
                     log.error("Interrupted exception while closing from error state");
                 }
             } else if (newState == KafkaStreams.State.RUNNING) {
+                streamsRunningLatch.close();
                 readyLatch.countDown();
             } else if (oldState == KafkaStreams.State.RUNNING) {
+                streamsRunningLatch.open();
                 readyLatch.countUp();
             }
         });

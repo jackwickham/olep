@@ -14,6 +14,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -37,7 +39,8 @@ public abstract class ConsistencyProperties {
      * zero).
      */
     @Test
-    public void testNextOrderIdMatchesGreatestNewOrderId() {
+    public void testNextOrderIdMatchesGreatestNewOrderId() throws TimeoutException, InterruptedException {
+        CurrentTestState.getInstance().workerApp.getStreamsRunningLatch().await(20, TimeUnit.SECONDS);
         KafkaStreams streams = CurrentTestState.getInstance().workerApp.getStreams();
         ReadOnlyKeyValueStore<WarehouseSpecificKey, Integer> nextOrderIdStore =
             streams.store(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE, QueryableStoreTypes.keyValueStore());
@@ -67,7 +70,9 @@ public abstract class ConsistencyProperties {
      * outstanding new orders (i.e., the number of rows is zero).
      */
     @Test
-    public void testNewOrderIdsAreContiguous() {
+    public void testNewOrderIdsAreContiguous() throws InterruptedException, TimeoutException {
+        CurrentTestState.getInstance().workerApp.getStreamsRunningLatch().await(20, TimeUnit.SECONDS);
+
         KafkaStreams streams = CurrentTestState.getInstance().workerApp.getStreams();
         ReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore =
             streams.store(KafkaConfig.NEW_ORDER_STORE, QueryableStoreTypes.keyValueStore());
@@ -100,7 +105,9 @@ public abstract class ConsistencyProperties {
      * This only applies here for orders that are in the order status store
      */
     @Test
-    public void testCarrierIdConsistent() {
+    public void testCarrierIdConsistent() throws InterruptedException, TimeoutException {
+        CurrentTestState.getInstance().workerApp.getStreamsRunningLatch().await(20, TimeUnit.SECONDS);
+
         KafkaStreams streams = CurrentTestState.getInstance().workerApp.getStreams();
         ReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore =
             streams.store(KafkaConfig.NEW_ORDER_STORE, QueryableStoreTypes.keyValueStore());

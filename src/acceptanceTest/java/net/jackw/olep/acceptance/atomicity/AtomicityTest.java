@@ -2,6 +2,7 @@ package net.jackw.olep.acceptance.atomicity;
 
 import com.google.common.util.concurrent.SettableFuture;
 import net.jackw.olep.acceptance.BaseAcceptanceTest;
+import net.jackw.olep.acceptance.CurrentTestState;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.DistrictSpecificKey;
@@ -15,6 +16,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -30,7 +33,7 @@ public class AtomicityTest extends BaseAcceptanceTest {
      */
     @Test
     @SuppressWarnings("AssertionFailureIgnored")
-    public void testPaymentAtomicallyUpdates() throws InterruptedException, ExecutionException {
+    public void testPaymentAtomicallyUpdates() throws InterruptedException, ExecutionException, TimeoutException {
         RandomDataGenerator rand = new RandomDataGenerator();
         int warehouseId = rand.uniform(1, getConfig().getWarehouseCount());
         int districtId = rand.uniform(1, getConfig().getDistrictsPerWarehouse());
@@ -38,6 +41,8 @@ public class AtomicityTest extends BaseAcceptanceTest {
         int customerWarehouseId = rand.uniform(1, getConfig().getWarehouseCount());
         int customerDistrictId = rand.uniform(1, getConfig().getDistrictsPerWarehouse());
         BigDecimal amount = new BigDecimal("12.34");
+
+        CurrentTestState.getInstance().workerApp.getStreamsRunningLatch().await(20, TimeUnit.SECONDS);
 
         ReadOnlyKeyValueStore<DistrictSpecificKey, CustomerMutable> customerMutableStore = getWorkerApp().getStreams()
             .store(KafkaConfig.CUSTOMER_MUTABLE_STORE, QueryableStoreTypes.keyValueStore());
