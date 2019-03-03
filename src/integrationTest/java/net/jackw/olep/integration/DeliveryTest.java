@@ -6,6 +6,8 @@ import net.jackw.olep.integration.matchers.DeliveryResultMatcher;
 import net.jackw.olep.integration.matchers.MapEntryMatcher;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,7 +44,7 @@ public class DeliveryTest extends BaseIntegrationTest {
         try (EventDatabase db = new EventDatabase(getConfig())) {
             // Populate DB
             final CountDownLatch latch = new CountDownLatch(5);
-            System.err.println("Starting transactions");
+            log.info("Starting transactions");
             List<TransactionStatus<NewOrderResult>> orders = List.of(
                 db.newOrder(1, 1, 1, List.of()),
                 db.newOrder(1, 2, 1, List.of()),
@@ -56,15 +58,15 @@ public class DeliveryTest extends BaseIntegrationTest {
 
             for (TransactionStatus<NewOrderResult> status : orders) {
                 status.addAcceptedHandler(() -> {
-                    System.err.println("accepted");
+                    log.info("Transaction accepted");
                 });
                 status.addCompleteHandler(result -> {
-                    System.err.println("complete");
+                    log.info("Transaction complete for district " + result.districtId);
                     orderIds[result.districtId - 1] = result.orderId;
                     latch.countDown();
                 });
                 status.addRejectedHandler(err -> {
-                    System.err.println("rejected");
+                    log.error("rejected");
                     errorRef.set(err);
                     latch.countDown();
                 });
@@ -88,4 +90,6 @@ public class DeliveryTest extends BaseIntegrationTest {
             resultHandler.await();
         }
     }
+
+    private static Logger log = LogManager.getLogger();
 }
