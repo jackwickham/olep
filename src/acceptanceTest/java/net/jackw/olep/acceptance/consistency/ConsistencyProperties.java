@@ -2,20 +2,17 @@ package net.jackw.olep.acceptance.consistency;
 
 import net.jackw.olep.acceptance.CurrentTestState;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.SafeReadOnlyKeyValueStore;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.OrderStatusResult;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -39,13 +36,14 @@ public abstract class ConsistencyProperties {
      * zero).
      */
     @Test
-    public void testNextOrderIdMatchesGreatestNewOrderId() throws TimeoutException, InterruptedException {
-        CurrentTestState.getInstance().workerApp.getStreamsRunningLatch().await(20, TimeUnit.SECONDS);
+    public void testNextOrderIdMatchesGreatestNewOrderId() throws InterruptedException, SafeReadOnlyKeyValueStore.StoreUnavailableException {
         KafkaStreams streams = CurrentTestState.getInstance().workerApp.getStreams();
-        ReadOnlyKeyValueStore<WarehouseSpecificKey, Integer> nextOrderIdStore =
-            streams.store(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE, QueryableStoreTypes.keyValueStore());
-        ReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore =
-            streams.store(KafkaConfig.NEW_ORDER_STORE, QueryableStoreTypes.keyValueStore());
+        SafeReadOnlyKeyValueStore<WarehouseSpecificKey, Integer> nextOrderIdStore = new SafeReadOnlyKeyValueStore<>(
+            streams, KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE, CurrentTestState.getInstance().workerApp.getStreamsRunningLatch()
+        );
+        SafeReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore = new SafeReadOnlyKeyValueStore<>(
+            streams, KafkaConfig.NEW_ORDER_STORE, CurrentTestState.getInstance().workerApp.getStreamsRunningLatch()
+        );
 
         for (int warehouseId = 1; warehouseId <= CurrentTestState.getInstance().config.getWarehouseCount(); warehouseId++) {
             for (int districtId = 1; districtId <= CurrentTestState.getInstance().config.getDistrictsPerWarehouse(); districtId++) {
@@ -70,12 +68,11 @@ public abstract class ConsistencyProperties {
      * outstanding new orders (i.e., the number of rows is zero).
      */
     @Test
-    public void testNewOrderIdsAreContiguous() throws InterruptedException, TimeoutException {
-        CurrentTestState.getInstance().workerApp.getStreamsRunningLatch().await(20, TimeUnit.SECONDS);
-
+    public void testNewOrderIdsAreContiguous() throws InterruptedException, SafeReadOnlyKeyValueStore.StoreUnavailableException {
         KafkaStreams streams = CurrentTestState.getInstance().workerApp.getStreams();
-        ReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore =
-            streams.store(KafkaConfig.NEW_ORDER_STORE, QueryableStoreTypes.keyValueStore());
+        SafeReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore = new SafeReadOnlyKeyValueStore<>(
+            streams, KafkaConfig.NEW_ORDER_STORE, CurrentTestState.getInstance().workerApp.getStreamsRunningLatch()
+        );
 
         for (int warehouseId = 1; warehouseId <= CurrentTestState.getInstance().config.getWarehouseCount(); warehouseId++) {
             for (int districtId = 1; districtId <= CurrentTestState.getInstance().config.getDistrictsPerWarehouse(); districtId++) {
@@ -105,12 +102,11 @@ public abstract class ConsistencyProperties {
      * This only applies here for orders that are in the order status store
      */
     @Test
-    public void testCarrierIdConsistent() throws InterruptedException, TimeoutException {
-        CurrentTestState.getInstance().workerApp.getStreamsRunningLatch().await(20, TimeUnit.SECONDS);
-
+    public void testCarrierIdConsistent() throws InterruptedException, SafeReadOnlyKeyValueStore.StoreUnavailableException {
         KafkaStreams streams = CurrentTestState.getInstance().workerApp.getStreams();
-        ReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore =
-            streams.store(KafkaConfig.NEW_ORDER_STORE, QueryableStoreTypes.keyValueStore());
+        SafeReadOnlyKeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>> newOrderStore = new SafeReadOnlyKeyValueStore<>(
+            streams, KafkaConfig.NEW_ORDER_STORE, CurrentTestState.getInstance().workerApp.getStreamsRunningLatch()
+        );
 
         for (int warehouseId = 1; warehouseId <= CurrentTestState.getInstance().config.getWarehouseCount(); warehouseId++) {
             for (int districtId = 1; districtId <= CurrentTestState.getInstance().config.getDistrictsPerWarehouse(); districtId++) {

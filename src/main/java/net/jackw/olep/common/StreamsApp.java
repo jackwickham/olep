@@ -138,7 +138,7 @@ public abstract class StreamsApp implements AutoCloseable {
 
         streams.setStateListener((newState, oldState) -> {
             if (newState == KafkaStreams.State.ERROR) {
-                log.fatal("Kafka streams have transitioned to error state");
+                log.fatal("{} streams have transitioned to error state", getApplicationID());
                 try {
                     close();
                 } catch (InterruptedException e) {
