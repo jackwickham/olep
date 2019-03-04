@@ -57,16 +57,11 @@ public class DeliveryTest extends BaseIntegrationTest {
             AtomicReference<Throwable> errorRef = new AtomicReference<>();
 
             for (TransactionStatus<NewOrderResult> status : orders) {
-                status.addAcceptedHandler(() -> {
-                    log.info("Transaction accepted");
-                });
                 status.addCompleteHandler(result -> {
-                    log.info("Transaction complete for district " + result.districtId);
                     orderIds[result.districtId - 1] = result.orderId;
                     latch.countDown();
                 });
                 status.addRejectedHandler(err -> {
-                    log.error("rejected");
                     errorRef.set(err);
                     latch.countDown();
                 });

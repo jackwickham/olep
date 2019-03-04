@@ -99,7 +99,11 @@ class DatabaseConnection implements Closeable {
         );
         transactionResultConsumer.assign(List.of(partition));
         // And seek to the end, since we've not sent any transactions yet
-        transactionResultConsumer.seekToEnd(List.of(partition));
+        // nb. Consumer.seekToEnd is lazy, which means it may not actually seek to the end until after the acceptance
+        // messages have been sent (if starting the thread is a bit delayed), resulting in missing messages
+        // Therefore, do it manually
+        long offset = transactionResultConsumer.endOffsets(List.of(partition)).get(partition);
+        transactionResultConsumer.seek(partition, offset);
 
         // Create the transaction result processor, so we can decode the results
         transactionResultProcessor = new TransactionResultProcessor();
@@ -172,7 +176,7 @@ class DatabaseConnection implements Closeable {
                                 log.debug("Received duplicate result for completed transaction {}", transactionId);
                             }
                         } else {
-                            log.debug("Received {} message", record.key().approvalMessage ? "approval" : "result");
+                            log.debug("Received {} message for transaction {}", record.key().approvalMessage ? "approval" : "result", transactionId);
                             boolean complete;
                             if (record.key().approvalMessage) {
                                 complete = transactionResultProcessor.processApprovalMessage(record.value(), pendingTransaction);

@@ -27,12 +27,10 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
     private ProcessorContext context;
     private final SharedKeyValueStore<Integer, Item> itemStore;
     private final Metrics metrics;
-    private final Set<Long> recentTransactions;
 
     public TransactionVerificationProcessor(SharedKeyValueStore<Integer, Item> itemStore, Metrics metrics) {
         this.itemStore = itemStore;
         this.metrics = metrics;
-        recentTransactions = new LockingLRUSet<>(100);
     }
 
     @Override
@@ -49,11 +47,6 @@ public class TransactionVerificationProcessor implements Processor<Long, Transac
     @Override
     public void process(Long key, TransactionRequestMessage message) {
         Timer timer = metrics.startTimer();
-        if (!recentTransactions.add(key)) {
-            // Already present, so we processed this transaction already
-            return;
-        }
-
         if (message instanceof NewOrderRequest) {
             NewOrderRequest body = (NewOrderRequest) message;
             if (body.lines.stream().allMatch(line -> itemStore.containsKey(line.itemId))) {
