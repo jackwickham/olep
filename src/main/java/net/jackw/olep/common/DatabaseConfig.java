@@ -194,7 +194,7 @@ public class DatabaseConfig {
         if (transactionRequestTopicPartitions > -1) {
             return transactionRequestTopicPartitions;
         } else {
-            return getVerifierInstances() * getVerifierThreads() * 8;
+            return getVerifierInstances() * getVerifierThreads();
         }
     }
 
@@ -205,7 +205,7 @@ public class DatabaseConfig {
         if (acceptedTransactionTopicPartitions > -1) {
             return acceptedTransactionTopicPartitions;
         } else {
-            return getWorkerInstances() * getWorkerThreads() * 8;
+            return getWorkerInstances() * getWorkerThreads();
         }
     }
 
@@ -216,7 +216,7 @@ public class DatabaseConfig {
         if (modificationTopicPartitions > -1) {
             return modificationTopicPartitions;
         } else {
-            return getViewThreads() * 8;
+            return getViewThreads();
         }
     }
 
