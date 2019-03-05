@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
 import net.jackw.olep.common.store.SharedCustomerStore;
 import net.jackw.olep.common.store.SharedKeyValueStore;
 import net.jackw.olep.common.records.Address;
@@ -82,7 +83,7 @@ public class NewOrderProcessorTest {
 
         nextOrderIdStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE),
-            new JsonSerde<>(WarehouseSpecificKey.class),
+            WarehouseSpecificKeySerde.getInstance(),
             Serdes.Integer()
         ).withLoggingDisabled().build();
         nextOrderIdStore.init(context, nextOrderIdStore);
@@ -90,7 +91,7 @@ public class NewOrderProcessorTest {
 
         stockQuantityStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.STOCK_QUANTITY_STORE),
-            new JsonSerde<>(WarehouseSpecificKey.class),
+            WarehouseSpecificKeySerde.getInstance(),
             Serdes.Integer()
         ).withLoggingDisabled().build();
         stockQuantityStore.init(context, stockQuantityStore);
@@ -98,7 +99,7 @@ public class NewOrderProcessorTest {
 
         newOrdersStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
-            new JsonSerde<>(WarehouseSpecificKey.class),
+            WarehouseSpecificKeySerde.getInstance(),
             new JsonSerde<ArrayDeque<NewOrder>>(new TypeReference<>() {})
         ).withLoggingDisabled().build();
         newOrdersStore.init(context, newOrdersStore);

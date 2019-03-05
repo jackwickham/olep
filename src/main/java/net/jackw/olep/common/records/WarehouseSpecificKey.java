@@ -4,11 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 @Immutable
-public class WarehouseSpecificKey implements Serializable {
+public class WarehouseSpecificKey {
     public final int id;
     public final int warehouseId;
 

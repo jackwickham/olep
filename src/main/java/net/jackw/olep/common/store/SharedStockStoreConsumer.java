@@ -4,6 +4,7 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
+import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
 import net.jackw.olep.utils.populate.PredictableStockFactory;
 
 public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpecificKey, StockShared> {
@@ -11,7 +12,7 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
     private DiskBackedMapStore<WarehouseSpecificKey, StockShared> store;
 
     private SharedStockStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
-        super(bootstrapServers, nodeId, KafkaConfig.STOCK_IMMUTABLE_TOPIC, WarehouseSpecificKey.class, StockShared.class);
+        super(bootstrapServers, nodeId, KafkaConfig.STOCK_IMMUTABLE_TOPIC, WarehouseSpecificKeySerde.getInstance(), StockShared.class);
         store = DiskBackedMapStore.create(
             config.getWarehouseCount() * config.getItemCount(),
             WarehouseSpecificKey.class,
@@ -19,7 +20,8 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
             "stockshared",
             new WarehouseSpecificKey(1, 1),
             PredictableStockFactory.instanceFor(1).getStockShared(1),
-            config
+            config,
+            WarehouseSpecificKeySerde.getInstance()
         );
     }
 

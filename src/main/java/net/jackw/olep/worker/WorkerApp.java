@@ -6,6 +6,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.ModificationPartitioner;
+import net.jackw.olep.common.records.DistrictSpecificKeySerde;
+import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
@@ -38,8 +40,6 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -112,25 +112,25 @@ public class WorkerApp extends StreamsApp {
     protected Topology getTopology() {
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, Integer>> nextOrderIdStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE),
-            new JsonSerde<>(WarehouseSpecificKey.class),
+            WarehouseSpecificKeySerde.getInstance(),
             Serdes.Integer()
         );
 
         StoreBuilder<KeyValueStore<DistrictSpecificKey, CustomerMutable>> customerMutableStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),
-            new JsonSerde<>(DistrictSpecificKey.class),
+            DistrictSpecificKeySerde.getInstance(),
             new JsonSerde<>(CustomerMutable.class)
         );
 
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>>> newOrdersStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
-            new JsonSerde<>(WarehouseSpecificKey.class),
+            WarehouseSpecificKeySerde.getInstance(),
             new JsonSerde<>(new TypeReference<>() {})
         );
 
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, Integer>> stockQuantityStoreBuilder = Stores.keyValueStoreBuilder(
             Stores.persistentKeyValueStore(KafkaConfig.STOCK_QUANTITY_STORE),
-            new JsonSerde<>(WarehouseSpecificKey.class),
+            WarehouseSpecificKeySerde.getInstance(),
             Serdes.Integer()
         );
 

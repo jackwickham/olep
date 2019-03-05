@@ -3,11 +3,10 @@ package net.jackw.olep.common.records;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 @Immutable
-public class CustomerNameKey implements Serializable {
+public class CustomerNameKey {
     public final String lastName;
     public final int districtId;
     public final int warehouseId;

@@ -3,6 +3,7 @@ package net.jackw.olep.worker;
 import com.google.common.base.Strings;
 import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.records.DistrictSpecificKeySerde;
 import net.jackw.olep.common.store.SharedCustomerStore;
 import net.jackw.olep.common.store.SharedKeyValueStore;
 import net.jackw.olep.common.records.Address;
@@ -63,7 +64,7 @@ public class PaymentProcessorTest {
         context = new MockProcessorContext();
         customerMutableStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),
-            new JsonSerde<>(DistrictSpecificKey.class),
+            DistrictSpecificKeySerde.getInstance(),
             new JsonSerde<>(CustomerMutable.class)
         ).withLoggingDisabled().build();
         customerMutableStore.init(context, customerMutableStore);

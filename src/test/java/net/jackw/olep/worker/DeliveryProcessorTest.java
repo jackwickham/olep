@@ -6,8 +6,10 @@ import net.jackw.olep.common.JsonSerde;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.DistrictSpecificKeySerde;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
+import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
@@ -44,7 +46,7 @@ public class DeliveryProcessorTest {
         context = new MockProcessorContext();
         newOrdersStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
-            new JsonSerde<>(WarehouseSpecificKey.class),
+            WarehouseSpecificKeySerde.getInstance(),
             new JsonSerde<ArrayDeque<NewOrder>>(new TypeReference<>() {})
         ).withLoggingDisabled().build();
         newOrdersStore.init(context, newOrdersStore);
@@ -52,7 +54,7 @@ public class DeliveryProcessorTest {
 
         customerMutableStore = Stores.keyValueStoreBuilder(
             Stores.inMemoryKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),
-            new JsonSerde<>(DistrictSpecificKey.class),
+            DistrictSpecificKeySerde.getInstance(),
             new JsonSerde<>(CustomerMutable.class)
         ).withLoggingDisabled().build();
         customerMutableStore.init(context, customerMutableStore);

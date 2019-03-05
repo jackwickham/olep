@@ -2,6 +2,11 @@ package net.jackw.olep.common.store;
 
 import com.google.common.io.Files;
 import net.jackw.olep.common.DatabaseConfig;
+import net.openhft.chronicle.bytes.BytesMarshaller;
+import net.openhft.chronicle.hash.serialization.BytesReader;
+import net.openhft.chronicle.hash.serialization.BytesWriter;
+import net.openhft.chronicle.hash.serialization.SizedReader;
+import net.openhft.chronicle.hash.serialization.SizedWriter;
 import net.openhft.chronicle.map.ChronicleMap;
 import net.openhft.chronicle.map.ChronicleMapBuilder;
 
@@ -42,14 +47,19 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
      * @param config The current database configuration
      * @return An instance of the store
      */
-    public static <K, V> DiskBackedMapStore<K, V> create(long capacity, Class<K> keyClass, Class<V> valueClass,
-                                                         String storeName, K averageKey, V averageValue,
-                                                         DatabaseConfig config) {
+    public static <K, V, KM extends SizedReader<K> & SizedWriter<? super K>, VM extends BytesReader<V> & BytesWriter<? super V>> DiskBackedMapStore<K, V> create(
+        long capacity, Class<K> keyClass, Class<V> valueClass, String storeName, K averageKey, V averageValue,
+        DatabaseConfig config, KM keyMarshaller//, VM valueMarshaller
+    ) {
         ChronicleMapBuilder<K, V> mapBuilder = ChronicleMapBuilder.of(keyClass, valueClass)
             .entries(capacity)
             .name(storeName + rand.nextInt())
             .averageKey(averageKey)
-            .averageValue(averageValue);
+            .averageValue(averageValue)
+            .keyMarshaller(keyMarshaller)
+            //.valueMarshaller(valueMarshaller)
+            .putReturnsNull(true)
+            .removeReturnsNull(true);
 
         return new DiskBackedMapStore<>(mapBuilder, storeName, config);
     }
@@ -71,7 +81,9 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
         ChronicleMapBuilder<Integer, V> mapBuilder = ChronicleMapBuilder.of(Integer.class, valueClass)
             .entries(capacity)
             .name(storeName + rand.nextInt())
-            .averageValue(averageValue);
+            .averageValue(averageValue)
+            .putReturnsNull(true)
+            .removeReturnsNull(true);
 
         return new DiskBackedMapStore<>(mapBuilder, storeName, config);
     }

@@ -5,8 +5,10 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.CustomerNameKey;
+import net.jackw.olep.common.records.CustomerNameKeySerde;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.DistrictSpecificKeySerde;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.utils.populate.PredictableCustomerFactory;
 
@@ -52,11 +54,12 @@ public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCl
 
         idMap = DiskBackedMapStore.create(
             capacity, DistrictSpecificKey.class, CustomerShared.class, "customer-id", sampleCustomer.getKey(),
-            sampleCustomer, config
+            sampleCustomer, config, DistrictSpecificKeySerde.getInstance()
         );
         nameMap = DiskBackedMapStore.create(
             capacity, CustomerNameKey.class, CustomerShared.class, "customer-name",
-            new CustomerNameKey(sampleCustomer.lastName, 1, 1), sampleCustomer, config
+            new CustomerNameKey(sampleCustomer.lastName, 1, 1), sampleCustomer, config,
+            CustomerNameKeySerde.getInstance()
         );
     }
 

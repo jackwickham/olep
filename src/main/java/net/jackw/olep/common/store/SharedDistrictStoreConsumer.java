@@ -4,13 +4,14 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
+import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
 
 public class SharedDistrictStoreConsumer extends SharedStoreConsumer<WarehouseSpecificKey, DistrictShared> {
     private int referenceCount = 0;
     private InMemoryMapStore<WarehouseSpecificKey, DistrictShared> store;
 
     private SharedDistrictStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
-        super(bootstrapServers, nodeId, KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, WarehouseSpecificKey.class, DistrictShared.class);
+        super(bootstrapServers, nodeId, KafkaConfig.DISTRICT_IMMUTABLE_TOPIC, WarehouseSpecificKeySerde.getInstance(), DistrictShared.class);
         store = new InMemoryMapStore<>(config.getWarehouseCount() * config.getItemCount());
     }
 

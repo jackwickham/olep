@@ -8,6 +8,7 @@ import net.jackw.olep.common.records.Customer;
 import net.jackw.olep.common.records.CustomerMutable;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.DistrictSpecificKeySerde;
 import net.jackw.olep.common.records.NewOrder;
 import net.jackw.olep.common.records.Stock;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
@@ -15,6 +16,7 @@ import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.Item;
 import net.jackw.olep.common.records.StockShared;
 import net.jackw.olep.common.records.WarehouseShared;
+import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
 import net.jackw.olep.message.modification.ModificationKey;
 import net.jackw.olep.message.modification.ModificationMessage;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -66,14 +68,14 @@ public class PopulateStores implements AutoCloseable {
 
         itemProducer = new KafkaProducer<>(props, Serdes.Integer().serializer(), new JsonSerializer<>());
         warehouseProducer = new KafkaProducer<>(props, Serdes.Integer().serializer(), new JsonSerializer<>());
-        districtProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
-        customerProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
-        stockProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
+        districtProducer = new KafkaProducer<>(props, WarehouseSpecificKeySerde.getInstance(), new JsonSerializer<>());
+        customerProducer = new KafkaProducer<>(props, DistrictSpecificKeySerde.getInstance(), new JsonSerializer<>());
+        stockProducer = new KafkaProducer<>(props, WarehouseSpecificKeySerde.getInstance(), new JsonSerializer<>());
 
-        nextOrderIdStoreProducer = new KafkaProducer<>(props, new JsonSerializer<>(), Serdes.Integer().serializer());
-        customerMutableStoreProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
-        newOrderStoreProducer = new KafkaProducer<>(props, new JsonSerializer<>(), new JsonSerializer<>());
-        stockQuantityStoreProducer = new KafkaProducer<>(props, new JsonSerializer<>(), Serdes.Integer().serializer());
+        nextOrderIdStoreProducer = new KafkaProducer<>(props, WarehouseSpecificKeySerde.getInstance(), Serdes.Integer().serializer());
+        customerMutableStoreProducer = new KafkaProducer<>(props, DistrictSpecificKeySerde.getInstance(), new JsonSerializer<>());
+        newOrderStoreProducer = new KafkaProducer<>(props, WarehouseSpecificKeySerde.getInstance(), new JsonSerializer<>());
+        stockQuantityStoreProducer = new KafkaProducer<>(props, WarehouseSpecificKeySerde.getInstance(), Serdes.Integer().serializer());
 
         storePartitions = nextOrderIdStoreProducer.partitionsFor(KafkaConfig.DISTRICT_NEXT_ORDER_ID_CHANGELOG).size();
 

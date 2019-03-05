@@ -4,6 +4,7 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.CustomerShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.DistrictSpecificKeySerde;
 
 public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpecificKey, CustomerShared> {
     private int referenceCount = 0;
@@ -17,7 +18,7 @@ public class SharedCustomerStoreConsumer extends SharedStoreConsumer<DistrictSpe
      * @param config            The current database config
      */
     private SharedCustomerStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
-        super(bootstrapServers, nodeId, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, DistrictSpecificKey.class, CustomerShared.class);
+        super(bootstrapServers, nodeId, KafkaConfig.CUSTOMER_IMMUTABLE_TOPIC, DistrictSpecificKeySerde.getInstance(), CustomerShared.class);
         store = new DiskBackedCustomerMapStore(config);
     }
 
