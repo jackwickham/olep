@@ -32,7 +32,7 @@ public abstract class BaseCustomerStoreTest {
     @Test
     public void testInsertGetFlow() {
         CustomerShared c = makeCustomer("", "l");
-        assertNull(store.put(c.getKey(), c));
+        store.put(c.getKey(), c);
         assertTrue(store.containsKey(c.getKey()));
         assertThat(store.get(c.getKey()), new IdenticalCustomerMatcher(c));
     }
@@ -138,14 +138,14 @@ public abstract class BaseCustomerStoreTest {
                 mismatchDescription.appendText("firstName ")
                     .appendValue(customer.firstName)
                     .appendText(" did not match ")
-                    .appendValue(expected.lastName);
+                    .appendValue(expected.firstName);
                 return false;
             }
             if (!Objects.equals(customer.middleName, expected.middleName)) {
                 mismatchDescription.appendText("middleName ")
                     .appendValue(customer.middleName)
                     .appendText(" did not match ")
-                    .appendValue(expected.lastName);
+                    .appendValue(expected.middleName);
                 return false;
             }
             if (!Objects.equals(customer.lastName, expected.lastName)) {
@@ -159,14 +159,14 @@ public abstract class BaseCustomerStoreTest {
                 mismatchDescription.appendText("address ")
                     .appendValue(customer.address)
                     .appendText(" did not match ")
-                    .appendValue(expected.lastName);
+                    .appendValue(expected.address);
                 return false;
             }
             if (!Objects.equals(customer.phone, expected.phone)) {
                 mismatchDescription.appendText("phone ")
                     .appendValue(customer.phone)
                     .appendText(" did not match ")
-                    .appendValue(expected.lastName);
+                    .appendValue(expected.phone);
                 return false;
             }
             if (customer.since != expected.since) {
@@ -180,21 +180,21 @@ public abstract class BaseCustomerStoreTest {
                 mismatchDescription.appendText("credit ")
                     .appendValue(customer.credit)
                     .appendText(" did not match ")
-                    .appendValue(expected.lastName);
+                    .appendValue(expected.credit);
                 return false;
             }
             if (!Objects.equals(customer.creditLimit, expected.creditLimit)) {
                 mismatchDescription.appendText("creditLimit ")
                     .appendValue(customer.creditLimit)
                     .appendText(" did not match ")
-                    .appendValue(expected.lastName);
+                    .appendValue(expected.creditLimit);
                 return false;
             }
             if (!Objects.equals(customer.discount, expected.discount)) {
                 mismatchDescription.appendText("discount ")
                     .appendValue(customer.discount)
                     .appendText(" did not match ")
-                    .appendValue(expected.lastName);
+                    .appendValue(expected.discount);
                 return false;
             }
             return true;

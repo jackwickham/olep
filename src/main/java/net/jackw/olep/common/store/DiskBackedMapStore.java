@@ -47,9 +47,9 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
      * @param config The current database configuration
      * @return An instance of the store
      */
-    public static <K, V, KM extends SizedReader<K> & SizedWriter<? super K>, VM extends BytesReader<V> & BytesWriter<? super V>> DiskBackedMapStore<K, V> create(
+    public static <K, V, KM extends SizedReader<K> & SizedWriter<? super K>, VM extends SizedReader<V> & SizedWriter<? super V>> DiskBackedMapStore<K, V> create(
         long capacity, Class<K> keyClass, Class<V> valueClass, String storeName, K averageKey, V averageValue,
-        DatabaseConfig config, KM keyMarshaller//, VM valueMarshaller
+        DatabaseConfig config, KM keyMarshaller, VM valueMarshaller
     ) {
         ChronicleMapBuilder<K, V> mapBuilder = ChronicleMapBuilder.of(keyClass, valueClass)
             .entries(capacity)
@@ -57,7 +57,7 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
             .averageKey(averageKey)
             .averageValue(averageValue)
             .keyMarshaller(keyMarshaller)
-            //.valueMarshaller(valueMarshaller)
+            .valueMarshaller(valueMarshaller)
             .putReturnsNull(true)
             .removeReturnsNull(true);
 
@@ -75,13 +75,17 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
      * @param config The current database configuration
      * @return An instance of the store
      */
-    public static <V> DiskBackedMapStore<Integer, V> createIntegerKeyed(long capacity, Class<V> valueClass,
-                                                                        String storeName, V averageValue,
-                                                                        DatabaseConfig config) {
-        ChronicleMapBuilder<Integer, V> mapBuilder = ChronicleMapBuilder.of(Integer.class, valueClass)
+    public static <K, V, KM extends SizedReader<K> & SizedWriter<? super K>, VM extends BytesReader<V> & BytesWriter<? super V>> DiskBackedMapStore<K, V> create(
+        long capacity, Class<K> keyClass, Class<V> valueClass, String storeName, K averageKey, V averageValue,
+        DatabaseConfig config, KM keyMarshaller, VM valueMarshaller
+    ) {
+        ChronicleMapBuilder<K, V> mapBuilder = ChronicleMapBuilder.of(keyClass, valueClass)
             .entries(capacity)
             .name(storeName + rand.nextInt())
+            .averageKey(averageKey)
             .averageValue(averageValue)
+            .keyMarshaller(keyMarshaller)
+            .valueMarshaller(valueMarshaller)
             .putReturnsNull(true)
             .removeReturnsNull(true);
 
@@ -99,10 +103,9 @@ public class DiskBackedMapStore<K, V> implements WritableKeyValueStore<K, V>, Au
         return map.get(key);
     }
 
-    @Nullable
     @Override
-    public V put(K key, @Nonnull V value) {
-        return map.put(key, value);
+    public void put(K key, @Nonnull V value) {
+        map.put(key, value);
     }
 
     @Nullable

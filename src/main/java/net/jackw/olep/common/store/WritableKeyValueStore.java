@@ -8,11 +8,9 @@ import javax.annotation.Nullable;
 public interface WritableKeyValueStore<K, V> extends SharedKeyValueStore<K, V> {
 
     /**
-     * Save a value into the store with the given key, and return the previous value if it exists
+     * Save a value into the store with the given key
      */
-    @CanIgnoreReturnValue
-    @Nullable
-    V put(K key, @Nonnull V value);
+    void put(K key, @Nonnull V value);
 
     /**
      * Remove the element with the given key from the store, returning the previous value if it existed

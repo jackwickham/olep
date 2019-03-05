@@ -3,6 +3,7 @@ package net.jackw.olep.common.store;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.records.StockShared;
+import net.jackw.olep.common.records.StockSharedSerde;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
 import net.jackw.olep.utils.populate.PredictableStockFactory;
@@ -21,7 +22,8 @@ public class SharedStockStoreConsumer extends SharedStoreConsumer<WarehouseSpeci
             new WarehouseSpecificKey(1, 1),
             PredictableStockFactory.instanceFor(1).getStockShared(1),
             config,
-            WarehouseSpecificKeySerde.getInstance()
+            WarehouseSpecificKeySerde.getInstance(),
+            StockSharedSerde.getInstance()
         );
     }
 

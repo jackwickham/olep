@@ -25,12 +25,10 @@ class InMemoryCustomerMapStore implements WritableCustomerStore {
         nameMultimap = HashMultimap.create(initialCapacity / 10, 10);
     }
 
-    @Nullable
-    @CanIgnoreReturnValue
     @Override
-    public CustomerShared put(DistrictSpecificKey key, @Nonnull CustomerShared value) {
+    public void put(DistrictSpecificKey key, @Nonnull CustomerShared value) {
         nameMultimap.put(value.getNameKey(), value);
-        return idMap.put(key, value);
+        idMap.put(key, value);
     }
 
     @Nullable

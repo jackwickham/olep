@@ -7,6 +7,7 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.CustomerNameKeySerde;
 import net.jackw.olep.common.records.CustomerShared;
+import net.jackw.olep.common.records.CustomerSharedSerde;
 import net.jackw.olep.common.records.DistrictSpecificKey;
 import net.jackw.olep.common.records.DistrictSpecificKeySerde;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
@@ -54,12 +55,12 @@ public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCl
 
         idMap = DiskBackedMapStore.create(
             capacity, DistrictSpecificKey.class, CustomerShared.class, "customer-id", sampleCustomer.getKey(),
-            sampleCustomer, config, DistrictSpecificKeySerde.getInstance()
+            sampleCustomer, config, DistrictSpecificKeySerde.getInstance(), CustomerSharedSerde.getInstance()
         );
         nameMap = DiskBackedMapStore.create(
             capacity, CustomerNameKey.class, CustomerShared.class, "customer-name",
             new CustomerNameKey(sampleCustomer.lastName, 1, 1), sampleCustomer, config,
-            CustomerNameKeySerde.getInstance()
+            CustomerNameKeySerde.getInstance(), CustomerSharedSerde.getInstance()
         );
     }
 
@@ -76,9 +77,8 @@ public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCl
         }
     };
 
-    @Nullable
     @Override
-    public CustomerShared put(DistrictSpecificKey key, @Nonnull CustomerShared value) {
+    public void put(DistrictSpecificKey key, @Nonnull CustomerShared value) {
         // Update the name map
         WarehouseSpecificKey district = new WarehouseSpecificKey(key.districtId, key.warehouseId);
         if (!district.equals(currentPopulatingDistrict)) {
@@ -100,7 +100,7 @@ public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCl
         nameMap.put(new CustomerNameKey(middleCustomer.lastName, middleCustomer.districtId, middleCustomer.warehouseId), middleCustomer);
 
         // Also update the ID map, and return the old value
-        return idMap.put(key, value);
+        idMap.put(key, value);
     }
 
     @Nullable

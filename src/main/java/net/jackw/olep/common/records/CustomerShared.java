@@ -65,7 +65,7 @@ public class CustomerShared extends Record<DistrictSpecificKey> {
     }
 
     @SuppressWarnings("Immutable")
-    private CustomerNameKey nameKey = null;
+    private transient CustomerNameKey nameKey = null;
 
     @JsonIgnore
     public CustomerNameKey getNameKey() {

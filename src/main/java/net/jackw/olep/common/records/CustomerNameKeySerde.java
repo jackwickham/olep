@@ -28,7 +28,8 @@ public class CustomerNameKeySerde implements SizedReader<CustomerNameKey>, Sized
 
     @Override
     public long size(@NotNull CustomerNameKey toWrite) {
-        return toWrite.lastName.length() + 8;
+        // 4B for district, 4B for warehouse, length + 1B for name
+        return toWrite.lastName.length() + 9L;
     }
 
     @NotNull

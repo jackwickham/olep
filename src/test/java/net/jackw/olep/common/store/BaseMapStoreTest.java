@@ -8,71 +8,70 @@ import java.io.Serializable;
 import static org.junit.Assert.*;
 
 public abstract class BaseMapStoreTest {
-    protected WritableKeyValueStore<Integer, Val> store;
-
-    public BaseMapStoreTest(WritableKeyValueStore<Integer, Val> store) {
-        this.store = store;
-    }
+    protected abstract WritableKeyValueStore<Val, Val> getStore();
 
     @Test
     public void testInsertGetFlow() {
-        Val o =  new Val(1);
-        assertNull(store.put(5, o));
-        assertTrue(store.containsKey(5));
-        assertEquals(o, store.get(5));
+        Val k = new Val(5);
+        Val v =  new Val(1);
+        getStore().put(k, v);
+        assertTrue(getStore().containsKey(k));
+        assertEquals(v, getStore().get(k));
     }
 
     @Test
     public void testRemove() {
-        Val o = new Val(2);
-        store.put(6, o);
-        // DiskBackedMapStore deliberately violates the Map contract and returns null on remove, for performance
-        store.remove(6);
-        assertFalse(store.containsKey(6));
-        assertNull(store.get(6));
+        Val k = new Val(6);
+        Val v = new Val(2);
+        getStore().put(k, v);
+        getStore().remove(k);
+        assertFalse(getStore().containsKey(k));
+        assertNull(getStore().get(k));
     }
 
     @Test
     public void testDuplicateInsertOverwrites() {
-        Val o1 = new Val(3);
-        Val o2 = new Val(4);
+        Val k = new Val(2);
+        Val v1 = new Val(3);
+        Val v2 = new Val(4);
 
-        store.put(2, o1);
-        // DiskBackedMapStore deliberately violates the Map contract and returns null on put, for performance
-        store.put(2, o2);
-        assertEquals(o2, store.get(2));
+        getStore().put(k, v1);
+        getStore().put(k, v2);
+        assertEquals(v2, getStore().get(k));
     }
 
     @Test
     public void testGetBlockingDoesntBlockIfAlreadyInStore() throws InterruptedException {
-        Val o = new Val(5);
-        store.put(8, o);
+        Val k = new Val(8);
+        Val v = new Val(5);
+        getStore().put(k, v);
 
         Thread.currentThread().interrupt();
         // If the thread tries to block, it will throw an InterruptedException and clear interrupted
-        assertEquals(o, store.getBlocking(8));
+        assertEquals(v, getStore().getBlocking(k));
         assertTrue(Thread.interrupted());
     }
 
     @Test
     public void testGetBlockingReturnsResultIfItBecomesAvailable() throws InterruptedException {
-        final Val o = new Val(6);
+        final Val k = new Val(1);
+        final Val v = new Val(6);
 
         new Thread(() -> {
             try {
                 Thread.sleep(70);
-                store.put(1, o);
+                getStore().put(k, v);
             } catch (InterruptedException e) {
                 // :(
             }
         }).start();
 
-        assertEquals(o, store.getBlocking(1));
+        assertEquals(v, getStore().getBlocking(k));
     }
 
     @Test(expected = StoreKeyMissingException.class)
     public void testGetBlockingThrowsExceptionIfNoResultAppears() throws InterruptedException {
-        store.getBlocking(9, 2);
+        getStore().getBlocking(new Val(9), 2);
     }
 
     public static class Val implements Serializable {
@@ -80,6 +79,10 @@ public abstract class BaseMapStoreTest {
 
         public Val(int x) {
             this.x = x;
+        }
+
+        public int getX() {
+            return x;
         }
 
         @Override

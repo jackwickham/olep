@@ -28,11 +28,9 @@ class InMemoryMapStore<K, V> implements WritableKeyValueStore<K, V> {
     /**
      * Save a value into the store with the given key, and return the previous value if it exists
      */
-    @CanIgnoreReturnValue
-    @Nullable
     @Override
-    public V put(K key, @Nonnull V value) {
-        return map.put(key, value);
+    public void put(K key, @Nonnull V value) {
+        map.put(key, value);
     }
 
     /**

@@ -8,20 +8,14 @@ import org.apache.kafka.common.serialization.Serdes;
 
 public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> {
     private int referenceCount = 0;
-    private DiskBackedMapStore<Integer, Item> store;
+    private InMemoryMapStore<Integer, Item> store;
 
     private SharedItemStoreConsumer(String bootstrapServers, String nodeId, DatabaseConfig config) {
         super(
             bootstrapServers, nodeId, KafkaConfig.ITEM_IMMUTABLE_TOPIC, Serdes.Integer().deserializer(),
             Item.class
         );
-        store = DiskBackedMapStore.createIntegerKeyed(
-            config.getWarehouseCount() * config.getItemCount(),
-            Item.class,
-            "itemshared",
-            PredictableItemFactory.getInstance().getItem(1),
-            config
-        );
+        store = new InMemoryMapStore<>(config.getWarehouseCount() * config.getItemCount());
     }
 
     @Override
@@ -65,10 +59,8 @@ public class SharedItemStoreConsumer extends SharedStoreConsumer<Integer, Item> 
             }
         }
 
-        // Closing the disk store might be slow, so release the lock first
         if (close) {
             super.close();
-            store.close();
         }
     }
 }
