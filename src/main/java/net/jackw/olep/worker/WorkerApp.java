@@ -1,6 +1,7 @@
 package net.jackw.olep.worker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Strings;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import net.jackw.olep.common.Arguments;
@@ -8,6 +9,7 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.ModificationPartitioner;
 import net.jackw.olep.common.records.DistrictSpecificKeySerde;
 import net.jackw.olep.common.records.WarehouseSpecificKeySerde;
+import net.jackw.olep.common.store.ChronicleMapKeyValueBytesStoreSupplier;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.JsonSerde;
@@ -42,6 +44,7 @@ import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Properties;
@@ -110,14 +113,22 @@ public class WorkerApp extends StreamsApp {
 
     @Override
     protected Topology getTopology() {
+        int maxWarehousesPerPartition = (config.getWarehouseCount() + config.getAcceptedTransactionTopicPartitions() - 1) / config.getAcceptedTransactionTopicPartitions();
+
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, Integer>> nextOrderIdStoreBuilder = Stores.keyValueStoreBuilder(
-            Stores.persistentKeyValueStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE),
+            Stores.inMemoryKeyValueStore(KafkaConfig.DISTRICT_NEXT_ORDER_ID_STORE),
             WarehouseSpecificKeySerde.getInstance(),
             Serdes.Integer()
         );
 
         StoreBuilder<KeyValueStore<DistrictSpecificKey, CustomerMutable>> customerMutableStoreBuilder = Stores.keyValueStoreBuilder(
-            Stores.persistentKeyValueStore(KafkaConfig.CUSTOMER_MUTABLE_STORE),
+            new ChronicleMapKeyValueBytesStoreSupplier<>(
+                KafkaConfig.CUSTOMER_MUTABLE_STORE,
+                config.getCustomersPerDistrict() * config.getDistrictsPerWarehouse() * maxWarehousesPerPartition,
+                DistrictSpecificKeySerde.getInstance(), new JsonSerializer<>(),
+                new DistrictSpecificKey(1, 1, 1),
+                new CustomerMutable(new BigDecimal("-23.45"), Strings.padStart("", 500, '-'))
+            ),
             DistrictSpecificKeySerde.getInstance(),
             new JsonSerde<>(CustomerMutable.class)
         );
