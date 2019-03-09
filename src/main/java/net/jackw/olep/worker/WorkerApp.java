@@ -127,7 +127,7 @@ public class WorkerApp extends StreamsApp {
                 config.getCustomersPerDistrict() * config.getDistrictsPerWarehouse() * maxWarehousesPerPartition,
                 DistrictSpecificKeySerde.getInstance(), new JsonSerializer<>(),
                 new DistrictSpecificKey(1, 1, 1),
-                new CustomerMutable(new BigDecimal("-23.45"), Strings.padStart("", 500, '-'))
+                new CustomerMutable(new BigDecimal("-234.56"), Strings.padStart("", 500, '-'))
             ),
             DistrictSpecificKeySerde.getInstance(),
             new JsonSerde<>(CustomerMutable.class)

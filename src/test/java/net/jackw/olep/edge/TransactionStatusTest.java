@@ -103,6 +103,16 @@ public class TransactionStatusTest {
         verify(deliveredHandler, times(1)).run();
     }
 
+    @Test public void testCompleteHandlerCalledWhenTransactionAcceptedLate() {
+        TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(1, transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
+
+        transactionDeliveredFuture.complete(null);
+        transactionCompleteFuture.complete(mock(TransactionResultMessage.class));
+        transactionAcceptedFuture.complete(null);
+
+        assertHandlersCalled(transactionStatus, HANDLER_DELIVERED | HANDLER_ACCEPTED | HANDLER_COMPLETED);
+    }
+
     @Test public void testDeliveryFailedHandlerCalledWithExceptionThatItWasRejectedWith() {
         TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(1, transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
@@ -127,7 +137,7 @@ public class TransactionStatusTest {
         verify(rejectedHandler).accept(e);
     }
 
-    @Test public void testRejectedHandlerCalledWitTransactionRejectedException() {
+    @Test public void testRejectedHandlerCalledWithTransactionRejectedException() {
         TransactionStatus<TransactionResultMessage> transactionStatus = new TransactionStatus<>(1, transactionDeliveredFuture, transactionAcceptedFuture, transactionCompleteFuture);
 
         Exception e = new Exception();

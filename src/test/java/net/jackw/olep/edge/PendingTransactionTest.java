@@ -102,7 +102,7 @@ public class PendingTransactionTest {
         verify(transactionResultBuilder).build();
 
         assertFalse(pendingTransaction.getWrittenToLogFuture().isDone());
-        assertFalse(pendingTransaction.getAcceptedFuture().isDone());
+        assertTrue(pendingTransaction.getAcceptedFuture().isDone());
         assertTrue(pendingTransaction.getCompleteFuture().isDone());
 
         assertEquals(mockResult, pendingTransaction.getCompleteFuture().getNow(null));

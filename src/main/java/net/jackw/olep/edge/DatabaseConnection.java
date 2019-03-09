@@ -173,7 +173,7 @@ class DatabaseConnection implements Closeable {
                                 log.warn("Received a transaction result for a transaction that isn't pending or recently completed");
                             } else {
                                 // Otherwise it's a duplicate, so we can just ignore it
-                                log.debug("Received duplicate result for completed transaction {}", transactionId);
+                                log.info("Received duplicate result for completed transaction {}", transactionId);
                             }
                         } else {
                             log.debug("Received {} message for transaction {}", record.key().approvalMessage ? "approval" : "result", transactionId);

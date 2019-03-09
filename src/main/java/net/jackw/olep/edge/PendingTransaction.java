@@ -115,11 +115,18 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
     public boolean builderUpdated() {
         if (transactionResultBuilder.canBuild()) {
             T result = transactionResultBuilder.build();
+            log.debug("{} completed", transactionId);
             if (!complete.complete(result)) {
                 // We had already built this
                 log.warn("{} - Builder shouldn't be updated after it has already been build", transactionId);
             }
-            log.debug("{} completed", transactionId);
+            if (accepted.complete(null)) {
+                // We hadn't received the accepted message yet. As the transaction has completed, it must have been
+                // accepted, so it was safe to mark it as such.
+                // The actual accepted message will be discarded by the log consumer, because this transaction will be
+                // added to the completed transactions cache
+                log.warn("Received all results for {} before the acceptance message - marking accepted", transactionId);
+            }
             return true;
         } else {
             log.debug("{} updated but not buildable", transactionId);
