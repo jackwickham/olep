@@ -134,7 +134,7 @@ public class WorkerApp extends StreamsApp {
         );
 
         StoreBuilder<KeyValueStore<WarehouseSpecificKey, ArrayDeque<NewOrder>>> newOrdersStoreBuilder = Stores.keyValueStoreBuilder(
-            Stores.persistentKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
+            Stores.inMemoryKeyValueStore(KafkaConfig.NEW_ORDER_STORE),
             WarehouseSpecificKeySerde.getInstance(),
             new JsonSerde<>(new TypeReference<>() {})
         );
