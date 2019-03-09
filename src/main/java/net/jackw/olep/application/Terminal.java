@@ -68,28 +68,39 @@ public class Terminal extends AbstractActorWithTimers {
 
     @Override
     public void preStart() {
-        nextTransaction();
+        TransactionType type = chooseTransaction();
+        // The weighted average of the think+keying times gives an average time of 20s per transaction of waiting, so
+        // distribute the initial delay uniformly over 20s to get a consistent transaction rate
+        float delay = rand.nextFloat() * 20;
+
+        getTimers().startSingleTimer(NEXT_TRANSACTION_TIMER_KEY, type, Duration.ofMillis((long)(delay * 1000)));
     }
 
     private void nextTransaction() {
-        // Choose which transaction should be sent next, according to TPC-C §5.2.3
-        TransactionType event;
+        TransactionType type = chooseTransaction();
+
+        // Compute the time until that transaction should be sent, according to TPC-C §5.2.5.4
+        double thinkTime = -Math.log(rand.nextDouble()) * type.thinkTime;
+        double totalDelay = thinkTime + type.keyingTime;
+
+        getTimers().startSingleTimer(NEXT_TRANSACTION_TIMER_KEY, type, Duration.ofMillis((long)(totalDelay * 1000.0)));
+    }
+
+    /**
+     * Choose which transaction should be sent next, according to TPC-C §5.2.3
+     */
+    private TransactionType chooseTransaction() {
         float n = rand.nextFloat() * 100;
         if (n < 4.2) {
-            event = TransactionType.STOCK_LEVEL;
+            return TransactionType.STOCK_LEVEL;
         } else if (n < 8.4) {
-            event = TransactionType.ORDER_STATUS;
+            return TransactionType.ORDER_STATUS;
         } else if (n < 12.6) {
-            event = TransactionType.DELIVERY;
+            return TransactionType.DELIVERY;
         } else if (n < 55.8) {
-            event = TransactionType.PAYMENT;
+            return TransactionType.PAYMENT;
         } else {
-            event = TransactionType.NEW_ORDER;
+            return TransactionType.NEW_ORDER;
         }
-        // Compute the time until that transaction should be sent, according to TPC-C §5.2.5.4
-        double thinkTime = -Math.log(rand.nextDouble()) * event.thinkTime;
-        double totalDelay = thinkTime + event.keyingTime;
-
-        getTimers().startSingleTimer(NEXT_TRANSACTION_TIMER_KEY, event, Duration.ofMillis((long)(totalDelay * 1000.0)));
     }
 }
