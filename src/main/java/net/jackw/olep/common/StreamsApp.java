@@ -134,9 +134,8 @@ public abstract class StreamsApp implements AutoCloseable {
         streams = createStreams();
         streams.cleanUp();
 
-        CountUpDownLatch readyLatch = new CountUpDownLatch(getStateStoreCount() * config.getAcceptedTransactionTopicPartitions() + 1);
-
         streams.setStateListener((newState, oldState) -> {
+            log.info("{} transitioned from {} to {}", getApplicationID(), oldState, newState);
             if (newState == KafkaStreams.State.ERROR) {
                 log.fatal("{} streams have transitioned to error state", getApplicationID());
                 try {
@@ -144,12 +143,13 @@ public abstract class StreamsApp implements AutoCloseable {
                 } catch (InterruptedException e) {
                     log.error("Interrupted exception while closing from error state");
                 }
-            } else if (newState == KafkaStreams.State.RUNNING) {
+            } else if (newState == KafkaStreams.State.RUNNING && oldState != KafkaStreams.State.CREATED) {
+                // When transitioning CREATED->RUNNING, we don't have any partitions assigned, so the streams aren't
+                // useful until we've been through REBALANCING
                 streamsRunningLatch.close();
-                readyLatch.countDown();
             } else if (oldState == KafkaStreams.State.RUNNING) {
+                // Only transitions into this state when all of the state stores are fully restored
                 streamsRunningLatch.open();
-                readyLatch.countUp();
             }
         });
 
@@ -165,31 +165,11 @@ public abstract class StreamsApp implements AutoCloseable {
             }).start();
         });
 
-        Multimap<String, Integer> initialisedMutableStores = Multimaps.synchronizedSetMultimap(
-            HashMultimap.create(getStateStoreCount(), config.getAcceptedTransactionTopicPartitions())
-        );
-
-        streams.setGlobalStateRestoreListener(new StateRestoreListener() {
-            @Override
-            public void onRestoreStart(TopicPartition topicPartition, String storeName, long startingOffset, long endingOffset) { }
-
-            @Override
-            public void onBatchRestored(TopicPartition topicPartition, String storeName, long batchEndOffset, long numRestored) { }
-
-            @Override
-            public void onRestoreEnd(TopicPartition topicPartition, String storeName, long totalRestored) {
-                if (initialisedMutableStores.put(topicPartition.topic(), topicPartition.partition())) {
-                    // This store became ready for the first time
-                    readyLatch.countDown();
-                }
-            }
-        });
-
         getBeforeStartFuture().get();
         log.info("Starting Kafka streams");
         streams.start();
 
-        readyLatch.await();
+        streamsRunningLatch.await();
 
         log.info("Mutable state stores populated");
     }
