@@ -88,7 +88,7 @@ dependencies {
     acceptanceTestCompile 'org.hamcrest:hamcrest-junit:2.0.0.0'
 }
 
-def databaseHeapSize = "6G"
+def databaseHeapSize = "7G"
 
 // In this section you declare where to find the dependencies of your project
 repositories {
