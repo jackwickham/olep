@@ -139,7 +139,9 @@ public abstract class SharedStoreConsumer<K, V> implements Runnable, AutoCloseab
     @Override
     public void close() throws InterruptedException {
         consumer.wakeup();
-        thread.join();
+        if (thread.isAlive()) {
+            thread.join();
+        }
     }
 
     /**

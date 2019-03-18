@@ -51,7 +51,7 @@ public class DiskBackedCustomerMapStore implements WritableCustomerStore, AutoCl
         this.config = config;
 
         int capacity = config.getWarehouseCount() * config.getDistrictsPerWarehouse() * config.getCustomersPerDistrict();
-        CustomerShared sampleCustomer = PredictableCustomerFactory.instanceFor(1, 1, 10).getCustomerShared(1);
+        CustomerShared sampleCustomer = PredictableCustomerFactory.getAverageCustomerShared();
 
         idMap = DiskBackedMapStore.create(
             capacity, DistrictSpecificKey.class, CustomerShared.class, "customer-id", sampleCustomer.getKey(),

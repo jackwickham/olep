@@ -58,18 +58,26 @@ public class PredictableCustomerFactory implements CustomerFactory {
         long since = 1514764800000L;
         Credit credit = (id % 10 == 0) ? Credit.BC : Credit.GC;
         BigDecimal creditLim = new BigDecimal("50000.00");
-        BigDecimal discount = new BigDecimal(String.format("0.%d", id % 6));
+        BigDecimal discount = new BigDecimal(String.format("0.%04d", id % 6));
 
         return new CustomerShared(id, dId, wId, first, middle, last, address, phone, since, credit, creditLim, discount);
     }
 
     public CustomerMutable getCustomerMutable(int id) {
-        BigDecimal balance = new BigDecimal("-100");
+        BigDecimal balance = new BigDecimal("-100.00");
         String data = Strings.padEnd(
             String.format("Customer %d from warehouse %d, district %d", id, warehouseId, districtId),
             500, '*'
         );
         return new CustomerMutable(balance, data);
+    }
+
+    public static CustomerShared getAverageCustomerShared() {
+        return new CustomerShared(
+            1000, 10, 1000, "ABCDEFGHIJKLMNOP", "OE", "OUGHTABLEATION",
+            new Address("ABCDEFGHIJKLMNOP", "ABCDEFGHIJKLMNOP", "ABCDEFGHIJKLMNOP", "AA", "12345678"),
+            "1234567890123456", 10000000000L, Credit.GC, new BigDecimal("50000.00"), new BigDecimal("0.1234")
+        );
     }
 
     public static void resetInstances() {

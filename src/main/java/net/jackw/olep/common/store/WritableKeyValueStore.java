@@ -5,7 +5,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public interface WritableKeyValueStore<K, V> extends SharedKeyValueStore<K, V> {
+interface WritableKeyValueStore<K, V> extends SharedKeyValueStore<K, V> {
 
     /**
      * Save a value into the store with the given key
