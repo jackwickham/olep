@@ -311,6 +311,8 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
         consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         // Prefer not to change partition assignment
         consumerProps.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, StickyAssignor.class.getName());
+        // Prevent timeouts causing rebalances, which break things
+        consumerProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "120000");
 
         KafkaConsumer<ModificationKey, ModificationMessage> consumer = null;
         SharedCustomerStoreConsumer customerStoreConsumer = null;
