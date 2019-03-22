@@ -1,22 +1,23 @@
 package net.jackw.olep.utils;
 
 import net.jackw.olep.common.LRUSet;
+import net.jackw.olep.common.LockFreeBatchingLRUSet;
+import net.jackw.olep.common.LockFreeLRUSet;
 import net.jackw.olep.common.LockingLRUSet;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LRUSetPerformanceTest {
-    private final Set<Integer> set;
+    private final LRUSet<Integer> set;
     private final int maxValue;
     private final AtomicBoolean stop = new AtomicBoolean(false);
 
     private static final int ITEMS_PER_RUN = 100000;
     private static final int RUNS = 250;
 
-    public LRUSetPerformanceTest(Set<Integer> set, int maxValue) {
+    public LRUSetPerformanceTest(LRUSet<Integer> set, int maxValue) {
         this.set = set;
         this.maxValue = maxValue;
     }
@@ -151,38 +152,47 @@ public class LRUSetPerformanceTest {
         LockingLRUSet<Integer> lockingSet = new LockingLRUSet<>(100);
         LRUSetPerformanceTest lockingPerf = new LRUSetPerformanceTest(lockingSet, 500);
 
-        LRUSet<Integer> lockFreeLRUSet = new LRUSet<>(100);
+        LockFreeLRUSet<Integer> lockFreeLRUSet = new LockFreeLRUSet<>(100);
         LRUSetPerformanceTest lockFreePerf = new LRUSetPerformanceTest(lockFreeLRUSet, 500);
+
+        LockFreeBatchingLRUSet<Integer> batchingLRUSet = new LockFreeBatchingLRUSet<>(100);
+        LRUSetPerformanceTest batchingPerf = new LRUSetPerformanceTest(batchingLRUSet, 500);
 
         Results readOnlyLockingResults = test(lockingPerf::readOnlyBenchmark);
         Results readOnlyLockFreeResults = test(lockFreePerf::readOnlyBenchmark);
+        Results readOnlyBatchingResults = test(batchingPerf::readOnlyBenchmark);
 
-        System.out.printf("Read only benchmark:\n    locking: %s\n  lock free: %s\n", readOnlyLockingResults, readOnlyLockFreeResults);
+        System.out.printf("Read only benchmark:\n    locking: %s\n  lock free: %s\n   batching: %s\n", readOnlyLockingResults, readOnlyLockFreeResults, readOnlyBatchingResults);
 
         Results writeOnlyLockingResults = test(lockingPerf::writeOnlyBenchmark);
         Results writeOnlyLockFreeResults = test(lockFreePerf::writeOnlyBenchmark);
+        Results writeOnlyBatchingResults = test(batchingPerf::writeOnlyBenchmark);
 
-        System.out.printf("Write only benchmark:\n    locking: %s\n  lock free: %s\n", writeOnlyLockingResults, writeOnlyLockFreeResults);
+        System.out.printf("Write only benchmark:\n    locking: %s\n  lock free: %s\n   batching: %s\n", writeOnlyLockingResults, writeOnlyLockFreeResults, writeOnlyBatchingResults);
 
         Results readReadLockingResults = test(lockingPerf::readWithBackgroundReadBenchmark);
         Results readReadLockFreeResults = test(lockFreePerf::readWithBackgroundReadBenchmark);
+        Results readReadBatchingResults = test(batchingPerf::readWithBackgroundReadBenchmark);
 
-        System.out.printf("Read with bg read benchmark:\n    locking: %s\n  lock free: %s\n", readReadLockingResults, readReadLockFreeResults);
+        System.out.printf("Read with bg read benchmark:\n    locking: %s\n  lock free: %s\n   batching: %s\n", readReadLockingResults, readReadLockFreeResults, readReadBatchingResults);
 
         Results readWriteLockingResults = test(lockingPerf::readWithBackgroundWriteBenchmark);
         Results readWriteLockFreeResults = test(lockFreePerf::readWithBackgroundWriteBenchmark);
+        Results readWriteBatchingResults = test(batchingPerf::readWithBackgroundWriteBenchmark);
 
-        System.out.printf("Read with bg write benchmark:\n    locking: %s\n  lock free: %s\n", readWriteLockingResults, readWriteLockFreeResults);
+        System.out.printf("Read with bg write benchmark:\n    locking: %s\n  lock free: %s\n   batching: %s\n", readWriteLockingResults, readWriteLockFreeResults, readWriteBatchingResults);
 
         Results writeReadLockingResults = test(lockingPerf::writeWithBackgroundReadBenchmark);
         Results writeReadLockFreeResults = test(lockFreePerf::writeWithBackgroundReadBenchmark);
+        Results writeReadBatchingResults = test(batchingPerf::writeWithBackgroundReadBenchmark);
 
-        System.out.printf("Write with bg read benchmark:\n    locking: %s\n  lock free: %s\n", writeReadLockingResults, writeReadLockFreeResults);
+        System.out.printf("Write with bg read benchmark:\n    locking: %s\n  lock free: %s\n   batching: %s\n", writeReadLockingResults, writeReadLockFreeResults, writeReadBatchingResults);
 
         Results writeWriteLockingResults = test(lockingPerf::writeWithBackgroundWriteBenchmark);
         Results writeWriteLockFreeResults = test(lockFreePerf::writeWithBackgroundWriteBenchmark);
+        Results writeWriteBatchingResults = test(batchingPerf::writeWithBackgroundWriteBenchmark);
 
-        System.out.printf("Write with bg write benchmark:\n    locking: %s\n  lock free: %s\n", writeWriteLockingResults, writeWriteLockFreeResults);
+        System.out.printf("Write with bg write benchmark:\n    locking: %s\n  lock free: %s\n   batching: %s\n", writeWriteLockingResults, writeWriteLockFreeResults, writeWriteBatchingResults);
 
         System.out.println("x = [\"Read only\", \"Write only\", \"Read with background read\", \"Read with background write\", \"Write with background read\", \"Write with background write\"]");
         System.out.printf("locking = [%d, %d, %d, %d, %d, %d]\n",
@@ -204,6 +214,16 @@ public class LRUSetPerformanceTest {
             readOnlyLockFreeResults.getStddev(), writeOnlyLockFreeResults.getStddev(),
             readReadLockFreeResults.getStddev(), readWriteLockFreeResults.getStddev(),
             writeReadLockFreeResults.getStddev(), writeWriteLockFreeResults.getStddev()
+        );
+        System.out.printf("batching = [%d, %d, %d, %d, %d, %d]\n",
+            readOnlyBatchingResults.getMean(), writeOnlyBatchingResults.getMean(),
+            readReadBatchingResults.getMean(), readWriteBatchingResults.getMean(),
+            writeReadBatchingResults.getMean(), writeWriteBatchingResults.getMean()
+        );
+        System.out.printf("batching_stddev = [%d, %d, %d, %d, %d, %d]\n",
+            readOnlyBatchingResults.getStddev(), writeOnlyBatchingResults.getStddev(),
+            readReadBatchingResults.getStddev(), readWriteBatchingResults.getStddev(),
+            writeReadBatchingResults.getStddev(), writeWriteBatchingResults.getStddev()
         );
     }
 

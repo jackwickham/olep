@@ -10,7 +10,7 @@ import net.jackw.olep.message.transaction_result.PaymentResult;
 import java.math.BigDecimal;
 import java.util.List;
 
-public interface Database extends AutoCloseable {
+public interface Database extends AutoCloseable { // TODO: Move to edge
     TransactionStatus<NewOrderResult> newOrder(
         int customerId, int districtId, int warehouseId, List<NewOrderRequest.OrderLine> lines
     );

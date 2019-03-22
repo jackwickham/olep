@@ -49,7 +49,7 @@ class DatabaseConnection implements Closeable {
 
     private final Map<Long, PendingTransaction<?, ?>> pendingTransactions;
     // Store recently completed transactions so duplicate messages about them can be discarded without reporting errors
-    private final Set<Long> recentlyCompletedTransactions;
+    private final LRUSet<Long> recentlyCompletedTransactions;
 
     private final Thread resultThread;
 

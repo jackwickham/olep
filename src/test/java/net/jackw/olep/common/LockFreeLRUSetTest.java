@@ -5,30 +5,26 @@ import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
 @SuppressWarnings("ModifiedButNotUsed")
-public class LRUSetTest {
+public class LockFreeLRUSetTest {
     @Test(expected = IllegalArgumentException.class)
     public void testZeroCapacityThrowsException() {
-        new LRUSet<>(0);
+        new LockFreeLRUSet<>(0);
     }
 
     @Test
     public void testInitiallyHasZeroSize() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         assertEquals(0, set.size());
         assertTrue(set.isEmpty());
     }
 
     @Test
     public void testAddIncreasesSizeAndContains() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o = new Object();
         set.add(o);
 
@@ -39,7 +35,7 @@ public class LRUSetTest {
 
     @Test
     public void testInsertReturnsTrue() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o = new Object();
 
         assertTrue(set.add(o));
@@ -47,7 +43,7 @@ public class LRUSetTest {
 
     @Test
     public void testInsertingOverCapacityInsertsNewObject() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o1 = new Object();
         Object o2 = new Object();
         Object o3 = new Object();
@@ -64,7 +60,7 @@ public class LRUSetTest {
 
     @Test
     public void testInsertingOverCapacityRemovesEldestOnly() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o1 = new Object();
         Object o2 = new Object();
         Object o3 = new Object();
@@ -83,7 +79,7 @@ public class LRUSetTest {
 
     @Test
     public void testInsertingOverCapacityAgainRemovesCorrectNextElement() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o1 = new Object();
         Object o2 = new Object();
         Object o3 = new Object();
@@ -104,7 +100,7 @@ public class LRUSetTest {
 
     @Test
     public void testIteratorContainsOnlyPresentElements() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o1 = new Object();
         Object o2 = new Object();
         Object o3 = new Object();
@@ -123,7 +119,7 @@ public class LRUSetTest {
 
     @Test
     public void testDuplicateInsertionsDontIncreaseSize() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o1 = new Object();
 
         set.add(o1);
@@ -134,7 +130,7 @@ public class LRUSetTest {
 
     @Test
     public void testDuplicateInsertionsHaveNoSideEffects() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         Object o1 = new Object();
         Object o2 = new Object();
         Object o3 = new Object();
@@ -151,7 +147,7 @@ public class LRUSetTest {
 
     @Test(expected = NullPointerException.class)
     public void testCantInsertNull() {
-        LRUSet<Object> set = new LRUSet<>(3);
+        LockFreeLRUSet<Object> set = new LockFreeLRUSet<>(3);
         set.add(null);
     }
 }

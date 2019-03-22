@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class LockingLRUSet<T> implements Set<T> {
+public class LockingLRUSet<T> implements LRUSet<T>, Set<T> {
     private Set<T> set;
     private int capacity;
 
