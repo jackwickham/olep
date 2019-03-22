@@ -13,6 +13,9 @@ public class LRUSetPerformanceTest {
     private final int maxValue;
     private final AtomicBoolean stop = new AtomicBoolean(false);
 
+    private static final int ITEMS_PER_RUN = 100000;
+    private static final int RUNS = 250;
+
     public LRUSetPerformanceTest(Set<Integer> set, int maxValue) {
         this.set = set;
         this.maxValue = maxValue;
@@ -87,14 +90,14 @@ public class LRUSetPerformanceTest {
 
     public long readWithBackgroundWriteBenchmark() throws InterruptedException {
         return runTest(
-            () -> readTest(100000),
+            () -> readTest(ITEMS_PER_RUN),
             () -> writeTest(0)
         );
     }
 
     public long readWithBackgroundReadBenchmark() throws InterruptedException {
         return runTest(
-            () -> readTest(100000),
+            () -> readTest(ITEMS_PER_RUN),
             () -> readTest(0)
         );
     }
@@ -102,26 +105,26 @@ public class LRUSetPerformanceTest {
     public long readOnlyBenchmark() throws InterruptedException {
         writeTest(100);
         return runTest(
-            () -> readTest(100000)
+            () -> readTest(ITEMS_PER_RUN)
         );
     }
 
     public long writeWithBackgroundReadBenchmark() throws InterruptedException {
         return runTest(
-            () -> writeTest(100000),
+            () -> writeTest(ITEMS_PER_RUN),
             () -> readTest(0)
         );
     }
 
     public long writeOnlyBenchmark() throws InterruptedException {
         return runTest(
-            () -> writeTest(100000)
+            () -> writeTest(ITEMS_PER_RUN)
         );
     }
 
     public long writeWithBackgroundWriteBenchmark() throws InterruptedException {
         return runTest(
-            () -> writeTest(100000),
+            () -> writeTest(ITEMS_PER_RUN),
             () -> writeTest(0)
         );
     }
@@ -138,7 +141,7 @@ public class LRUSetPerformanceTest {
         for (int i = 0; i < 100; i++) {
             perf.get();
         }
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < RUNS; i++) {
             results.add(perf.get());
         }
         return results;
@@ -224,14 +227,13 @@ public class LRUSetPerformanceTest {
         }
 
         public long getStddev() {
-            long squareTotal = 0;
-            long total = 0;
+            long mean = getMean();
+            double total = 0;
             for (long time : results) {
-                squareTotal += time * time;
-                total += time;
+                double difference = time - mean;
+                total += difference * difference;
             }
-            long mean = total / results.size();
-            return (long) Math.sqrt((double) squareTotal / results.size() - mean * mean);
+            return (long) Math.sqrt(total / results.size());
         }
 
         @Override
