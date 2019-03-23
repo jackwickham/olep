@@ -70,12 +70,14 @@ public abstract class BaseAcceptanceTest {
     }
 
     public static void shutdown() throws InterruptedException {
-        verifierApp.close();
-        workerApp.close();
-        viewApp.close();
-        db.close();
-
-        CurrentTestState.clear();
+        try {
+            verifierApp.close();
+            workerApp.close();
+            viewApp.close();
+            db.close();
+        } finally {
+            CurrentTestState.clear();
+        }
     }
 
     public Database getDb() {
