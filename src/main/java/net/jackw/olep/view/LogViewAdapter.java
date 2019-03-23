@@ -6,6 +6,8 @@ import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.InterThreadWorkQueue;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.common.LRUSet;
+import net.jackw.olep.common.LockFreeBatchingLRUSet;
 import net.jackw.olep.common.LockingLRUSet;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
@@ -44,7 +46,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerRebalanceListener {
     private final ViewWriteAdapter viewAdapter;
@@ -52,24 +53,25 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
     private final SharedCustomerStoreConsumer customerStoreConsumer;
     private final Metrics metrics;
     private final SettableFuture<Void> readyFuture;
-    private final Set<ModificationKey> recentTransactions;
+    private final LRUSet<ModificationKey> recentTransactions;
     private final Set<Integer> readyPartitions;
     private final Map<Integer, Long> endOffsets;
     private final AtomicInteger assignedPartitionCount = new AtomicInteger(0);
-    private final Thread partitionEndOffsetUpdateThread;
     private final ExecutorService executorService;
     private final InterThreadWorkQueue mainThreadWorkQueue;
 
+    private static final AtomicInteger threadId = new AtomicInteger(0);
+
     public LogViewAdapter(Consumer<ModificationKey, ModificationMessage> logConsumer, ViewWriteAdapter viewAdapter,
                           SharedCustomerStoreConsumer customerStoreConsumer, Metrics metrics) {
-        super("log-view-adapter");
+        super("log-view-adapter-" + threadId.incrementAndGet());
 
         this.logConsumer = logConsumer;
         this.viewAdapter = viewAdapter;
         this.customerStoreConsumer = customerStoreConsumer;
         this.metrics = metrics;
         this.readyFuture = SettableFuture.create();
-        this.recentTransactions = new LockingLRUSet<>(100);
+        this.recentTransactions = new LockFreeBatchingLRUSet<>(20000);
 
         this.readyPartitions = Collections.synchronizedSet(new HashSet<>());
         this.endOffsets = new ConcurrentHashMap<>();
@@ -78,18 +80,6 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
         this.mainThreadWorkQueue = new InterThreadWorkQueue(4);
 
         logConsumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG), this);
-
-        partitionEndOffsetUpdateThread = new Thread(() -> {
-            try {
-                while (true) {
-                    Thread.sleep(5000);
-                    updateEndOffsets();
-                }
-            } catch (InterruptedException e) {
-                // Pass
-            }
-        }, "partition-end-offset-update");
-        partitionEndOffsetUpdateThread.start();
     }
 
     /**
@@ -274,33 +264,6 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
         }
     }
 
-    /**
-     * Get the end offsets for the partitions assigned to this adapter
-     */
-    private void updateEndOffsets() {
-        synchronized (endOffsets) {
-            Collection<TopicPartition> assignedPartitions = endOffsets.keySet()
-                .stream()
-                .map(p -> new TopicPartition(KafkaConfig.MODIFICATION_LOG, p))
-                .collect(Collectors.toList());
-            try {
-                Map<TopicPartition, Long> latestEndOffsets = mainThreadWorkQueue.request(
-                    () -> logConsumer.endOffsets(assignedPartitions)
-                );
-                endOffsets.putAll(latestEndOffsets
-                    .entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(
-                        e -> e.getKey().partition(),
-                        Map.Entry::getValue
-                    )));
-            } catch (InterruptedException e) {
-                // Can't throw it, so just remark as interrupted
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
     @SuppressWarnings("MustBeClosedChecker")
     public static LogViewAdapter init(DatabaseConfig config) throws RemoteException, InterruptedException {
         Properties consumerProps = new Properties();
@@ -347,13 +310,11 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
             ViewWriteAdapter va = viewAdapter;
             SharedCustomerStoreConsumer csc = customerStoreConsumer;
         ) {
-            partitionEndOffsetUpdateThread.interrupt();
             logConsumer.wakeup();
             readyFuture.setException(new CancellationException());
             if (Thread.currentThread() != this) {
                 this.join();
             }
-            partitionEndOffsetUpdateThread.join();
         }
     }
 

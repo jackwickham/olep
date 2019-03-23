@@ -1,6 +1,7 @@
 package net.jackw.olep.worker;
 
-import net.jackw.olep.common.LockingLRUSet;
+import net.jackw.olep.common.LRUSet;
+import net.jackw.olep.common.LockFreeBatchingLRUSet;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
@@ -12,14 +13,12 @@ import org.apache.kafka.streams.processor.To;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Set;
-
 /**
  * Routes transactions to the correct transaction worker based on its type
  */
 public class TransactionRouter implements Processor<TransactionWarehouseKey, TransactionRequestMessage> {
     private ProcessorContext context;
-    private final Set<TransactionWarehouseKey> recentTransactions = new LockingLRUSet<>(100);
+    private final LRUSet<TransactionWarehouseKey> recentTransactions = new LockFreeBatchingLRUSet<>(20000);
 
     @Override
     public void init(ProcessorContext context) {
