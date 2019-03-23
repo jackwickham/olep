@@ -94,12 +94,8 @@ public class LockFreeLRUSet<T> extends AbstractSet<T> implements LRUSet<T>, Set<
             // prevent too many elements from being deleted
             sizeInternal.incrementAndGet();
 
-            T lastElem;
-
             // Get the current last element, then update the pointer to point to us
-            do {
-                lastElem = last.get();
-            } while (!last.compareAndSet(lastElem, t));
+            T lastElem = last.getAndSet(t);
 
             // We are successfully inserted, now update the pointers
             if (lastElem == null) {
