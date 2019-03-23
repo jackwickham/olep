@@ -1,7 +1,7 @@
 package net.jackw.olep.utils;
 
 import net.jackw.olep.common.LRUSet;
-import net.jackw.olep.common.LockFreeBatchingLRUSet;
+import net.jackw.olep.common.BatchingLRUSet;
 import net.jackw.olep.common.LockFreeLRUSet;
 import net.jackw.olep.common.LockingLRUSet;
 
@@ -149,14 +149,14 @@ public class LRUSetPerformanceTest {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        LockingLRUSet<Integer> lockingSet = new LockingLRUSet<>(100);
-        LRUSetPerformanceTest lockingPerf = new LRUSetPerformanceTest(lockingSet, 500);
+        LockingLRUSet<Integer> lockingSet = new LockingLRUSet<>(1000);
+        LRUSetPerformanceTest lockingPerf = new LRUSetPerformanceTest(lockingSet, 5000);
 
-        LockFreeLRUSet<Integer> lockFreeLRUSet = new LockFreeLRUSet<>(100);
-        LRUSetPerformanceTest lockFreePerf = new LRUSetPerformanceTest(lockFreeLRUSet, 500);
+        LockFreeLRUSet<Integer> lockFreeLRUSet = new LockFreeLRUSet<>(1000);
+        LRUSetPerformanceTest lockFreePerf = new LRUSetPerformanceTest(lockFreeLRUSet, 5000);
 
-        LockFreeBatchingLRUSet<Integer> batchingLRUSet = new LockFreeBatchingLRUSet<>(100);
-        LRUSetPerformanceTest batchingPerf = new LRUSetPerformanceTest(batchingLRUSet, 500);
+        BatchingLRUSet<Integer> batchingLRUSet = new BatchingLRUSet<>(1000);
+        LRUSetPerformanceTest batchingPerf = new LRUSetPerformanceTest(batchingLRUSet, 5000);
 
         Results readOnlyLockingResults = test(lockingPerf::readOnlyBenchmark);
         Results readOnlyLockFreeResults = test(lockFreePerf::readOnlyBenchmark);

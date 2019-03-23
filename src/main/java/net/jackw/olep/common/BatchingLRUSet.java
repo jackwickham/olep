@@ -9,19 +9,24 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * A weaker LRU Set
  *
- * This set makes a best effort to
+ * This implementation guarantees linearisability, and will generally perform better than LRUSet. However, formal
+ * lock-freedom is *not* provided.
+ *
+ * Approximately half the elements are removed from the set each time it reaches 2x capacity.
  */
-public class LockFreeBatchingLRUSet<T> implements LRUSet<T> {
+public class BatchingLRUSet<T> implements LRUSet<T> {
     private final int capacity;
     private final AtomicReference<ConcurrentHashMap<T, Object>> current;
     private final AtomicReference<ConcurrentHashMap<T, Object>> previous;
     private final AtomicInteger currentSize = new AtomicInteger(0);
     // An even generation means things are static, and an odd generation means a swap is occurring
     private final AtomicInteger generation = new AtomicInteger(0);
+    // Number of threads currently within add
+    private final AtomicInteger currentWriters = new AtomicInteger(0);
 
     private static final Object PRESENT = new Object();
 
-    public LockFreeBatchingLRUSet(int capacity) {
+    public BatchingLRUSet(int capacity) {
         Preconditions.checkArgument(capacity > 0, "Capacity must be greater than zero");
         this.capacity = capacity;
         current = new AtomicReference<>(new ConcurrentHashMap<>(capacity + 5));
@@ -37,29 +42,39 @@ public class LockFreeBatchingLRUSet<T> implements LRUSet<T> {
         do {
             // Using getAcquire so that subsequent accesses aren't reordered before this
             initialGeneration = generation.getAcquire();
+            if ((initialGeneration & 1) == 1) {
+                // Currently swapping - retry
+                continue;
+            }
+
+            // Increment the number of threads writing first
+            currentWriters.incrementAndGet();
+
             // Using getOpaque for the loads because generation ensures that they
             currentMap = current.getOpaque();
             previousMap = previous.getOpaque();
-            // Make sure we're not currently swapping, and that the generation hasn't changed since
-        } while ((initialGeneration & 1) == 1 || initialGeneration != generation.get());
 
-        // If this thread is held up for so long here that two swaps occur, we still retain linearisability for `add`.
-        // This is because if the same value was inserted by any other thread after 0 or 1 swaps, there will be a
-        // collision on the following `put` call.
-        //
-        // If a collision occurs, this call can be linearised immediately after the conflicting `add`
-        // If no collision occurs, no other insertions can have been performed in 0 or 1 swaps, so we can be linearised
-        // somewhere in there.
-        // This doesn't provide full linearisability with `contains` though.
+            // Make sure the generation hasn't changed since we started
+            if (initialGeneration != generation.get()) {
+                // Reset the counter and retry
+                currentWriters.decrementAndGet();
+            } else {
+                break;
+            }
+        } while (true);
 
         // Try to insert into the chosen current map
         if (currentMap.putIfAbsent(element, PRESENT) != null) {
             // The element was already present in current, so there's nothing more we need to do
             // This insertion is linearised at the point where we read currentMap
+            currentWriters.decrementAndGet();
             return false;
         }
 
-        // We performed an insertion, so increment the number of items in current
+        // We've finished the update, so release the lock on currentMap
+        currentWriters.decrementAndGet();
+
+        // Increment the number of items in current
         // This may occur after another thread has zeroed out currentSize, but that doesn't matter because we don't
         // provide any guarantees that the size is exactly accurate, just that it roughly corresponds to the actual size
         int newSize = currentSize.incrementAndGet();
@@ -69,17 +84,8 @@ public class LockFreeBatchingLRUSet<T> implements LRUSet<T> {
             swapSets();
         }
 
-        // The following sequence of events is possible:
-        //     T1 loads currentMap=m2 and previousMap=m1
-        //     T2 performs a swap
-        //     T3 loads currentMap=m3 and previousMap=m2
-        //     T3 writes v to m3
-        //     T3 checks m2 and discovers that v is not present, so returns true
-        //     T1 writes v to m2
-        //     T1 checks m1 and discovers that v is not present, so returns true
-        // Only one of T1 and T3 should return successfully. Therefore, we need T3 to write v to m2, so that it gets
-        // picked up by T1.
-        return previousMap.put(element, PRESENT) == null;
+        // This doesn't need to be protected by currentWriters because it is guaranteed to be read-only
+        return !previousMap.containsKey(element);
     }
 
     @Override
@@ -108,7 +114,17 @@ public class LockFreeBatchingLRUSet<T> implements LRUSet<T> {
 
         // Only one thread can have incremented the size to capacity, so we must be the only thread here
         // Increment the generation to notify .add that we are swapping
+        //
+        // Note that this implementation does not provide formal lock-freedom because if this thread is suspended after
+        // incrementing the generation, or if a currentWriter is suspended which blocks this thread from making
+        // progress, no adds can proceed.
         generation.incrementAndGet();
+
+        // Wait for readers to become zero
+        // Using a spin lock because it shouldn't last for long
+        while (currentWriters.getAcquire() > 0) {
+            // spin
+        }
 
         // Move current to previous and set current to the new map
         // Previous must be set before current, so full volatile writes are required

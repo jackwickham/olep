@@ -7,8 +7,7 @@ import net.jackw.olep.common.InterThreadWorkQueue;
 import net.jackw.olep.common.JsonDeserializer;
 import net.jackw.olep.common.KafkaConfig;
 import net.jackw.olep.common.LRUSet;
-import net.jackw.olep.common.LockFreeBatchingLRUSet;
-import net.jackw.olep.common.LockingLRUSet;
+import net.jackw.olep.common.BatchingLRUSet;
 import net.jackw.olep.common.store.SharedCustomerStoreConsumer;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.ModificationKey;
@@ -71,7 +70,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
         this.customerStoreConsumer = customerStoreConsumer;
         this.metrics = metrics;
         this.readyFuture = SettableFuture.create();
-        this.recentTransactions = new LockFreeBatchingLRUSet<>(20000);
+        this.recentTransactions = new BatchingLRUSet<>(20000);
 
         this.readyPartitions = Collections.synchronizedSet(new HashSet<>());
         this.endOffsets = new ConcurrentHashMap<>();

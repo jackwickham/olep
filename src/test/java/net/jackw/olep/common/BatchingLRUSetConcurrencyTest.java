@@ -7,8 +7,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 
-public class LockFreeBatchingLRUSetConcurrencyTest extends ConcurrencyTest {
-    private LockFreeBatchingLRUSet<Object> set;
+public class BatchingLRUSetConcurrencyTest extends ConcurrencyTest {
+    private BatchingLRUSet<Object> set;
     private static final int NUM_RUNS = 5000;
 
     @Test
@@ -19,7 +19,7 @@ public class LockFreeBatchingLRUSetConcurrencyTest extends ConcurrencyTest {
         concurrentTest(
             () -> {
                 successfulInsertionCount.set(0);
-                set = new LockFreeBatchingLRUSet<>(3);
+                set = new BatchingLRUSet<>(3);
             },
             _i -> {
                 if (set.add(o1)) {
@@ -41,7 +41,7 @@ public class LockFreeBatchingLRUSetConcurrencyTest extends ConcurrencyTest {
 
         concurrentTest(
             () -> {
-                set = new LockFreeBatchingLRUSet<>(4);
+                set = new BatchingLRUSet<>(4);
             },
             i -> {
                 assertTrue(set.add(os[i]));
@@ -63,7 +63,7 @@ public class LockFreeBatchingLRUSetConcurrencyTest extends ConcurrencyTest {
 
         concurrentTest(
             () -> {
-                set = new LockFreeBatchingLRUSet<>(2);
+                set = new BatchingLRUSet<>(2);
                 set.add(initialElements[0]);
                 set.add(initialElements[1]);
             },
@@ -86,7 +86,7 @@ public class LockFreeBatchingLRUSetConcurrencyTest extends ConcurrencyTest {
 
         concurrentTest(
             () -> {
-                set = new LockFreeBatchingLRUSet<>(1);
+                set = new BatchingLRUSet<>(1);
             },
             i -> {
                 assertTrue(set.add(os[i]));

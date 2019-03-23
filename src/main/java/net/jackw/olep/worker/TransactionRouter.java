@@ -1,7 +1,7 @@
 package net.jackw.olep.worker;
 
 import net.jackw.olep.common.LRUSet;
-import net.jackw.olep.common.LockFreeBatchingLRUSet;
+import net.jackw.olep.common.BatchingLRUSet;
 import net.jackw.olep.message.transaction_request.TransactionWarehouseKey;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
@@ -18,7 +18,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class TransactionRouter implements Processor<TransactionWarehouseKey, TransactionRequestMessage> {
     private ProcessorContext context;
-    private final LRUSet<TransactionWarehouseKey> recentTransactions = new LockFreeBatchingLRUSet<>(20000);
+    private final LRUSet<TransactionWarehouseKey> recentTransactions = new BatchingLRUSet<>(20000);
 
     @Override
     public void init(ProcessorContext context) {

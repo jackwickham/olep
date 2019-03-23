@@ -4,10 +4,10 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class LockFreeBatchingLRUSetTest {
+public class BatchingLRUSetTest {
     @Test
     public void testAddContains() {
-        LockFreeBatchingLRUSet<Object> set = new LockFreeBatchingLRUSet<>(3);
+        BatchingLRUSet<Object> set = new BatchingLRUSet<>(3);
         Object o = new Object();
         assertTrue(set.add(o));
         assertTrue(set.contains(o));
@@ -15,7 +15,7 @@ public class LockFreeBatchingLRUSetTest {
 
     @Test
     public void testDuplicateAddsReturnFalse() {
-        LockFreeBatchingLRUSet<Object> set = new LockFreeBatchingLRUSet<>(3);
+        BatchingLRUSet<Object> set = new BatchingLRUSet<>(3);
         Object o = new Object();
         assertTrue(set.add(o));
         assertFalse(set.add(o));
@@ -24,7 +24,7 @@ public class LockFreeBatchingLRUSetTest {
 
     @Test
     public void testContainsAndAddConsistent() {
-        LockFreeBatchingLRUSet<Object> set = new LockFreeBatchingLRUSet<>(3);
+        BatchingLRUSet<Object> set = new BatchingLRUSet<>(3);
         Object o = new Object();
         assertTrue(set.add(o));
         for (int i = 0; i < 12; i++) {
@@ -42,7 +42,7 @@ public class LockFreeBatchingLRUSetTest {
 
     @Test
     public void testMultipleAdds() {
-        LockFreeBatchingLRUSet<Object> set = new LockFreeBatchingLRUSet<>(3);
+        BatchingLRUSet<Object> set = new BatchingLRUSet<>(3);
         Object[] os = {new Object(), new Object(), new Object(), new Object(), new Object(), new Object()};
         assertTrue(set.add(os[0]));
         assertTrue(set.add(os[1]));
@@ -60,7 +60,7 @@ public class LockFreeBatchingLRUSetTest {
 
     @Test
     public void testLRURemoved() {
-        LockFreeBatchingLRUSet<Object> set = new LockFreeBatchingLRUSet<>(3);
+        BatchingLRUSet<Object> set = new BatchingLRUSet<>(3);
         Object o = new Object();
         assertTrue(set.add(o));
         for (int i = 0; i < 12; i++) {
