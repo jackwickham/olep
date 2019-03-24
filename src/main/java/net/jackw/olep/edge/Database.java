@@ -1,7 +1,6 @@
-package net.jackw.olep.common;
+package net.jackw.olep.edge;
 
 import net.jackw.olep.common.records.OrderStatusResult;
-import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
 import net.jackw.olep.message.transaction_result.DeliveryResult;
 import net.jackw.olep.message.transaction_result.NewOrderResult;
@@ -10,7 +9,7 @@ import net.jackw.olep.message.transaction_result.PaymentResult;
 import java.math.BigDecimal;
 import java.util.List;
 
-public interface Database extends AutoCloseable { // TODO: Move to edge
+public interface Database extends AutoCloseable {
     TransactionStatus<NewOrderResult> newOrder(
         int customerId, int districtId, int warehouseId, List<NewOrderRequest.OrderLine> lines
     );

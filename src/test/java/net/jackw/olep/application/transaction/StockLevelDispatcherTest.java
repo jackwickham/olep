@@ -5,7 +5,7 @@ import akka.actor.ActorSystem;
 import akka.testkit.TestProbe;
 import net.jackw.olep.application.OnDemandExecutionContext;
 import net.jackw.olep.application.TransactionCompleteMessage;
-import net.jackw.olep.common.Database;
+import net.jackw.olep.edge.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.metrics.DurationType;
 import net.jackw.olep.metrics.Metrics;
@@ -19,9 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;
-import java.util.List;
 
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)

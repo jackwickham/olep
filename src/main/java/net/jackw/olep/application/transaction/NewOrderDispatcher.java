@@ -6,7 +6,7 @@ import com.google.common.collect.ImmutableList;
 import net.jackw.olep.application.IllegalTransactionResponseException;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionType;
-import net.jackw.olep.common.Database;
+import net.jackw.olep.edge.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.TransactionStatus;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;

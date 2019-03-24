@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import net.jackw.olep.common.Database;
+import net.jackw.olep.edge.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.EventDatabase;
 import net.jackw.olep.utils.Resetter;

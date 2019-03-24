@@ -1,9 +1,8 @@
 package net.jackw.olep.acceptance;
 
-import net.jackw.olep.common.Database;
+import net.jackw.olep.edge.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.verifier.VerifierApp;
-import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.ViewApp;
 import net.jackw.olep.worker.WorkerApp;
 

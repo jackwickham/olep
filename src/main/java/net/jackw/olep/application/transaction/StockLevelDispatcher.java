@@ -7,7 +7,7 @@ import akka.dispatch.Futures;
 import net.jackw.olep.application.TransactionCompleteMessage;
 import net.jackw.olep.application.TransactionTimeoutMessage;
 import net.jackw.olep.application.TransactionType;
-import net.jackw.olep.common.Database;
+import net.jackw.olep.edge.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.metrics.DurationType;
 import net.jackw.olep.metrics.Metrics;

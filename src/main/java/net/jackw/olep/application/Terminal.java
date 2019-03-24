@@ -7,7 +7,7 @@ import net.jackw.olep.application.transaction.NewOrderDispatcher;
 import net.jackw.olep.application.transaction.OrderStatusDispatcher;
 import net.jackw.olep.application.transaction.PaymentDispatcher;
 import net.jackw.olep.application.transaction.StockLevelDispatcher;
-import net.jackw.olep.common.Database;
+import net.jackw.olep.edge.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.metrics.EventType;
 import net.jackw.olep.utils.RandomDataGenerator;

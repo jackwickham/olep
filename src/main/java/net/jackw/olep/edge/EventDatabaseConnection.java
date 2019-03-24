@@ -42,7 +42,7 @@ import static net.jackw.olep.common.KafkaConfig.TRANSACTION_RESULT_TOPIC;
 /**
  * A connection to the OLEP database
  */
-class DatabaseConnection implements Closeable {
+class EventDatabaseConnection implements Closeable {
     private final Producer<Long, TransactionRequestMessage> transactionRequestProducer;
     private final Consumer<TransactionResultKey, byte[]> transactionResultConsumer;
 
@@ -61,7 +61,7 @@ class DatabaseConnection implements Closeable {
 
 
     @MustBeClosed
-    public DatabaseConnection(String bootstrapServers) {
+    public EventDatabaseConnection(String bootstrapServers) {
         connectionId = rand.nextInt();
 
         // Initialise regular fields

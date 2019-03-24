@@ -2,7 +2,6 @@ package net.jackw.olep.edge;
 
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
-import net.jackw.olep.common.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.message.transaction_request.DeliveryRequest;
 import net.jackw.olep.message.transaction_request.NewOrderRequest;
@@ -23,7 +22,7 @@ import java.util.List;
 
 public class EventDatabase implements Database {
     private final DatabaseConfig config;
-    private final DatabaseConnection eventConnection;
+    private final EventDatabaseConnection eventConnection;
     private final Registry registry;
 
     @MustBeClosed
@@ -31,7 +30,7 @@ public class EventDatabase implements Database {
     public EventDatabase(DatabaseConfig config) {
         this.config = config;
         try {
-            eventConnection = new DatabaseConnection(config.getBootstrapServers());
+            eventConnection = new EventDatabaseConnection(config.getBootstrapServers());
             registry = LocateRegistry.getRegistry(config.getViewRegistryHost());
         } catch (Exception e) {
             close();
