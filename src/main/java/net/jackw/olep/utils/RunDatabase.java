@@ -2,14 +2,12 @@ package net.jackw.olep.utils;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.StreamsApp;
 import net.jackw.olep.verifier.VerifierApp;
-import net.jackw.olep.view.LogViewAdapter;
 import net.jackw.olep.view.StandaloneRegistry;
 import net.jackw.olep.view.ViewApp;
 import net.jackw.olep.worker.WorkerApp;

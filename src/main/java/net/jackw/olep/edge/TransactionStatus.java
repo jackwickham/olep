@@ -1,10 +1,15 @@
 package net.jackw.olep.edge;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.concurrent.CompletableFuture;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
@@ -23,9 +28,9 @@ import java.util.function.Consumer;
 @SuppressWarnings("FutureReturnValueIgnored")
 public class TransactionStatus<T extends TransactionResultMessage> {
     private long transactionId;
-    private CompletableFuture<Void> writtenToLog;
-    private CompletableFuture<Void> accepted;
-    private CompletableFuture<T> complete;
+    private ListenableFuture<Void> writtenToLog;
+    private ListenableFuture<Void> accepted;
+    private ListenableFuture<T> complete;
 
     /**
      * Create the status for a new transaction
@@ -37,21 +42,26 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      * @param complete A future that will complete successfully when the results of the transaction have been retrieved
      *                 from the database system, and will never complete exceptionally.
      */
+    @SuppressWarnings("unchecked")
     TransactionStatus(
         long transactionId,
-        CompletableFuture<?> writtenToLog,
-        CompletableFuture<Void> accepted,
-        CompletableFuture<T> complete
+        ListenableFuture<?> writtenToLog,
+        ListenableFuture<Void> accepted,
+        ListenableFuture<T> complete
     ) {
         this.transactionId = transactionId;
         // Convert writtenToLog to a CompletableFuture<Void>
-        this.writtenToLog = writtenToLog.thenApply(_a -> null);
+        this.writtenToLog = Futures.transform(writtenToLog, _a -> null, MoreExecutors.directExecutor());
         // Convert accepted to a future that only completes once writtenToLog and accepted have completed
         // Using .thenCompose so if writtenToLog fails, the resulting future will immediately fail too - .thenCombine
         // waits for both futures to complete before failing
-        this.accepted = this.writtenToLog.thenCompose(_a -> accepted);
+        this.accepted = Futures.transform(Futures.allAsList(writtenToLog, accepted), _r -> null, MoreExecutors.directExecutor());
         // Convert complete to a future that only completes once the new accepted, and complete, have completed
-        this.complete = this.accepted.thenCompose(_a -> complete);
+        this.complete = Futures.transform(
+            Futures.allAsList(writtenToLog, accepted, complete),
+            results -> (T) results.get(2),
+            MoreExecutors.directExecutor()
+        );
     }
 
     /**
@@ -60,11 +70,94 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      * @param handlers The TransactionStatusListener that contains all of the handlers
      */
     public void register(TransactionStatusListener<? super T> handlers) {
-        addDeliveredHandler(handlers::deliveredHandler);
-        addDeliveryFailedHandler(handlers::deliveryFailedHandler);
-        addAcceptedHandler(handlers::acceptedHandler);
-        addRejectedHandler(handlers::rejectedHandler);
-        addCompleteHandler(handlers::completeHandler);
+        Futures.addCallback(
+            writtenToLog,
+            new FutureCallback<>() {
+                @Override
+                public void onSuccess(@Nullable Void result) {
+                    try {
+                        handlers.deliveredHandler();
+                    } catch (Exception e) {
+                        log.error("Transaction event handler threw an exception", e);
+                    }
+                }
+
+                @Override
+                public void onFailure(@Nonnull Throwable t) {
+                    try {
+                        handlers.deliveryFailedHandler(t);
+                    } catch (Exception e) {
+                        log.error("Transaction event handler threw an exception", e);
+                    }
+                }
+            },
+            MoreExecutors.directExecutor()
+        );
+
+        Futures.addCallback(
+            accepted,
+            new FutureCallback<>() {
+                @Override
+                public void onSuccess(@Nullable Void result) {
+                    try {
+                        handlers.acceptedHandler();
+                    } catch (Exception e) {
+                        log.error("Transaction event handler threw an exception", e);
+                    }
+                }
+
+                @Override
+                public void onFailure(@Nonnull Throwable t) {
+                    try {
+                        handlers.rejectedHandler(t);
+                    } catch (Exception e) {
+                        log.error("Transaction event handler threw an exception", e);
+                    }
+                }
+            },
+            MoreExecutors.directExecutor()
+        );
+
+        Futures.addCallback(
+            complete,
+            new FutureCallback<>() {
+                @Override
+                public void onSuccess(@Nullable T result) {
+                    try {
+                        handlers.completeHandler(result);
+                    } catch (Exception e) {
+                        log.error("Transaction event handler threw an exception", e);
+                    }
+                }
+
+                @Override
+                public void onFailure(Throwable t) { }
+            },
+            MoreExecutors.directExecutor()
+        );
+    }
+
+    /**
+     * Get a future that resolves when the transaction has successfully been persisted, and will be processed at some
+     * point in the future
+     */
+    public ListenableFuture<Void> getDeliveryFuture() {
+        return writtenToLog;
+    }
+
+    /**
+     * Get a future that resolves when the transaction is guaranteed to have been accepted, although the results may
+     * not be available yet
+     */
+    public ListenableFuture<Void> getAcceptedFuture() {
+        return accepted;
+    }
+
+    /**
+     * Get a future that resolves with the transaction results when they are available
+     */
+    public ListenableFuture<T> getCompleteFuture() {
+        return complete;
     }
 
     /**
@@ -73,7 +166,12 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      * @param handler The handler to be called when the transaction has been delivered
      */
     public void addDeliveredHandler(final Runnable handler) {
-        writtenToLog.thenAccept(v -> handleExceptions(handler));
+        register(new TransactionStatusListener<>() {
+            @Override
+            public void deliveredHandler() {
+                handler.run();
+            }
+        });
     }
 
     /**
@@ -86,9 +184,11 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      * @param handler The callback to invoke if the transaction failed
      */
     public void addDeliveryFailedHandler(final Consumer<Throwable> handler) {
-        writtenToLog.exceptionally(ex -> {
-            handleExceptions(() -> handler.accept(unwrapExceptionalResult(ex)));
-            return null;
+        register(new TransactionStatusListener<>() {
+            @Override
+            public void deliveryFailedHandler(Throwable t) {
+                handler.accept(t);
+            }
         });
     }
 
@@ -101,7 +201,12 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      * @param handler The callback to be invoked when the transaction is accepted
      */
     public void addAcceptedHandler(final Runnable handler) {
-        accepted.thenAccept(_v -> handleExceptions(handler));
+        register(new TransactionStatusListener<>() {
+            @Override
+            public void acceptedHandler() {
+                handler.run();
+            }
+        });
     }
 
     /**
@@ -116,9 +221,11 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      * @param handler The callback to be invoked with the error that occurred
      */
     public void addRejectedHandler(final Consumer<Throwable> handler) {
-        accepted.exceptionally(throwable -> {
-            handleExceptions(() -> handler.accept(unwrapExceptionalResult(throwable)));
-            return null;
+        register(new TransactionStatusListener<>() {
+            @Override
+            public void rejectedHandler(Throwable t) {
+                handler.accept(t);
+            }
         });
     }
 
@@ -131,7 +238,12 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      * @param handler The handler to receive the transaction results when they are available
      */
     public void addCompleteHandler(final Consumer<T> handler) {
-        complete.thenAccept(v -> handleExceptions(() -> handler.accept(v)));
+        register(new TransactionStatusListener<>() {
+            @Override
+            public void completeHandler(T result) {
+                handler.accept(result);
+            }
+        });
     }
 
     /**
@@ -139,34 +251,6 @@ public class TransactionStatus<T extends TransactionResultMessage> {
      */
     public long getTransactionId() {
         return transactionId;
-    }
-
-    /**
-     * Handle any exceptions thrown by a handler, by logging them to the error log
-     *
-     * This allows the return values of the futures created by consuming the results to be ignored, because any errors
-     * that were generated when executing the handler is managed here instead.
-     *
-     * @param method A void->void function to run and handle exceptions from
-     */
-    private void handleExceptions(Runnable method) {
-        try {
-            method.run();
-        } catch (Throwable e) {
-            log.error("Transaction event handler threw an exception", e);
-        }
-    }
-
-    /**
-     * Unwrap the underlying cause of the exception, removing as many nested wrapping CompletionExceptions as needed
-     *
-     * https://stackoverflow.com/questions/27430255/surprising-behavior-of-java-8-completablefuture-exceptionally-method
-     */
-    private Throwable unwrapExceptionalResult(Throwable exception) {
-        while (exception instanceof CompletionException) {
-            exception = exception.getCause();
-        }
-        return exception;
     }
 
     private static Logger log = LogManager.getLogger();

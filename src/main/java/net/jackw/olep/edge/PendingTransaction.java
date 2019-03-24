@@ -1,14 +1,14 @@
 package net.jackw.olep.edge;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * An internal representation of a pending transaction
@@ -32,7 +32,7 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
      * A future that is completed successfully when the transaction has been successfully written to Kafka, and
      * completed exceptionally if the write to Kafka fails
      */
-    private final CompletableFuture<RecordMetadata> writtenToLog;
+    private final SettableFuture<RecordMetadata> writtenToLog;
 
     /**
      * A future that is completed successfully when the transaction is accepted by the database, and therefore
@@ -41,7 +41,7 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
      * If the transaction is not written to Kafka successfully, this future will never be completed, either successfully
      * or exceptionally.
      */
-    private final CompletableFuture<Void> accepted;
+    private final SettableFuture<Void> accepted;
 
     /**
      * A future that is completed successfully with the result of this transaction if the transaction succeeds. It will
@@ -50,7 +50,7 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
      * If the transaction is not written to Kafka successfully, or the transaction is rejected by the database, this
      * future will never be completed (successfully or exceptionally)
      */
-    private final CompletableFuture<T> complete;
+    private final SettableFuture<T> complete;
 
     /**
      * Construct a new pending transaction. The transaction will usually be about to be written to Kafka
@@ -63,9 +63,9 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
         this.transactionResultBuilder = transactionResultBuilder;
 
         // Create the futures to keep track of the transaction status
-        this.writtenToLog = new CompletableFuture<>();
-        this.accepted = new CompletableFuture<>();
-        this.complete = new CompletableFuture<>();
+        this.writtenToLog = SettableFuture.create();
+        this.accepted = SettableFuture.create();
+        this.complete = SettableFuture.create();
 
         this.transactionStatus = new TransactionStatus<>(transactionId, writtenToLog, accepted, complete);
     }
@@ -97,9 +97,9 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
     public Callback getWrittenToLogCallback() {
         return (metadata, exception) -> {
             if (metadata != null) {
-                this.writtenToLog.complete(metadata);
+                this.writtenToLog.set(metadata);
             } else {
-                this.writtenToLog.completeExceptionally(exception);
+                this.writtenToLog.setException(exception);
             }
         };
     }
@@ -116,11 +116,11 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
         if (transactionResultBuilder.canBuild()) {
             T result = transactionResultBuilder.build();
             log.debug("{} completed", transactionId);
-            if (!complete.complete(result)) {
+            if (!complete.set(result)) {
                 // We had already built this
                 log.warn("{} - Builder shouldn't be updated after it has already been build", transactionId);
             }
-            if (accepted.complete(null)) {
+            if (accepted.set(null)) {
                 // We hadn't received the accepted message yet. As the transaction has completed, it must have been
                 // accepted, so it was safe to mark it as such.
                 // The actual accepted message will be discarded by the log consumer, because this transaction will be
@@ -141,27 +141,27 @@ public class PendingTransaction<T extends TransactionResultMessage, B extends Tr
      */
     public void setAccepted(boolean isAccepted) {
         if (isAccepted) {
-            if (!accepted.complete(null)) {
+            if (!accepted.set(null)) {
                 log.warn("{} - Shouldn't set accepted after it has already been marked as accepted", transactionId);
             }
             log.debug("{} marked accepted", transactionId);
         } else {
-            if (!accepted.completeExceptionally(new TransactionRejectedException())) {
+            if (!accepted.setException(new TransactionRejectedException())) {
                 log.warn("{} - Shouldn't set accepted after it has already been marked as accepted", transactionId);
             }
         }
     }
 
     @VisibleForTesting
-    CompletableFuture<RecordMetadata> getWrittenToLogFuture() {
+    ListenableFuture<RecordMetadata> getWrittenToLogFuture() {
         return this.writtenToLog;
     }
     @VisibleForTesting
-    CompletableFuture<Void> getAcceptedFuture() {
+    ListenableFuture<Void> getAcceptedFuture() {
         return this.accepted;
     }
     @VisibleForTesting
-    CompletableFuture<T> getCompleteFuture() {
+    ListenableFuture<T> getCompleteFuture() {
         return complete;
     }
 

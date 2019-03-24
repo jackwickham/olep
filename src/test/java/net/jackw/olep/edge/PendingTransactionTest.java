@@ -1,5 +1,7 @@
 package net.jackw.olep.edge;
 
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
 import net.jackw.olep.message.transaction_result.TransactionResultBuilder;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -49,12 +51,12 @@ public class PendingTransactionTest {
 
         pendingTransaction.getWrittenToLogCallback().onCompletion(null, err);
 
-        assertTrue(pendingTransaction.getWrittenToLogFuture().isCompletedExceptionally());
+        assertTrue(isFutureCompletedExceptionally(pendingTransaction.getWrittenToLogFuture()));
         assertFalse(pendingTransaction.getAcceptedFuture().isDone());
         assertFalse(pendingTransaction.getCompleteFuture().isDone());
     }
 
-    @Test public void testSetAcceptedTrue() {
+    @Test public void testSetAcceptedTrue() throws ExecutionException {
         PendingTransaction<TransactionResultMessage, TransactionResultBuilder<TransactionResultMessage>> pendingTransaction = new PendingTransaction<>(4, transactionResultBuilder);
 
         pendingTransaction.setAccepted(true);
@@ -64,7 +66,7 @@ public class PendingTransactionTest {
         assertFalse(pendingTransaction.getCompleteFuture().isDone());
 
         // Make sure it was completed successfully - this will throw if not
-        pendingTransaction.getAcceptedFuture().getNow(null);
+        Futures.getDone(pendingTransaction.getAcceptedFuture());
     }
 
     @Test public void testSetAcceptedFalse() {
@@ -72,7 +74,7 @@ public class PendingTransactionTest {
 
         pendingTransaction.setAccepted(false);
 
-        assertFalse(pendingTransaction.getWrittenToLogFuture().isCompletedExceptionally());
+        assertFalse(pendingTransaction.getWrittenToLogFuture().isDone());
         assertTrue(pendingTransaction.getAcceptedFuture().isDone());
         assertFalse(pendingTransaction.getCompleteFuture().isDone());
     }
@@ -91,7 +93,7 @@ public class PendingTransactionTest {
     }
 
 
-    @Test public void testUpdatedBuilderCanBuild() {
+    @Test public void testUpdatedBuilderCanBuild() throws ExecutionException {
         when(transactionResultBuilder.canBuild()).thenReturn(true);
         TransactionResultMessage mockResult = mock(TransactionResultMessage.class);
         when(transactionResultBuilder.build()).thenReturn(mockResult);
@@ -105,6 +107,17 @@ public class PendingTransactionTest {
         assertTrue(pendingTransaction.getAcceptedFuture().isDone());
         assertTrue(pendingTransaction.getCompleteFuture().isDone());
 
-        assertEquals(mockResult, pendingTransaction.getCompleteFuture().getNow(null));
+        assertEquals(mockResult, Futures.getDone(pendingTransaction.getCompleteFuture()));
+    }
+
+    private static boolean isFutureCompletedExceptionally(ListenableFuture<?> future) {
+        if (future.isDone()) {
+            try {
+                Futures.getDone(future);
+            } catch (ExecutionException e) {
+                return true;
+            }
+        }
+        return false;
     }
 }
