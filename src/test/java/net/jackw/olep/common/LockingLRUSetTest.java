@@ -147,4 +147,27 @@ public class LockingLRUSetTest {
         assertTrue(set.contains(o1));
         assertTrue(set.contains(o3));
     }
+
+    @Test
+    public void testAddAllReturnsFalseIfNoElementsAdded() {
+        LockingLRUSet<Object> set = new LockingLRUSet<>(3);
+        Object o1 = new Object();
+        Object o2 = new Object();
+
+        set.add(o1);
+        set.add(o2);
+
+        assertFalse(set.addAll(List.of(o1, o2)));
+    }
+
+    @Test
+    public void testAddAllReturnsTrueIfAnyElementsAdded() {
+        LockingLRUSet<Object> set = new LockingLRUSet<>(3);
+        Object o1 = new Object();
+        Object o2 = new Object();
+
+        set.add(o1);
+
+        assertTrue(set.addAll(List.of(o1, o2)));
+    }
 }

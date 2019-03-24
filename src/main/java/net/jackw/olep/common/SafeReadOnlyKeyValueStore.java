@@ -1,5 +1,6 @@
 package net.jackw.olep.common;
 
+import com.google.errorprone.annotations.ForOverride;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
@@ -23,7 +24,6 @@ public class SafeReadOnlyKeyValueStore<K, V> {
     private final Latch streamsRunningLatch;
 
     private static final int MAX_ATTEMPTS = 5;
-    private static final int LATCH_TIMEOUT_MS = 2000;
 
     public SafeReadOnlyKeyValueStore(KafkaStreams streams, String storeName, Latch streamsRunningLatch) throws InterruptedException, StoreUnavailableException {
         this.streamsRunningLatch = streamsRunningLatch;
@@ -54,7 +54,7 @@ public class SafeReadOnlyKeyValueStore<K, V> {
         List<Exception> suppressedExceptions = new ArrayList<>(5);
         for (int i = 0 ;; i++) {
             try {
-                streamsRunningLatch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                streamsRunningLatch.await(getLatchTimeoutMs(), TimeUnit.MILLISECONDS);
 
                 return task.get();
             } catch (TimeoutException e) {
@@ -67,6 +67,14 @@ public class SafeReadOnlyKeyValueStore<K, V> {
                 }
             }
         }
+    }
+
+    /**
+     * Get the time to wait for the latch each attempt
+     */
+    @ForOverride
+    protected int getLatchTimeoutMs() {
+        return 2000;
     }
 
     public static class StoreUnavailableException extends Exception {

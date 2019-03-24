@@ -90,6 +90,16 @@ dependencies {
 
 def databaseHeapSize = "7G"
 
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories = files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/olep/utils/**'
+            ])
+        })
+    }
+}
+
 // In this section you declare where to find the dependencies of your project
 repositories {
     // Use jcenter for resolving your dependencies.
