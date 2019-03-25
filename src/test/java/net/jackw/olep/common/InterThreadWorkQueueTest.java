@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
 
 public class InterThreadWorkQueueTest {
-    @Test(timeout = 100)
+    @Test(timeout = 300)
     public void testRequest() throws InterruptedException {
         final InterThreadWorkQueue q = new InterThreadWorkQueue(1);
         new Thread(() -> {
@@ -22,7 +22,7 @@ public class InterThreadWorkQueueTest {
         assertEquals(5, (int) q.request(() -> 5));
     }
 
-    @Test(timeout = 100)
+    @Test(timeout = 300)
     public void testExecuteRunsAllTasks() throws InterruptedException {
         final InterThreadWorkQueue q = new InterThreadWorkQueue(1);
         final AtomicInteger sum = new AtomicInteger();
