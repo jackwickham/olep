@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -248,7 +247,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
                     // We were already subscribed to this partition
                     ++notReassigned;
                 }
-                if (logConsumer.position(topicPartition) >= latestEndOffsets.getOrDefault(topicPartition, 0L)) {
+                if (logConsumer.position(topicPartition) >= latestEndOffsets.getOrDefault(topicPartition, 0L) - 1) {
                     // We're already caught up on this partition
                     markReady(topicPartition.partition());
                 }
@@ -309,10 +308,14 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
             ViewWriteAdapter va = viewAdapter;
             SharedCustomerStoreConsumer csc = customerStoreConsumer;
         ) {
+            readyFuture.cancel(false);
             logConsumer.wakeup();
-            readyFuture.setException(new CancellationException());
-            if (Thread.currentThread() != this) {
-                this.join();
+            if (this.isAlive() && Thread.currentThread() != this) {
+                this.join(50);
+                if (this.isAlive()) {
+                    this.interrupt();
+                    this.join();
+                }
             }
         }
     }

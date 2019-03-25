@@ -131,7 +131,7 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
                 newState = oldState.withLatestOrder(modification.orderId, modification.date, null, modification.lines);
                 replaced = customerState.replace(customerKey, oldState, newState);
             }
-        } while (!replaced);
+        } while (!replaced); // Retry if concurrency meant that we didn't make the change
     }
 
     @Override

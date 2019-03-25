@@ -13,6 +13,7 @@ import net.jackw.olep.common.records.OrderStatusResult;
 import net.jackw.olep.message.modification.DeliveryModification;
 import net.jackw.olep.message.modification.NewOrderModification;
 import net.jackw.olep.message.modification.OrderLineModification;
+import net.jackw.olep.message.modification.PaymentModification;
 import net.jackw.olep.message.modification.RemoteStockModification;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -364,5 +365,30 @@ public class InMemoryAdapterTest {
         assertEquals(new BigDecimal("2.50"), result.balance);
         assertEquals(0, (int) result.latestOrderCarrierId);
         assertEquals(25L, (long) result.latestOrderLines.get(0).deliveryDate);
+    }
+
+    @Test
+    public void testPaymentIncreasesCustomerBalance() {
+        when(customerImmutableStore.get(new DistrictSpecificKey(1, 1, 1))).thenReturn(customer);
+
+        ImmutableList<OrderLineModification> lines = ImmutableList.of(
+            new OrderLineModification(
+                0, 5, 1, 1, new BigDecimal("12.50"), 10, ""
+            )
+        );
+        NewOrderModification newOrder = new NewOrderModification(
+            1, 1, 1, lines, 12L, 15
+        );
+        adapter.newOrder(newOrder);
+
+        PaymentModification payment = new PaymentModification(
+            1, 1, 1, 1, 1, new BigDecimal("5.80"),
+            new BigDecimal("-15.80"), "dat"
+        );
+        adapter.payment(payment);
+
+        OrderStatusResult result = adapter.orderStatus(1, 1, 1);
+
+        assertEquals(new BigDecimal("-15.80"), result.balance);
     }
 }
