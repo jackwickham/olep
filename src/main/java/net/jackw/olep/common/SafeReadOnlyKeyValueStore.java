@@ -69,7 +69,6 @@ public class SafeReadOnlyKeyValueStore<K, V> {
                 // Otherwise, sleep for a few ms to give it a chance to update its state, then try again
                 suppressedExceptions.add(complaint);
                 Thread.sleep(50);
-                task.get();
             } catch (TimeoutException e) {
                 throw new StoreUnavailableException(e, suppressedExceptions);
             } catch (InvalidStateStoreException e) {
