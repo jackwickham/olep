@@ -287,7 +287,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
             customerStoreConsumer = SharedCustomerStoreConsumer.create(config.getBootstrapServers(), "view-adapter-" + System.nanoTime(), config);
 
-            ViewWriteAdapter viewWriteAdapter = new InMemoryAdapter(customerStoreConsumer.getStore(), config);
+            ViewWriteAdapter viewWriteAdapter = new InMemoryView(customerStoreConsumer.getStore(), config);
 
             return new LogViewAdapter(consumer, viewWriteAdapter, customerStoreConsumer, config.getMetrics());
         } catch (Exception e) {

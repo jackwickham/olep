@@ -31,7 +31,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdapter, ViewWriteAdapter {
+public class InMemoryView extends UnicastRemoteObject implements ViewReadAdapter, ViewWriteAdapter {
     private Map<WarehouseSpecificKey, WarehouseItemStock> stockMap;
     private Map<WarehouseSpecificKey, Queue<Set<WarehouseItemStock>>> recentOrders;
     private Map<DistrictSpecificKey, CustomerState> customerState;
@@ -41,7 +41,7 @@ public class InMemoryAdapter extends UnicastRemoteObject implements ViewReadAdap
 
     private final Set<Integer> registeredPartitions;
 
-    public InMemoryAdapter(SharedCustomerStore customerSharedStore, DatabaseConfig config) throws RemoteException {
+    public InMemoryView(SharedCustomerStore customerSharedStore, DatabaseConfig config) throws RemoteException {
         super();
         stockMap = new MapMaker().initialCapacity(1000).weakValues().makeMap();
         recentOrders = new ConcurrentHashMap<>();

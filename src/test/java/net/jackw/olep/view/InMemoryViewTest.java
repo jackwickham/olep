@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class InMemoryAdapterTest {
+public class InMemoryViewTest {
     @Mock
     private SharedCustomerStore customerImmutableStore;
 
@@ -39,11 +39,11 @@ public class InMemoryAdapterTest {
         BigDecimal.TEN, BigDecimal.ZERO
     );
 
-    private InMemoryAdapter adapter;
+    private InMemoryView adapter;
 
     @Before
     public void instantiateAdapter() throws RemoteException {
-        adapter = new InMemoryAdapter(customerImmutableStore, mock(DatabaseConfig.class));
+        adapter = new InMemoryView(customerImmutableStore, mock(DatabaseConfig.class));
     }
 
     @Test
