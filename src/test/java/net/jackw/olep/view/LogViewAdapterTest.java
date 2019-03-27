@@ -107,7 +107,7 @@ public class LogViewAdapterTest {
         customerStoreConsumerReadyFuture.set(null);
         lva.start();
 
-        Thread.sleep(20);
+        Thread.sleep(30);
 
         verify(viewAdapter).newOrder(same(modification));
     }
@@ -122,7 +122,7 @@ public class LogViewAdapterTest {
         customerStoreConsumerReadyFuture.set(null);
         lva.start();
 
-        Thread.sleep(20);
+        Thread.sleep(30);
 
         verify(viewAdapter).remoteStock(same(modification));
     }
@@ -140,7 +140,7 @@ public class LogViewAdapterTest {
         customerStoreConsumerReadyFuture.set(null);
         lva.start();
 
-        Thread.sleep(20);
+        Thread.sleep(30);
 
         verify(viewAdapter).payment(same(modification));
     }
@@ -157,7 +157,7 @@ public class LogViewAdapterTest {
         customerStoreConsumerReadyFuture.set(null);
         lva.start();
 
-        Thread.sleep(20);
+        Thread.sleep(30);
 
         verify(viewAdapter).delivery(same(modification));
     }
@@ -204,7 +204,7 @@ public class LogViewAdapterTest {
             ));
         });
 
-        Thread.sleep(20);
+        Thread.sleep(50);
         verify(viewAdapter, never()).register(0);
     }
 
@@ -287,8 +287,9 @@ public class LogViewAdapterTest {
             ));
         });
 
-        Thread.sleep(20);
+        Thread.sleep(50);
 
+        assertEquals(Boolean.FALSE, preRegister.get());
         verify(viewAdapter).register(0);
         assertTrue(lva.getReadyFuture().isDone());
         lva.getReadyFuture().get();

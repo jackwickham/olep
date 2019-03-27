@@ -44,7 +44,7 @@ public class InterThreadWorkQueueTest {
         });
         t2.start();
 
-        Thread.sleep(20);
+        Thread.sleep(30);
 
         q.execute();
 
