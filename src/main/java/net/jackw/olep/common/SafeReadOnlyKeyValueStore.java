@@ -56,7 +56,20 @@ public class SafeReadOnlyKeyValueStore<K, V> {
             try {
                 streamsRunningLatch.await(getLatchTimeoutMs(), TimeUnit.MILLISECONDS);
 
-                return task.get();
+                R result = task.get();
+                if (result != null) {
+                    return result;
+                }
+                // Otherwise, Kafka is lying to us (or the store isn't initialised fully, but that's not meant to happen)
+                Exception complaint = new IllegalStateException("Store operation returned null");
+                // If we've exceeded the max attempts, throw an exception
+                if (i >= MAX_ATTEMPTS) {
+                    throw new StoreUnavailableException(complaint, suppressedExceptions);
+                }
+                // Otherwise, sleep for a few ms to give it a chance to update its state, then try again
+                suppressedExceptions.add(complaint);
+                Thread.sleep(50);
+                task.get();
             } catch (TimeoutException e) {
                 throw new StoreUnavailableException(e, suppressedExceptions);
             } catch (InvalidStateStoreException e) {

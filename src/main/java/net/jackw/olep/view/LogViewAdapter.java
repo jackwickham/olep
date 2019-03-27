@@ -246,7 +246,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
     @Override
     public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-        log.debug("Partitions {} revoked", partitions);
+        log.info("Partitions {} revoked", partitions);
         if (partitions.isEmpty()) {
             // Initially, an empty set of partitions are revoked, and there's no point doing anything with that
             return;
@@ -267,7 +267,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
     @Override
     public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-        log.debug("Partitions {} assigned", partitions);
+        log.info("Partitions {} assigned", partitions);
         if (partitions.isEmpty()) {
             // Nothing to do except avoid deadlock
             return;
