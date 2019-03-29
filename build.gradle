@@ -65,6 +65,8 @@ dependencies {
     testCompile group: 'com.typesafe.akka', name: 'akka-testkit_2.12', version: '2.5.21'
     // Chronicle map for storing data that may exceed the available memory
     compile group: 'net.openhft', name: 'chronicle-map', version: '3.17.0'
+    // MySQL connector for comparison
+    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.15'
 
     // Expose the errorprone client library to the application
     compile group: 'com.google.errorprone', name: 'error_prone_core', version: '2.3.2'

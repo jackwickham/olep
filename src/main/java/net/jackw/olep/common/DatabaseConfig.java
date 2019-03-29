@@ -85,6 +85,12 @@ public class DatabaseConfig {
     private String viewRegistryHost = "127.0.0.1";
 
     @JsonProperty
+    private String mysqlServer = "127.0.0.1";
+
+    @JsonProperty
+    private String mysqlUser = null;
+
+    @JsonProperty
     private String baseResultsDir = "results";
 
     @JsonProperty
@@ -265,6 +271,41 @@ public class DatabaseConfig {
      */
     public String getViewRegistryHost() {
         return viewRegistryHost;
+    }
+
+    /**
+     * Get the host of the MySQL server
+     */
+    public String getMysqlServer() {
+        return mysqlServer;
+    }
+
+    /**
+     * Get the user that should be used for the MySQL connection
+     */
+    public String getMysqlUser() {
+        if (mysqlUser != null) {
+            return mysqlUser;
+        }
+        String user = System.getenv("MYSQL_USER");
+        if (user != null && !user.isEmpty()) {
+            return user;
+        } else {
+            throw new IllegalStateException("MySQL user must be provided in the MYSQL_USER environment variable or mysqlUser config property");
+        }
+    }
+
+    /**
+     * Get the password that should be used for the MySQL connection
+     */
+    @Nullable
+    public String getMysqlPassword() {
+        String password = System.getenv("MYSQL_PASS");
+        if (password == null || password.isEmpty()) {
+            return null;
+        } else {
+            return password;
+        }
     }
 
     /**

@@ -30,7 +30,7 @@ public class NewOrderResult extends TransactionResultMessage {
     public final BigDecimal districtTax;
     public final ImmutableList<OrderLineResult> lines;
 
-    private NewOrderResult(
+    public NewOrderResult(
         int customerId, int districtId, int warehouseId, long orderDate, int orderId, String customerLastName,
         Credit credit, BigDecimal discount, BigDecimal warehouseTax, BigDecimal districtTax,
         ImmutableList<OrderLineResult> lines
