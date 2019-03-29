@@ -44,7 +44,6 @@ public class RandomDistrictFactory implements DistrictFactory {
         Address address = CommonFieldGenerators.generateAddress(rand);
         // D_TAX random within [0.0000 .. 0.2000]
         BigDecimal tax = rand.uniform(0L, 2000L, 4);
-        // D_YTD and D_NEXT_O_ID are not published to the shared store
 
         return new DistrictShared(id, wId, name, address, tax);
     }
