@@ -36,7 +36,7 @@ public class MySQLConnection implements AutoCloseable {
     private final PreparedStatement getStockLevelStatement;
     private final PreparedStatement getLatestOrderStatement;
 
-    private final PreparedStatement incrementNextOrderIdStatement;
+    private final PreparedStatement setNextOrderIdStatement;
     private final PreparedStatement updateStockStatement;
     private final PreparedStatement setWarehouseYtdStatement;
     private final PreparedStatement setDistrictYtdStatement;
@@ -84,7 +84,7 @@ public class MySQLConnection implements AutoCloseable {
         getLatestOrderStatement = connection.prepareStatement("SELECT * FROM `ORDER` INNER JOIN ORDER_LINE ON O_ID=OL_O_ID AND O_W_ID=OL_W_ID AND O_D_ID=OL_D_ID " +
             "WHERE O_ID = (SELECT MAX(O_ID) FROM `ORDER` WHERE O_W_ID=? AND O_D_ID=? AND O_C_ID=?) AND O_W_ID=? AND O_D_ID=?");
 
-        incrementNextOrderIdStatement = connection.prepareStatement("UPDATE DISTRICT SET D_NEXT_O_ID=D_NEXT_O_ID+1 WHERE D_W_ID=? AND D_ID=?");
+        setNextOrderIdStatement = connection.prepareStatement("UPDATE DISTRICT SET D_NEXT_O_ID=? WHERE D_W_ID=? AND D_ID=?");
         updateStockStatement = connection.prepareStatement("UPDATE STOCK SET S_QUANTITY=?, S_YTD=?, S_ORDER_CNT=?, S_REMOTE_CNT=? WHERE S_W_ID=? AND S_I_ID=?");
         setWarehouseYtdStatement = connection.prepareStatement("UPDATE WAREHOUSE SET W_YTD=? WHERE W_ID=?");
         setDistrictYtdStatement = connection.prepareStatement("UPDATE DISTRICT SET D_YTD=? WHERE D_W_ID=? AND D_ID=?");
@@ -214,10 +214,11 @@ public class MySQLConnection implements AutoCloseable {
 
     ///// Updates /////
 
-    public void incrementDistrictNextOrderId(WarehouseSpecificKey district) throws SQLException {
-        incrementNextOrderIdStatement.setInt(1, district.warehouseId);
-        incrementNextOrderIdStatement.setInt(2, district.id);
-        incrementNextOrderIdStatement.executeUpdate();
+    public void setDistrictNextOrderId(WarehouseSpecificKey district, int newValue) throws SQLException {
+        setNextOrderIdStatement.setInt(1, newValue);
+        setNextOrderIdStatement.setInt(2, district.warehouseId);
+        setNextOrderIdStatement.setInt(3, district.id);
+        setNextOrderIdStatement.executeUpdate();
     }
 
     public void updateStock(WarehouseSpecificKey key, int newQuantity, int newYtd, int newOrderCnt, int newRemoteCnt) throws SQLException {

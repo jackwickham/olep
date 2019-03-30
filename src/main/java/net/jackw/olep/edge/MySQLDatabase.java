@@ -23,6 +23,7 @@ import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
+import net.jackw.olep.utils.populate.PopulateStores;
 import net.jackw.olep.utils.populate.RandomCustomerFactory;
 import net.jackw.olep.utils.populate.RandomDistrictFactory;
 import net.jackw.olep.utils.populate.RandomItemFactory;
@@ -138,32 +139,29 @@ public class MySQLDatabase implements Database {
     }
 
     @MustBeClosed
+    @SuppressWarnings("MustBeClosedChecker")
     private ResultSet loadCustomerByName(String lastName, int districtId, int warehouseId) throws SQLException {
         ResultSet resultSet = connection.loadCustomersByName(new CustomerNameKey(lastName, districtId, warehouseId));
         try {
             resultSet.last();
             int numResults = resultSet.getRow();
             resultSet.absolute((numResults + 1) / 2);
-            return resultSet;
         } catch (Throwable e) {
             resultSet.close();
             throw e;
         }
+        return resultSet;
     }
 
     public static void main(String[] args) throws IOException, SQLException, InterruptedException {
         Arguments arguments = new Arguments(args);
         MySQLDatabase db = new MySQLDatabase(arguments.getConfig());
         db.connection.createTables();
-        WarehouseShared wh = RandomWarehouseFactory.getInstance().makeWarehouseShared();
-        DistrictShared dist = RandomDistrictFactory.instanceFor(wh).makeDistrictShared();
-        Customer cust = RandomCustomerFactory.instanceFor(dist, arguments.getConfig().getCustomerNameRange()).makeCustomer();
-        db.connection.insertWarehouse(wh, new BigDecimal("30000.00"));
-        db.connection.insertDistrict(dist, new BigDecimal("30000.00"), 3001);
-        db.connection.insertCustomer(cust, new BigDecimal("10.00"), 1, 0);
-        db.connection.insertItem(RandomItemFactory.getInstance().makeItem());
-        db.connection.insertStock(RandomStockFactory.instanceFor(wh).makeStock(), 0, 0, 0);
         db.connection.commit();
+
+        PopulateStores populator = new PopulateStores(arguments.getConfig(), true, true);
+        populator.populate();
+        populator.close();
 
         for (int i = 0; i < 20; i++) {
             new Thread(() -> {
@@ -240,16 +238,17 @@ public class MySQLDatabase implements Database {
         }
 
         @Override
-        public NewOrderResult exec() throws SQLException, TransactionRejectedException {
+        protected NewOrderResult exec() throws SQLException, TransactionRejectedException {
             try (
                 ResultSet wh = connection.loadWarehouse(warehouseId);
                 ResultSet dist = connection.loadDistrict(new WarehouseSpecificKey(districtId, warehouseId));
                 ResultSet cust = connection.loadCustomer(new DistrictSpecificKey(customerId, districtId, warehouseId));
             ) {
-                connection.incrementDistrictNextOrderId(new WarehouseSpecificKey(districtId, warehouseId));
+                int orderId = dist.getInt("D_NEXT_O_ID");
+
+                connection.setDistrictNextOrderId(new WarehouseSpecificKey(districtId, warehouseId), orderId + 1);
 
                 boolean allLocal = lines.stream().allMatch(line -> line.supplyingWarehouseId == warehouseId);
-                int orderId = dist.getInt("D_NEXT_O_ID");
                 long entryDate = new Date().getTime();
 
                 connection.insertOrder(
@@ -419,7 +418,7 @@ public class MySQLDatabase implements Database {
         }
 
         @Override
-        public Integer exec() throws SQLException {
+        protected Integer exec() throws SQLException {
             try (ResultSet results = connection.loadLatestNewOrder(districtId, warehouseId)) {
                 if (results.next()) {
                     int orderId = results.getInt("NO_O_ID");

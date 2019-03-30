@@ -96,6 +96,9 @@ public class DatabaseConfig {
     @JsonProperty
     private String runId = null;
 
+    @JsonProperty
+    private boolean sqlBenchmark = false;
+
     @JsonIgnore
     private String mainClass;
     @JsonIgnore
@@ -332,6 +335,13 @@ public class DatabaseConfig {
         } else {
             return runId;
         }
+    }
+
+    /**
+     * Is SQL or OLEP being tested?
+     */
+    public boolean isSqlBenchmark() {
+        return sqlBenchmark;
     }
 
     /**
