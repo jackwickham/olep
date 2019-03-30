@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.ForOverride;
+import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.Credit;
@@ -12,6 +13,7 @@ import net.jackw.olep.common.records.Customer;
 import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.OrderLine;
 import net.jackw.olep.common.records.OrderStatusResult;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
@@ -53,12 +55,12 @@ public class MySQLDatabase implements Database {
 
     @Override
     public TransactionStatus<PaymentResult> payment(int customerId, int districtId, int warehouseId, int customerDistrictId, int customerWarehouseId, BigDecimal amount) {
-        return execute(new PaymentByIdTransaction(customerId, districtId, warehouseId, customerDistrictId, customerWarehouseId, amount));
+        return execute(new PaymentTransaction(districtId, warehouseId, amount, customerId, customerDistrictId, customerWarehouseId));
     }
 
     @Override
     public TransactionStatus<PaymentResult> payment(String customerLastName, int districtId, int warehouseId, int customerDistrictId, int customerWarehouseId, BigDecimal amount) {
-        return execute(new PaymentByNameTransaction(customerLastName, districtId, warehouseId, customerDistrictId, customerWarehouseId, amount));
+        return execute(new PaymentTransaction(districtId, warehouseId, amount, customerLastName, customerDistrictId, customerWarehouseId));
     }
 
     @Override
@@ -88,12 +90,20 @@ public class MySQLDatabase implements Database {
 
     @Override
     public OrderStatusResult orderStatus(int customerId, int districtId, int warehouseId) {
-        return null;
+        try {
+            return new OrderStatusTransaction(customerId, districtId, warehouseId).run();
+        } catch (TransactionRejectedException e) {
+            throw new AssertionError("Order Status should never be rejected", e);
+        }
     }
 
     @Override
     public OrderStatusResult orderStatus(String customerLastName, int districtId, int warehouseId) {
-        return null;
+        try {
+            return new OrderStatusTransaction(customerLastName, districtId, warehouseId).run();
+        } catch (TransactionRejectedException e) {
+            throw new AssertionError("Order Status should never be rejected", e);
+        }
     }
 
     @Override
@@ -127,6 +137,20 @@ public class MySQLDatabase implements Database {
         }
     }
 
+    @MustBeClosed
+    private ResultSet loadCustomerByName(String lastName, int districtId, int warehouseId) throws SQLException {
+        ResultSet resultSet = connection.loadCustomersByName(new CustomerNameKey(lastName, districtId, warehouseId));
+        try {
+            resultSet.last();
+            int numResults = resultSet.getRow();
+            resultSet.absolute((numResults + 1) / 2);
+            return resultSet;
+        } catch (Throwable e) {
+            resultSet.close();
+            throw e;
+        }
+    }
+
     public static void main(String[] args) throws IOException, SQLException, InterruptedException {
         Arguments arguments = new Arguments(args);
         MySQLDatabase db = new MySQLDatabase(arguments.getConfig());
@@ -157,6 +181,9 @@ public class MySQLDatabase implements Database {
         db.delivery(1, 5);
 
         db.stockLevel(1, 1, 100);
+
+        db.orderStatus(1, 1, 1);
+        db.orderStatus("BARBARBAR", 1, 1);
 
         db.close();
     }
@@ -287,15 +314,47 @@ public class MySQLDatabase implements Database {
         }
     }
 
-    private abstract class PaymentTransaction extends Transaction<PaymentResult> {
+    private class PaymentTransaction extends Transaction<PaymentResult> {
         private final int districtId;
         private final int warehouseId;
         private final BigDecimal amount;
 
-        public PaymentTransaction(int districtId, int warehouseId, BigDecimal amount) {
+        private final String customerName;
+        private final int customerId;
+        private final int customerDistrictId;
+        private final int customerWarehouseId;
+
+        public PaymentTransaction(int districtId, int warehouseId, BigDecimal amount, int customerId, int customerDistrictId, int customerWarehouseId) {
             this.districtId = districtId;
             this.warehouseId = warehouseId;
             this.amount = amount;
+            this.customerId = customerId;
+            this.customerDistrictId = customerDistrictId;
+            this.customerWarehouseId = customerWarehouseId;
+            this.customerName = null;
+        }
+
+        public PaymentTransaction(int districtId, int warehouseId, BigDecimal amount, String customerName, int customerDistrictId, int customerWarehouseId) {
+            this.districtId = districtId;
+            this.warehouseId = warehouseId;
+            this.amount = amount;
+            this.customerDistrictId = customerDistrictId;
+            this.customerWarehouseId = customerWarehouseId;
+            this.customerName = customerName;
+            this.customerId = -1;
+        }
+
+        @Override
+        protected PaymentResult exec() throws SQLException {
+            if (customerName == null) {
+                try (ResultSet cust = connection.loadCustomer(new DistrictSpecificKey(customerId, customerDistrictId, customerWarehouseId))) {
+                    return performPayment(cust);
+                }
+            } else {
+                try (ResultSet cust = loadCustomerByName(customerName, customerDistrictId, customerWarehouseId)) {
+                    return performPayment(cust);
+                }
+            }
         }
 
         protected PaymentResult performPayment(ResultSet customer) throws SQLException {
@@ -348,49 +407,6 @@ public class MySQLDatabase implements Database {
         }
     }
 
-    private class PaymentByIdTransaction extends PaymentTransaction {
-        private final int customerId;
-        private final int customerDistrictId;
-        private final int customerWarehouseId;
-
-        public PaymentByIdTransaction(int customerId, int districtId, int warehouseId, int customerDistrictId, int customerWarehouseId, BigDecimal amount) {
-            super(districtId, warehouseId, amount);
-            this.customerId = customerId;
-            this.customerDistrictId = customerDistrictId;
-            this.customerWarehouseId = customerWarehouseId;
-        }
-
-        @Override
-        public PaymentResult exec() throws SQLException {
-            try (ResultSet cust = connection.loadCustomer(new DistrictSpecificKey(customerId, customerDistrictId, customerWarehouseId))) {
-                return performPayment(cust);
-            }
-        }
-    }
-
-    private class PaymentByNameTransaction extends PaymentTransaction {
-        private final String customerName;
-        private final int customerDistrictId;
-        private final int customerWarehouseId;
-
-        public PaymentByNameTransaction(String customerName, int districtId, int warehouseId, int customerDistrictId, int customerWarehouseId, BigDecimal amount) {
-            super(districtId, warehouseId, amount);
-            this.customerName = customerName;
-            this.customerDistrictId = customerDistrictId;
-            this.customerWarehouseId = customerWarehouseId;
-        }
-
-        @Override
-        public PaymentResult exec() throws SQLException {
-            try (ResultSet resultSet = connection.loadCustomersByName(new CustomerNameKey(customerName, customerDistrictId, customerWarehouseId))) {
-                resultSet.last();
-                int numResults = resultSet.getRow();
-                resultSet.absolute((numResults + 1) / 2);
-                return performPayment(resultSet);
-            }
-        }
-    }
-
     private class DeliveryTransaction extends Transaction<Integer> {
         private final int warehouseId;
         private final int districtId;
@@ -435,6 +451,73 @@ public class MySQLDatabase implements Database {
         @Override
         protected Integer exec() throws SQLException, TransactionRejectedException {
             return connection.getStockLevel(districtId, warehouseId, stockThreshold);
+        }
+    }
+
+    private class OrderStatusTransaction extends Transaction<OrderStatusResult> {
+        private final String customerLastName;
+        private final int customerId;
+
+        private final int districtId;
+        private final int warehouseId;
+
+        public OrderStatusTransaction(int customerId, int districtId, int warehouseId) {
+            this.customerId = customerId;
+            this.districtId = districtId;
+            this.warehouseId = warehouseId;
+            this.customerLastName = null;
+        }
+
+        public OrderStatusTransaction(String customerLastName, int districtId, int warehouseId) {
+            this.customerLastName = customerLastName;
+            this.districtId = districtId;
+            this.warehouseId = warehouseId;
+            this.customerId = -1;
+        }
+
+        @MustBeClosed
+        private ResultSet getCustomer() throws SQLException {
+            if (customerLastName != null) {
+                return loadCustomerByName(customerLastName, districtId, warehouseId);
+            } else {
+                return connection.loadCustomer(new DistrictSpecificKey(customerId, districtId, warehouseId));
+            }
+        }
+
+        @Override
+        protected OrderStatusResult exec() throws SQLException, TransactionRejectedException {
+            try (ResultSet customer = getCustomer()) {
+                int customerId = customer.getInt("C_ID");
+                try (ResultSet orderLines = connection.getLatestOrder(customerId, districtId, warehouseId)) {
+                    orderLines.next();
+
+                    int orderId = orderLines.getInt("O_ID");
+                    long orderDate = orderLines.getLong("O_ENTRY_D");
+                    Integer carrierId = orderLines.getInt("O_CARRIER_ID");
+                    if (orderLines.wasNull()) {
+                        carrierId = null;
+                    }
+
+                    ImmutableList.Builder<OrderLine> lines = ImmutableList.builder();
+                    do {
+                        Long deliveryDate = null;
+                        if (carrierId != null) {
+                            deliveryDate = orderLines.getLong("OL_DELIVERY_D");
+                        }
+                        lines.add(new OrderLine(
+                            orderLines.getInt("OL_NUMBER"), orderLines.getInt("OL_I_ID"),
+                            orderLines.getInt("OL_SUPPLY_W_ID"), deliveryDate, orderLines.getInt("OL_QUANTITY"),
+                            orderLines.getBigDecimal("OL_AMOUNT"), orderLines.getString("OL_DIST_INFO")
+                        ));
+                    } while (orderLines.next());
+
+                    return new OrderStatusResult(
+                        customerId, districtId, warehouseId, customer.getString("C_FIRST"),
+                        customer.getString("C_MIDDLE"), customer.getString("C_LAST"),
+                        customer.getBigDecimal("C_BALANCE"), orderId, orderDate, carrierId, lines.build()
+                    );
+                }
+            }
         }
     }
 }
