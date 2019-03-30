@@ -1,6 +1,7 @@
 package net.jackw.olep.edge;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
 import net.jackw.olep.common.Arguments;
@@ -57,7 +58,7 @@ public class MySQLDatabase implements Database {
                     connection.incrementDistrictNextOrderId(new WarehouseSpecificKey(districtId, warehouseId));
 
                     boolean allLocal = lines.stream().allMatch(line -> line.supplyingWarehouseId == warehouseId);
-                    int orderId = dist.getInt("NEXT_O_ID");
+                    int orderId = dist.getInt("D_NEXT_O_ID");
                     long entryDate = new Date().getTime();
 
                     connection.insertOrder(
@@ -75,51 +76,48 @@ public class MySQLDatabase implements Database {
                             ResultSet stock = connection.loadStock(stockKey)
                         ) {
                             if (item.isAfterLast()) {
-                                connection.rollback();
                                 throw new TransactionRejectedException();
                             }
 
-                            int stockQuantity = stock.getInt("QUANTITY");
+                            int stockQuantity = stock.getInt("S_QUANTITY");
                             int newStockQuantity;
                             if (stockQuantity - line.quantity >= 10) {
                                 newStockQuantity = stockQuantity - line.quantity;
                             } else {
                                 newStockQuantity = stockQuantity - line.quantity + 91;
                             }
-                            int newStockRemoteCount = stock.getInt("REMOTE_CNT");
+                            int newStockRemoteCount = stock.getInt("S_REMOTE_CNT");
                             if (line.supplyingWarehouseId != warehouseId) {
                                 newStockRemoteCount++;
                             }
                             connection.updateStock(
-                                stockKey, newStockQuantity, stock.getInt("YTD") + line.quantity,
-                                stock.getInt("ORDER_CNT") + 1, newStockRemoteCount
+                                stockKey, newStockQuantity, stock.getInt("S_YTD") + line.quantity,
+                                stock.getInt("S_ORDER_CNT") + 1, newStockRemoteCount
                             );
 
-                            BigDecimal lineAmount = item.getBigDecimal("PRICE").multiply(new BigDecimal(line.quantity));
+                            BigDecimal lineAmount = item.getBigDecimal("I_PRICE").multiply(new BigDecimal(line.quantity));
 
                             connection.insertOrderLine(
                                 orderId, districtId, warehouseId, ++lineNumber, line.itemId, line.supplyingWarehouseId, null,
-                                line.quantity, lineAmount, stock.getString(String.format("DIST_%02d", districtId))
+                                line.quantity, lineAmount, stock.getString(String.format("S_DIST_%02d", districtId))
                             );
 
                             lineResultBuilder.add(new OrderLineResult(
                                 line.supplyingWarehouseId,
                                 line.itemId,
-                                item.getString("NAME"),
+                                item.getString("I_NAME"),
                                 line.quantity,
                                 newStockQuantity,
-                                item.getBigDecimal("PRICE"),
+                                item.getBigDecimal("I_PRICE"),
                                 lineAmount
                             ));
                         }
                     }
 
-                    connection.commit();
-
                     NewOrderResult result = new NewOrderResult(
-                        customerId, districtId, warehouseId, entryDate, orderId, cust.getString("LAST"),
-                        Credit.fromByteValue(cust.getByte("CREDIT")), cust.getBigDecimal("DISCOUNT"),
-                        wh.getBigDecimal("TAX"), dist.getBigDecimal("TAX"), lineResultBuilder.build()
+                        customerId, districtId, warehouseId, entryDate, orderId, cust.getString("C_LAST"),
+                        Credit.fromByteValue(cust.getByte("C_CREDIT")), cust.getBigDecimal("C_DISCOUNT"),
+                        wh.getBigDecimal("W_TAX"), dist.getBigDecimal("D_TAX"), lineResultBuilder.build()
                     );
                     return result;
                 }
@@ -155,14 +153,14 @@ public class MySQLDatabase implements Database {
     }
 
     private PaymentResult performPayment(int districtId, int warehouseId, BigDecimal amount, ResultSet customer) throws SQLException {
-        BigDecimal customerBalance = customer.getBigDecimal("BALANCE").subtract(amount);
-        BigDecimal customerYtdPayment = customer.getBigDecimal("YTD_PAYMENT").add(amount);
-        int customerPaymentCount = customer.getInt("PAYMENT_CNT") + 1;
-        int customerId = customer.getInt("ID");
-        int customerDistrictId = customer.getInt("D_ID");
-        int customerWarehouseId = customer.getInt("W_ID");
-        String customerData = customer.getString("DATA");
-        Credit customerCredit = Credit.fromByteValue(customer.getByte("CREDIT"));
+        BigDecimal customerBalance = customer.getBigDecimal("C_BALANCE").subtract(amount);
+        BigDecimal customerYtdPayment = customer.getBigDecimal("C_YTD_PAYMENT").add(amount);
+        int customerPaymentCount = customer.getInt("C_PAYMENT_CNT") + 1;
+        int customerId = customer.getInt("C_ID");
+        int customerDistrictId = customer.getInt("C_D_ID");
+        int customerWarehouseId = customer.getInt("C_W_ID");
+        String customerData = customer.getString("C_DATA");
+        Credit customerCredit = Credit.fromByteValue(customer.getByte("C_CREDIT"));
         if (customerCredit == Credit.BC) {
             StringBuilder builder = new StringBuilder(Math.min(customerData.length() + 20, 500));
             builder.append(customerId)
@@ -184,29 +182,48 @@ public class MySQLDatabase implements Database {
             ResultSet wh = connection.loadWarehouse(warehouseId);
             ResultSet dist = connection.loadDistrict(new WarehouseSpecificKey(districtId, warehouseId));
             ) {
-            connection.setWarehouseYtd(warehouseId, wh.getInt("YTD") + 1);
-            connection.setDistrictYtd(districtId, warehouseId, dist.getInt("YTD") + 1);
+            connection.setWarehouseYtd(warehouseId, wh.getInt("W_YTD") + 1);
+            connection.setDistrictYtd(districtId, warehouseId, dist.getInt("D_YTD") + 1);
 
-            String historyData = wh.getString("NAME") + "    " + dist.getString("NAME");
+            String historyData = wh.getString("W_NAME") + "    " + dist.getString("D_NAME");
             connection.insertHistory(
                 customerDistrictId, customerWarehouseId, districtId, warehouseId, new Date().getTime(), amount, historyData
             );
 
-            connection.commit();
-
             return new PaymentResult(
-                districtId, connection.getAddress(dist), warehouseId, connection.getAddress(wh), customerId, customerDistrictId,
-                customerWarehouseId, customer.getString("FIRST"), customer.getString("MIDDLE"),
-                customer.getString("LAST"), connection.getAddress(customer), customer.getString("PHONE"),
-                customer.getLong("SINCE"), customerCredit, customer.getBigDecimal("CREDIT_LIM"),
-                customer.getBigDecimal("DISCOUNT"), customerBalance, customerData
+                districtId, connection.getAddress(dist, "D"), warehouseId, connection.getAddress(wh, "W"),
+                customerId, customerDistrictId, customerWarehouseId, customer.getString("C_FIRST"),
+                customer.getString("C_MIDDLE"), customer.getString("C_LAST"),
+                connection.getAddress(customer, "C"), customer.getString("C_PHONE"),
+                customer.getLong("C_SINCE"), customerCredit, customer.getBigDecimal("C_CREDIT_LIM"),
+                customer.getBigDecimal("C_DISCOUNT"), customerBalance, customerData
             );
         }
     }
 
     @Override
     public TransactionStatus<DeliveryResult> delivery(int warehouseId, int carrierId) {
-        return null;
+        return new Transaction<DeliveryResult>() {
+            @Override
+            public DeliveryResult exec() throws SQLException {
+                ImmutableMap.Builder<Integer, Integer> processedOrders = ImmutableMap.builderWithExpectedSize(10);
+                for (int districtId = 1; districtId <= 10; districtId++) {
+                    try (ResultSet results = connection.loadLatestNewOrder(districtId, warehouseId)) {
+                        if (results.next()) {
+                            int orderId = results.getInt("NO_O_ID");
+                            connection.deleteNewOrder(orderId, districtId, warehouseId);
+                            connection.setOrderCarrierId(orderId, districtId, warehouseId, carrierId);
+                            connection.setOrderLineDeliveryDate(orderId, districtId, warehouseId, new Date().getTime());
+                            BigDecimal amount = connection.getOrderLineAmountTotal(orderId, districtId, warehouseId);
+                            connection.deliveryUpdateCustomer(results.getInt("O_C_ID"), districtId, warehouseId, amount);
+
+                            processedOrders.put(districtId, orderId);
+                        }
+                    }
+                }
+                return new DeliveryResult(warehouseId, carrierId, processedOrders.build());
+            }
+        }.run();
     }
 
     @Override
@@ -260,6 +277,8 @@ public class MySQLDatabase implements Database {
         db.payment(1, 1, 1, 1, 1, new BigDecimal("10.12"));
         db.payment("BARBARBAR", 1, 1, 1, 1, new BigDecimal("10.12"));
 
+        db.delivery(1, 5);
+
         db.close();
     }
 
@@ -270,6 +289,7 @@ public class MySQLDatabase implements Database {
             do {
                 try {
                     T result = exec();
+                    connection.commit();
                     return new TransactionStatus<>(
                         0,
                         Futures.immediateFuture(null),
@@ -291,6 +311,13 @@ public class MySQLDatabase implements Database {
                     throw re;
                 } catch (TransactionRejectedException e) {
                     System.out.println("Rejected");
+                    try {
+                        connection.rollback();
+                    } catch (SQLException se) {
+                        RuntimeException re = new RuntimeException(se);
+                        re.addSuppressed(e);
+                        throw re;
+                    }
                     return new TransactionStatus<>(
                         0,
                         Futures.immediateFuture(null),

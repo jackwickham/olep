@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 
+@SuppressWarnings("Duplicates")
 public class MySQLConnection implements AutoCloseable {
     private final Connection connection;
 
@@ -30,12 +31,17 @@ public class MySQLConnection implements AutoCloseable {
     private final PreparedStatement loadCustomerByNameStatement;
     private final PreparedStatement loadItemStatement;
     private final PreparedStatement loadStockStatement;
+    private final PreparedStatement loadLatestNewOrderStatement;
+    private final PreparedStatement getOrderLineAmountTotalStatement;
 
     private final PreparedStatement incrementNextOrderIdStatement;
     private final PreparedStatement updateStockStatement;
     private final PreparedStatement setWarehouseYtdStatement;
     private final PreparedStatement setDistrictYtdStatement;
     private final PreparedStatement paymentUpdateCustomerStatement;
+    private final PreparedStatement setOrderCarrierIdStatement;
+    private final PreparedStatement setOrderLineDeliveryDateStatement;
+    private final PreparedStatement deliveryUpdateCustomerStatement;
 
     private final PreparedStatement insertOrderStatement;
     private final PreparedStatement insertOrderLineStatement;
@@ -47,6 +53,8 @@ public class MySQLConnection implements AutoCloseable {
     private final PreparedStatement insertCustomerStatement;
     private final PreparedStatement insertItemStatement;
     private final PreparedStatement insertStockStatement;
+
+    private final PreparedStatement deleteNewOrderStatement;
 
     public MySQLConnection(DatabaseConfig config) throws SQLException {
         String url = "jdbc:mysql://" + config.getMysqlServer() + "/";
@@ -61,31 +69,38 @@ public class MySQLConnection implements AutoCloseable {
         connection.setAutoCommit(false);
         connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
-        loadWarehouseStatement = connection.prepareStatement("SELECT * FROM WAREHOUSE WHERE ID=?");
-        loadDistrictStatement = connection.prepareStatement("SELECT * FROM DISTRICT WHERE W_ID=? AND ID=?");
-        loadCustomerStatement = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE W_ID=? AND D_ID=? AND ID=?");
-        loadCustomerByNameStatement = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE W_ID=? AND D_ID=? AND LAST=? ORDER BY FIRST ASC", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-        loadItemStatement = connection.prepareStatement("SELECT * FROM ITEM WHERE ID=?");
-        loadStockStatement = connection.prepareStatement("SELECT * FROM STOCK WHERE W_ID=? AND I_ID=?");
+        loadWarehouseStatement = connection.prepareStatement("SELECT * FROM WAREHOUSE WHERE W_ID=?");
+        loadDistrictStatement = connection.prepareStatement("SELECT * FROM DISTRICT WHERE D_W_ID=? AND D_ID=?");
+        loadCustomerStatement = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE C_W_ID=? AND C_D_ID=? AND C_ID=?");
+        loadCustomerByNameStatement = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE C_W_ID=? AND C_D_ID=? AND C_LAST=? ORDER BY C_FIRST ASC", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        loadItemStatement = connection.prepareStatement("SELECT * FROM ITEM WHERE I_ID=?");
+        loadStockStatement = connection.prepareStatement("SELECT * FROM STOCK WHERE S_W_ID=? AND S_I_ID=?");
+        loadLatestNewOrderStatement = connection.prepareStatement("SELECT * FROM NEW_ORDER INNER JOIN `ORDER` ON O_W_ID=NO_W_ID AND O_D_ID=NO_D_ID WHERE NO_W_ID=? AND NO_D_ID=? LIMIT 1");
+        getOrderLineAmountTotalStatement = connection.prepareStatement("SELECT SUM(OL_AMOUNT) AS total FROM ORDER_LINE WHERE OL_W_ID=? AND OL_D_ID=? AND OL_O_ID=?");
 
-        incrementNextOrderIdStatement = connection.prepareStatement("UPDATE DISTRICT SET NEXT_O_ID=NEXT_O_ID+1 WHERE W_ID=? AND ID=?");
-        updateStockStatement = connection.prepareStatement("UPDATE STOCK SET QUANTITY=?, YTD=?, ORDER_CNT=?, REMOTE_CNT=? WHERE W_ID=? AND I_ID=?");
-        setWarehouseYtdStatement = connection.prepareStatement("UPDATE WAREHOUSE SET YTD=? WHERE ID=?");
-        setDistrictYtdStatement = connection.prepareStatement("UPDATE DISTRICT SET YTD=? WHERE W_ID=? AND ID=?");
-        paymentUpdateCustomerStatement = connection.prepareStatement("UPDATE CUSTOMER SET BALANCE=?, YTD_PAYMENT=?, PAYMENT_CNT=?, DATA=? WHERE W_ID=? AND D_ID=? AND ID=?");
+        incrementNextOrderIdStatement = connection.prepareStatement("UPDATE DISTRICT SET D_NEXT_O_ID=D_NEXT_O_ID+1 WHERE D_W_ID=? AND D_ID=?");
+        updateStockStatement = connection.prepareStatement("UPDATE STOCK SET S_QUANTITY=?, S_YTD=?, S_ORDER_CNT=?, S_REMOTE_CNT=? WHERE S_W_ID=? AND S_I_ID=?");
+        setWarehouseYtdStatement = connection.prepareStatement("UPDATE WAREHOUSE SET W_YTD=? WHERE W_ID=?");
+        setDistrictYtdStatement = connection.prepareStatement("UPDATE DISTRICT SET D_YTD=? WHERE D_W_ID=? AND D_ID=?");
+        paymentUpdateCustomerStatement = connection.prepareStatement("UPDATE CUSTOMER SET C_BALANCE=?, C_YTD_PAYMENT=?, C_PAYMENT_CNT=?, C_DATA=? WHERE C_W_ID=? AND C_D_ID=? AND C_ID=?");
+        setOrderCarrierIdStatement = connection.prepareStatement("UPDATE `ORDER` SET O_CARRIER_ID=? WHERE O_W_ID=? AND O_D_ID=? AND O_ID=?");
+        setOrderLineDeliveryDateStatement = connection.prepareStatement("UPDATE ORDER_LINE SET OL_DELIVERY_D=? WHERE OL_W_ID=? AND OL_D_ID=? AND OL_O_ID=?");
+        deliveryUpdateCustomerStatement = connection.prepareStatement("UPDATE CUSTOMER SET C_BALANCE=C_BALANCE+?, C_DELIVERY_CNT=C_DELIVERY_CNT+1 WHERE C_W_ID=? AND C_D_ID=? AND C_ID=?");
 
-        insertOrderStatement = connection.prepareStatement("INSERT INTO `ORDER` (ID, D_ID, W_ID, C_ID, ENTRY_D, CARRIER_ID, OL_CNT, ALL_LOCAL) VALUE (?, ?, ?, ?, ?, ?, ?, ?)");
-        insertOrderLineStatement = connection.prepareStatement("INSERT INTO ORDER_LINE (O_ID, D_ID, W_ID, NUMBER, I_ID, SUPPLY_W_ID, DELIVERY_D, QUANTITY, AMOUNT, DIST_INFO) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        insertNewOrderStatement = connection.prepareStatement("INSERT INTO NEW_ORDER (O_ID, D_ID, W_ID) VALUE (?, ?, ?)");
-        insertHistoryStatement = connection.prepareStatement("INSERT INTO HISTORY (C_D_ID, C_W_ID, D_ID, W_ID, DATE, AMOUNT, DATA) VALUE (?, ?, ?, ?, ?, ?, ?)");
+        insertOrderStatement = connection.prepareStatement("INSERT INTO `ORDER` (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, O_OL_CNT, O_ALL_LOCAL) VALUE (?, ?, ?, ?, ?, ?, ?, ?)");
+        insertOrderLineStatement = connection.prepareStatement("INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        insertNewOrderStatement = connection.prepareStatement("INSERT INTO NEW_ORDER (NO_O_ID, NO_D_ID, NO_W_ID) VALUE (?, ?, ?)");
+        insertHistoryStatement = connection.prepareStatement("INSERT INTO HISTORY (H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATE, H_AMOUNT, H_DATA) VALUE (?, ?, ?, ?, ?, ?, ?)");
 
-        insertWarehouseStatement = connection.prepareStatement("INSERT INTO WAREHOUSE (ID, NAME, STREET_1, STREET_2, CITY, STATE, ZIP, TAX, YTD) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        insertDistrictStatement = connection.prepareStatement("INSERT INTO DISTRICT (ID, W_ID, NAME, STREET_1, STREET_2, CITY, STATE, ZIP, TAX, YTD, NEXT_O_ID) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        insertCustomerStatement = connection.prepareStatement("INSERT INTO CUSTOMER (ID, D_ID, W_ID, FIRST, MIDDLE, LAST, STREET_1, STREET_2, CITY, STATE, ZIP, PHONE, SINCE," +
-            "CREDIT, CREDIT_LIM, DISCOUNT, BALANCE, YTD_PAYMENT,  PAYMENT_CNT, DELIVERY_CNT, DATA) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        insertItemStatement = connection.prepareStatement("INSERT INTO ITEM (ID, IM_ID, NAME, PRICE, DATA) VALUES (?, ?, ?, ?, ?)");
-        insertStockStatement = connection.prepareStatement("INSERT INTO STOCK (W_ID, I_ID, QUANTITY, DIST_01, DIST_02, DIST_03, DIST_04, DIST_05, DIST_06, DIST_07, DIST_08, DIST_09, DIST_10," +
-            "YTD, ORDER_CNT, REMOTE_CNT, DATA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        insertWarehouseStatement = connection.prepareStatement("INSERT INTO WAREHOUSE (W_ID, W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_TAX, W_YTD) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        insertDistrictStatement = connection.prepareStatement("INSERT INTO DISTRICT (D_ID, D_W_ID, D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_TAX, D_YTD, D_NEXT_O_ID) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        insertCustomerStatement = connection.prepareStatement("INSERT INTO CUSTOMER (C_ID, C_D_ID, C_W_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE," +
+            "C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_YTD_PAYMENT,  C_PAYMENT_CNT, C_DELIVERY_CNT, C_DATA) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        insertItemStatement = connection.prepareStatement("INSERT INTO ITEM (I_ID, I_IM_ID, I_NAME, I_PRICE, I_DATA) VALUES (?, ?, ?, ?, ?)");
+        insertStockStatement = connection.prepareStatement("INSERT INTO STOCK (S_W_ID, S_I_ID, S_QUANTITY, S_DIST_01, S_DIST_02, S_DIST_03, S_DIST_04, S_DIST_05, S_DIST_06, S_DIST_07, S_DIST_08, S_DIST_09, S_DIST_10," +
+            "S_YTD, S_ORDER_CNT, S_REMOTE_CNT, S_DATA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        deleteNewOrderStatement = connection.prepareStatement("DELETE FROM NEW_ORDER WHERE NO_W_ID=? AND NO_D_ID=? AND NO_O_ID=?");
     }
 
     public void commit() throws SQLException {
@@ -150,6 +165,23 @@ public class MySQLConnection implements AutoCloseable {
         return results;
     }
 
+    @MustBeClosed
+    public ResultSet loadLatestNewOrder(int districtId, int warehouseId) throws SQLException {
+        loadLatestNewOrderStatement.setInt(1, warehouseId);
+        loadLatestNewOrderStatement.setInt(2, districtId);
+        return loadLatestNewOrderStatement.executeQuery();
+    }
+
+    public BigDecimal getOrderLineAmountTotal(int orderId, int districtId, int warehouseId) throws SQLException {
+        int index = 0;
+        getOrderLineAmountTotalStatement.setInt(++index, warehouseId);
+        getOrderLineAmountTotalStatement.setInt(++index, districtId);
+        getOrderLineAmountTotalStatement.setInt(++index, orderId);
+        ResultSet results = getOrderLineAmountTotalStatement.executeQuery();
+        results.next();
+        return results.getBigDecimal("total");
+    }
+
     ///// Updates /////
 
     public void incrementDistrictNextOrderId(WarehouseSpecificKey district) throws SQLException {
@@ -191,6 +223,33 @@ public class MySQLConnection implements AutoCloseable {
         paymentUpdateCustomerStatement.setInt(++index, districtId);
         paymentUpdateCustomerStatement.setInt(++index, id);
         paymentUpdateCustomerStatement.executeUpdate();
+    }
+
+    public void setOrderCarrierId(int orderId, int districtId, int warehouseId, int carrierId) throws SQLException {
+        int index = 0;
+        setOrderCarrierIdStatement.setInt(++index, carrierId);
+        setOrderCarrierIdStatement.setInt(++index, warehouseId);
+        setOrderCarrierIdStatement.setInt(++index, districtId);
+        setOrderCarrierIdStatement.setInt(++index, orderId);
+        setOrderCarrierIdStatement.executeUpdate();
+    }
+
+    public void setOrderLineDeliveryDate(int orderId, int districtId, int warehouseId, long deliveryDate) throws SQLException {
+        int index = 0;
+        setOrderLineDeliveryDateStatement.setLong(++index, deliveryDate);
+        setOrderLineDeliveryDateStatement.setInt(++index, warehouseId);
+        setOrderLineDeliveryDateStatement.setInt(++index, districtId);
+        setOrderLineDeliveryDateStatement.setInt(++index, orderId);
+        setOrderLineDeliveryDateStatement.executeUpdate();
+    }
+
+    public void deliveryUpdateCustomer(int customerId, int districtId, int warehouseId, BigDecimal totalAmount) throws SQLException {
+        int index = 0;
+        deliveryUpdateCustomerStatement.setBigDecimal(++index, totalAmount);
+        deliveryUpdateCustomerStatement.setInt(++index, warehouseId);
+        deliveryUpdateCustomerStatement.setInt(++index, districtId);
+        deliveryUpdateCustomerStatement.setInt(++index, customerId);
+        deliveryUpdateCustomerStatement.executeUpdate();
     }
 
     ///// Inserts /////
@@ -328,6 +387,18 @@ public class MySQLConnection implements AutoCloseable {
         insertStockStatement.executeUpdate();
     }
 
+    ///// Deletes /////
+
+    public void deleteNewOrder(int orderId, int districtId, int warehouseId) throws SQLException {
+        int index = 0;
+        deleteNewOrderStatement.setInt(++index, warehouseId);
+        deleteNewOrderStatement.setInt(++index, districtId);
+        deleteNewOrderStatement.setInt(++index, orderId);
+        deleteNewOrderStatement.executeUpdate();
+    }
+
+    //// Utilities /////
+
     private int bindAddress(PreparedStatement statement, Address address, int offset) throws SQLException {
         statement.setString(++offset, address.street1);
         statement.setString(++offset, address.street2);
@@ -337,13 +408,13 @@ public class MySQLConnection implements AutoCloseable {
         return offset;
     }
 
-    public Address getAddress(ResultSet results) throws SQLException {
+    public Address getAddress(ResultSet results, String tablePrefix) throws SQLException {
         return new Address(
-            results.getString("STREET_1"),
-            results.getString("STREET_2"),
-            results.getString("CITY"),
-            results.getString("STATE"),
-            results.getString("ZIP")
+            results.getString(tablePrefix + "_STREET_1"),
+            results.getString(tablePrefix + "_STREET_2"),
+            results.getString(tablePrefix + "_CITY"),
+            results.getString(tablePrefix + "_STATE"),
+            results.getString(tablePrefix + "_ZIP")
         );
     }
 
@@ -351,25 +422,25 @@ public class MySQLConnection implements AutoCloseable {
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("DROP TABLE IF EXISTS WAREHOUSE, DISTRICT, CUSTOMER, HISTORY, NEW_ORDER, `ORDER`, ORDER_LINE, ITEM, STOCK");
 
-            statement.executeUpdate("CREATE TABLE WAREHOUSE (ID INTEGER, NAME VARCHAR(10), STREET_1 VARCHAR(20), STREET_2 VARCHAR(20), CITY VARCHAR(20), " +
-                "STATE VARCHAR(2), ZIP VARCHAR(9), TAX DECIMAL(4, 4), YTD DECIMAL(12, 2), PRIMARY KEY (ID))");
-            statement.executeUpdate("CREATE TABLE DISTRICT (ID INTEGER, W_ID INTEGER, NAME VARCHAR(10), STREET_1 VARCHAR(20)," +
-                " STREET_2 VARCHAR(20), CITY VARCHAR(20), STATE VARCHAR(2), ZIP VARCHAR(9), TAX DECIMAL(4, 4), YTD DECIMAL(12, 2), NEXT_O_ID INTEGER, PRIMARY KEY (W_ID, ID))");
-            statement.executeUpdate("CREATE TABLE CUSTOMER (ID INTEGER, D_ID INTEGER, W_ID INTEGER, FIRST VARCHAR(16)," +
-                "MIDDLE VARCHAR(2), LAST VARCHAR(16), STREET_1 VARCHAR(20), STREET_2 VARCHAR(20), CITY VARCHAR(20), STATE VARCHAR(2), ZIP VARCHAR(9)," +
-                "PHONE VARCHAR(16), SINCE BIGINT, CREDIT TINYINT, CREDIT_LIM DECIMAL(12, 2), DISCOUNT DECIMAL(4, 4), BALANCE DECIMAL(12, 2), " +
-                "YTD_PAYMENT DECIMAL(12, 2), PAYMENT_CNT INT, DELIVERY_CNT INT, DATA VARCHAR(500), PRIMARY KEY (W_ID, D_ID, ID))");
-            statement.executeUpdate("CREATE INDEX LAST ON CUSTOMER (LAST)");
-            statement.executeUpdate("CREATE TABLE HISTORY (C_ID INT, C_D_ID INT, C_W_ID INT, D_ID INT, W_ID INT, DATE BIGINT, AMOUNT DEC(6, 2), DATA VARCHAR(24))");
-            statement.executeUpdate("CREATE TABLE NEW_ORDER (O_ID INT, D_ID INT, W_ID INT, PRIMARY KEY (W_ID, D_ID, O_ID))");
-            statement.executeUpdate("CREATE TABLE `ORDER` (ID INT, D_ID INT, W_ID INT, C_ID INT, ENTRY_D BIGINT," +
-                "CARRIER_ID TINYINT NULL, OL_CNT TINYINT, ALL_LOCAL BOOL, PRIMARY KEY (W_ID, D_ID, ID))");
-            statement.executeUpdate("CREATE TABLE ORDER_LINE (O_ID INT, D_ID INT, W_ID INT, NUMBER INT," +
-                "I_ID INT, SUPPLY_W_ID INT, DELIVERY_D BIGINT NULL, QUANTITY TINYINT, AMOUNT DEC(6, 2), DIST_INFO VARCHAR(24), PRIMARY KEY (W_ID, D_ID, O_ID, NUMBER))");
-            statement.executeUpdate("CREATE TABLE ITEM (ID INT, IM_ID INT, NAME VARCHAR(24), PRICE DEC(5, 2), DATA VARCHAR(50), PRIMARY KEY (ID))");
-            statement.executeUpdate("CREATE TABLE STOCK (I_ID INT, W_ID INT, QUANTITY INT, DIST_01 VARCHAR(24), DIST_02 VARCHAR(24)," +
-                "DIST_03 VARCHAR(24), DIST_04 VARCHAR(24), DIST_05 VARCHAR(24), DIST_06 VARCHAR(24), DIST_07 VARCHAR(24), DIST_08 VARCHAR(24)," +
-                "DIST_09 VARCHAR(24), DIST_10 VARCHAR(24), YTD INT, ORDER_CNT INT, REMOTE_CNT INT, DATA VARCHAR(50), PRIMARY KEY (W_ID, I_ID))");
+            statement.executeUpdate("CREATE TABLE WAREHOUSE (W_ID INTEGER, W_NAME VARCHAR(10), W_STREET_1 VARCHAR(20), W_STREET_2 VARCHAR(20), W_CITY VARCHAR(20), " +
+                "W_STATE VARCHAR(2), W_ZIP VARCHAR(9), W_TAX DECIMAL(4, 4), W_YTD DECIMAL(12, 2), PRIMARY KEY (W_ID))");
+            statement.executeUpdate("CREATE TABLE DISTRICT (D_ID INTEGER, D_W_ID INTEGER, D_NAME VARCHAR(10), D_STREET_1 VARCHAR(20)," +
+                " D_STREET_2 VARCHAR(20), D_CITY VARCHAR(20), D_STATE VARCHAR(2), D_ZIP VARCHAR(9), D_TAX DECIMAL(4, 4), D_YTD DECIMAL(12, 2), D_NEXT_O_ID INTEGER, PRIMARY KEY (D_W_ID, D_ID))");
+            statement.executeUpdate("CREATE TABLE CUSTOMER (C_ID INTEGER, C_D_ID INTEGER, C_W_ID INTEGER, C_FIRST VARCHAR(16)," +
+                "C_MIDDLE VARCHAR(2), C_LAST VARCHAR(16), C_STREET_1 VARCHAR(20), C_STREET_2 VARCHAR(20), C_CITY VARCHAR(20), C_STATE VARCHAR(2), C_ZIP VARCHAR(9)," +
+                "C_PHONE VARCHAR(16), C_SINCE BIGINT, C_CREDIT TINYINT, C_CREDIT_LIM DECIMAL(12, 2), C_DISCOUNT DECIMAL(4, 4), C_BALANCE DECIMAL(12, 2), " +
+                "C_YTD_PAYMENT DECIMAL(12, 2), C_PAYMENT_CNT INT, C_DELIVERY_CNT INT, C_DATA VARCHAR(500), PRIMARY KEY (C_W_ID, C_D_ID, C_ID))");
+            statement.executeUpdate("CREATE INDEX LAST ON CUSTOMER (C_LAST)");
+            statement.executeUpdate("CREATE TABLE HISTORY (H_C_ID INT, H_C_D_ID INT, H_C_W_ID INT, H_D_ID INT, H_W_ID INT, H_DATE BIGINT, H_AMOUNT DEC(6, 2), H_DATA VARCHAR(24))");
+            statement.executeUpdate("CREATE TABLE NEW_ORDER (NO_O_ID INT, NO_D_ID INT, NO_W_ID INT, PRIMARY KEY (NO_W_ID, NO_D_ID, NO_O_ID))");
+            statement.executeUpdate("CREATE TABLE `ORDER` (O_ID INT, O_D_ID INT, O_W_ID INT, O_C_ID INT, O_ENTRY_D BIGINT," +
+                "O_CARRIER_ID TINYINT NULL, O_OL_CNT TINYINT, O_ALL_LOCAL BOOL, PRIMARY KEY (O_W_ID, O_D_ID, O_ID))");
+            statement.executeUpdate("CREATE TABLE ORDER_LINE (OL_O_ID INT, OL_D_ID INT, OL_W_ID INT, OL_NUMBER INT," +
+                "OL_I_ID INT, OL_SUPPLY_W_ID INT, OL_DELIVERY_D BIGINT NULL, OL_QUANTITY TINYINT, OL_AMOUNT DEC(6, 2), OL_DIST_INFO VARCHAR(24), PRIMARY KEY (OL_W_ID, OL_D_ID, OL_O_ID, OL_NUMBER))");
+            statement.executeUpdate("CREATE TABLE ITEM (I_ID INT, I_IM_ID INT, I_NAME VARCHAR(24), I_PRICE DEC(5, 2), I_DATA VARCHAR(50), PRIMARY KEY (I_ID))");
+            statement.executeUpdate("CREATE TABLE STOCK (S_I_ID INT, S_W_ID INT, S_QUANTITY INT, S_DIST_01 VARCHAR(24), S_DIST_02 VARCHAR(24)," +
+                "S_DIST_03 VARCHAR(24), S_DIST_04 VARCHAR(24), S_DIST_05 VARCHAR(24), S_DIST_06 VARCHAR(24), S_DIST_07 VARCHAR(24), S_DIST_08 VARCHAR(24)," +
+                "S_DIST_09 VARCHAR(24), S_DIST_10 VARCHAR(24), S_YTD INT, S_ORDER_CNT INT, S_REMOTE_CNT INT, S_DATA VARCHAR(50), PRIMARY KEY (S_W_ID, S_I_ID))");
         }
     }
 

@@ -36,7 +36,7 @@ public class DeliveryResult extends TransactionResultMessage {
     public final int carrierId;
     public final ImmutableMap<Integer, Integer> processedOrders;
 
-    private DeliveryResult(int warehouseId, int carrierId, ImmutableMap<Integer, Integer> processedOrders) {
+    public DeliveryResult(int warehouseId, int carrierId, ImmutableMap<Integer, Integer> processedOrders) {
         this.warehouseId = warehouseId;
         this.carrierId = carrierId;
         this.processedOrders = processedOrders;
