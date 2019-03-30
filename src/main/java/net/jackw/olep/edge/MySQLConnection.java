@@ -33,6 +33,7 @@ public class MySQLConnection implements AutoCloseable {
     private final PreparedStatement loadStockStatement;
     private final PreparedStatement loadLatestNewOrderStatement;
     private final PreparedStatement getOrderLineAmountTotalStatement;
+    private final PreparedStatement getStockLevelStatement;
 
     private final PreparedStatement incrementNextOrderIdStatement;
     private final PreparedStatement updateStockStatement;
@@ -77,6 +78,8 @@ public class MySQLConnection implements AutoCloseable {
         loadStockStatement = connection.prepareStatement("SELECT * FROM STOCK WHERE S_W_ID=? AND S_I_ID=?");
         loadLatestNewOrderStatement = connection.prepareStatement("SELECT * FROM NEW_ORDER INNER JOIN `ORDER` ON O_W_ID=NO_W_ID AND O_D_ID=NO_D_ID WHERE NO_W_ID=? AND NO_D_ID=? LIMIT 1");
         getOrderLineAmountTotalStatement = connection.prepareStatement("SELECT SUM(OL_AMOUNT) AS total FROM ORDER_LINE WHERE OL_W_ID=? AND OL_D_ID=? AND OL_O_ID=?");
+        getStockLevelStatement = connection.prepareStatement("SELECT COUNT(*) as count FROM `ORDER` INNER JOIN `ORDER_LINE` ON O_ID=OL_O_ID AND O_W_ID=OL_W_ID AND O_D_ID=OL_D_ID " +
+            "INNER JOIN STOCK ON OL_I_ID=S_I_ID AND S_W_ID=OL_W_ID WHERE O_W_ID=? AND O_D_ID=? AND O_ID >= (SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID=? AND D_ID=?) - 20 AND S_QUANTITY < ?");
 
         incrementNextOrderIdStatement = connection.prepareStatement("UPDATE DISTRICT SET D_NEXT_O_ID=D_NEXT_O_ID+1 WHERE D_W_ID=? AND D_ID=?");
         updateStockStatement = connection.prepareStatement("UPDATE STOCK SET S_QUANTITY=?, S_YTD=?, S_ORDER_CNT=?, S_REMOTE_CNT=? WHERE S_W_ID=? AND S_I_ID=?");
@@ -180,6 +183,19 @@ public class MySQLConnection implements AutoCloseable {
         ResultSet results = getOrderLineAmountTotalStatement.executeQuery();
         results.next();
         return results.getBigDecimal("total");
+    }
+
+    public int getStockLevel(int districtId, int warehouseId, int threshold) throws SQLException {
+        int index = 0;
+        getStockLevelStatement.setInt(++index, warehouseId);
+        getStockLevelStatement.setInt(++index, districtId);
+        getStockLevelStatement.setInt(++index, warehouseId);
+        getStockLevelStatement.setInt(++index, districtId);
+        getStockLevelStatement.setInt(++index, threshold);
+
+        ResultSet results = getStockLevelStatement.executeQuery();
+        results.next();
+        return results.getInt("count");
     }
 
     ///// Updates /////
