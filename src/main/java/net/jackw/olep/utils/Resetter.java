@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import net.jackw.olep.common.Arguments;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.KafkaConfig;
+import net.jackw.olep.edge.MySQLConnection;
 import net.jackw.olep.utils.populate.PopulateStores;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -17,6 +18,7 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.KafkaException;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -71,8 +73,16 @@ public class Resetter implements AutoCloseable {
     }
 
     public void reset() throws InterruptedException, ExecutionException {
-        deleteTopics();
-        createTopics();
+        if (config.isSqlBenchmark()) {
+            try (MySQLConnection connection = new MySQLConnection(config)) {
+                connection.createTables();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            deleteTopics();
+            createTopics();
+        }
         if (populate) {
             populateTopics();
         }

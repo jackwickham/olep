@@ -462,7 +462,8 @@ public class MySQLConnection implements AutoCloseable {
                 "C_PHONE VARCHAR(16), C_SINCE BIGINT, C_CREDIT TINYINT, C_CREDIT_LIM DECIMAL(12, 2), C_DISCOUNT DECIMAL(4, 4), C_BALANCE DECIMAL(12, 2), " +
                 "C_YTD_PAYMENT DECIMAL(12, 2), C_PAYMENT_CNT INT, C_DELIVERY_CNT INT, C_DATA VARCHAR(500), PRIMARY KEY (C_W_ID, C_D_ID, C_ID))");
             statement.executeUpdate("CREATE INDEX LAST ON CUSTOMER (C_LAST)");
-            statement.executeUpdate("CREATE TABLE HISTORY (H_C_ID INT, H_C_D_ID INT, H_C_W_ID INT, H_D_ID INT, H_W_ID INT, H_DATE BIGINT, H_AMOUNT DEC(6, 2), H_DATA VARCHAR(24))");
+            // H_AMOUNT is specified to be numeric(6, 2), but can take values up to 5000.00, which exceeds that... It has been increased to (7, 2) here.
+            statement.executeUpdate("CREATE TABLE HISTORY (H_C_ID INT, H_C_D_ID INT, H_C_W_ID INT, H_D_ID INT, H_W_ID INT, H_DATE BIGINT, H_AMOUNT DEC(7, 2), H_DATA VARCHAR(24))");
             statement.executeUpdate("CREATE TABLE NEW_ORDER (NO_O_ID INT, NO_D_ID INT, NO_W_ID INT, PRIMARY KEY (NO_W_ID, NO_D_ID, NO_O_ID))");
             statement.executeUpdate("CREATE TABLE `ORDER` (O_ID INT, O_D_ID INT, O_W_ID INT, O_C_ID INT, O_ENTRY_D BIGINT," +
                 "O_CARRIER_ID TINYINT NULL, O_OL_CNT TINYINT, O_ALL_LOCAL BOOL, PRIMARY KEY (O_W_ID, O_D_ID, O_ID))");
@@ -473,11 +474,6 @@ public class MySQLConnection implements AutoCloseable {
                 "S_DIST_03 VARCHAR(24), S_DIST_04 VARCHAR(24), S_DIST_05 VARCHAR(24), S_DIST_06 VARCHAR(24), S_DIST_07 VARCHAR(24), S_DIST_08 VARCHAR(24)," +
                 "S_DIST_09 VARCHAR(24), S_DIST_10 VARCHAR(24), S_YTD INT, S_ORDER_CNT INT, S_REMOTE_CNT INT, S_DATA VARCHAR(50), PRIMARY KEY (S_W_ID, S_I_ID))");
         }
-    }
-
-    @MustBeClosed
-    public Statement getStatement() throws SQLException {
-        return connection.createStatement();
     }
 
     @Override

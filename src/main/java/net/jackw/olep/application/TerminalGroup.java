@@ -8,6 +8,7 @@ import akka.japi.pf.DeciderBuilder;
 import net.jackw.olep.edge.Database;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.edge.EventDatabase;
+import net.jackw.olep.edge.MySQLDatabase;
 
 import java.util.function.Consumer;
 
@@ -27,7 +28,11 @@ public class TerminalGroup extends AbstractActor {
         this.warehouseIdRange = warehouseIdRange;
         this.config = config;
         this.onFailure = onFailure;
-        this.db = new EventDatabase(config);
+        if (config.isSqlBenchmark()) {
+            this.db = new MySQLDatabase(config);
+        } else {
+            this.db = new EventDatabase(config);
+        }
     }
 
     @Override
