@@ -4,8 +4,11 @@ import com.google.errorprone.annotations.MustBeClosed;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.Address;
 import net.jackw.olep.common.records.Customer;
+import net.jackw.olep.common.records.CustomerNameKey;
 import net.jackw.olep.common.records.DistrictShared;
 import net.jackw.olep.common.records.DistrictSpecificKey;
+import net.jackw.olep.common.records.Item;
+import net.jackw.olep.common.records.Stock;
 import net.jackw.olep.common.records.WarehouseShared;
 import net.jackw.olep.common.records.WarehouseSpecificKey;
 
@@ -24,18 +27,26 @@ public class MySQLConnection implements AutoCloseable {
     private final PreparedStatement loadWarehouseStatement;
     private final PreparedStatement loadDistrictStatement;
     private final PreparedStatement loadCustomerStatement;
+    private final PreparedStatement loadCustomerByNameStatement;
     private final PreparedStatement loadItemStatement;
     private final PreparedStatement loadStockStatement;
 
     private final PreparedStatement incrementNextOrderIdStatement;
     private final PreparedStatement updateStockStatement;
+    private final PreparedStatement setWarehouseYtdStatement;
+    private final PreparedStatement setDistrictYtdStatement;
+    private final PreparedStatement paymentUpdateCustomerStatement;
 
     private final PreparedStatement insertOrderStatement;
     private final PreparedStatement insertOrderLineStatement;
+    private final PreparedStatement insertNewOrderStatement;
+    private final PreparedStatement insertHistoryStatement;
 
     private final PreparedStatement insertWarehouseStatement;
     private final PreparedStatement insertDistrictStatement;
     private final PreparedStatement insertCustomerStatement;
+    private final PreparedStatement insertItemStatement;
+    private final PreparedStatement insertStockStatement;
 
     public MySQLConnection(DatabaseConfig config) throws SQLException {
         String url = "jdbc:mysql://" + config.getMysqlServer() + "/";
@@ -48,23 +59,33 @@ public class MySQLConnection implements AutoCloseable {
             statement.execute("USE olep");
         }
         connection.setAutoCommit(false);
+        connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
         loadWarehouseStatement = connection.prepareStatement("SELECT * FROM WAREHOUSE WHERE ID=?");
         loadDistrictStatement = connection.prepareStatement("SELECT * FROM DISTRICT WHERE W_ID=? AND ID=?");
         loadCustomerStatement = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE W_ID=? AND D_ID=? AND ID=?");
+        loadCustomerByNameStatement = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE W_ID=? AND D_ID=? AND LAST=? ORDER BY FIRST ASC", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
         loadItemStatement = connection.prepareStatement("SELECT * FROM ITEM WHERE ID=?");
         loadStockStatement = connection.prepareStatement("SELECT * FROM STOCK WHERE W_ID=? AND I_ID=?");
 
         incrementNextOrderIdStatement = connection.prepareStatement("UPDATE DISTRICT SET NEXT_O_ID=NEXT_O_ID+1 WHERE W_ID=? AND ID=?");
         updateStockStatement = connection.prepareStatement("UPDATE STOCK SET QUANTITY=?, YTD=?, ORDER_CNT=?, REMOTE_CNT=? WHERE W_ID=? AND I_ID=?");
+        setWarehouseYtdStatement = connection.prepareStatement("UPDATE WAREHOUSE SET YTD=? WHERE ID=?");
+        setDistrictYtdStatement = connection.prepareStatement("UPDATE DISTRICT SET YTD=? WHERE W_ID=? AND ID=?");
+        paymentUpdateCustomerStatement = connection.prepareStatement("UPDATE CUSTOMER SET BALANCE=?, YTD_PAYMENT=?, PAYMENT_CNT=?, DATA=? WHERE W_ID=? AND D_ID=? AND ID=?");
 
         insertOrderStatement = connection.prepareStatement("INSERT INTO `ORDER` (ID, D_ID, W_ID, C_ID, ENTRY_D, CARRIER_ID, OL_CNT, ALL_LOCAL) VALUE (?, ?, ?, ?, ?, ?, ?, ?)");
         insertOrderLineStatement = connection.prepareStatement("INSERT INTO ORDER_LINE (O_ID, D_ID, W_ID, NUMBER, I_ID, SUPPLY_W_ID, DELIVERY_D, QUANTITY, AMOUNT, DIST_INFO) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        insertNewOrderStatement = connection.prepareStatement("INSERT INTO NEW_ORDER (O_ID, D_ID, W_ID) VALUE (?, ?, ?)");
+        insertHistoryStatement = connection.prepareStatement("INSERT INTO HISTORY (C_D_ID, C_W_ID, D_ID, W_ID, DATE, AMOUNT, DATA) VALUE (?, ?, ?, ?, ?, ?, ?)");
 
         insertWarehouseStatement = connection.prepareStatement("INSERT INTO WAREHOUSE (ID, NAME, STREET_1, STREET_2, CITY, STATE, ZIP, TAX, YTD) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         insertDistrictStatement = connection.prepareStatement("INSERT INTO DISTRICT (ID, W_ID, NAME, STREET_1, STREET_2, CITY, STATE, ZIP, TAX, YTD, NEXT_O_ID) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         insertCustomerStatement = connection.prepareStatement("INSERT INTO CUSTOMER (ID, D_ID, W_ID, FIRST, MIDDLE, LAST, STREET_1, STREET_2, CITY, STATE, ZIP, PHONE, SINCE," +
             "CREDIT, CREDIT_LIM, DISCOUNT, BALANCE, YTD_PAYMENT,  PAYMENT_CNT, DELIVERY_CNT, DATA) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        insertItemStatement = connection.prepareStatement("INSERT INTO ITEM (ID, IM_ID, NAME, PRICE, DATA) VALUES (?, ?, ?, ?, ?)");
+        insertStockStatement = connection.prepareStatement("INSERT INTO STOCK (W_ID, I_ID, QUANTITY, DIST_01, DIST_02, DIST_03, DIST_04, DIST_05, DIST_06, DIST_07, DIST_08, DIST_09, DIST_10," +
+            "YTD, ORDER_CNT, REMOTE_CNT, DATA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     }
 
     public void commit() throws SQLException {
@@ -105,6 +126,14 @@ public class MySQLConnection implements AutoCloseable {
     }
 
     @MustBeClosed
+    public ResultSet loadCustomersByName(CustomerNameKey customer) throws SQLException {
+        loadCustomerByNameStatement.setInt(1, customer.warehouseId);
+        loadCustomerByNameStatement.setInt(2, customer.districtId);
+        loadCustomerByNameStatement.setString(3, customer.lastName);
+        return loadCustomerByNameStatement.executeQuery();
+    }
+
+    @MustBeClosed
     public ResultSet loadItem(int id) throws SQLException {
         loadItemStatement.setInt(1, id);
         ResultSet results = loadItemStatement.executeQuery();
@@ -137,6 +166,31 @@ public class MySQLConnection implements AutoCloseable {
         updateStockStatement.setInt(5, key.warehouseId);
         updateStockStatement.setInt(6, key.id);
         updateStockStatement.executeUpdate();
+    }
+
+    public void setWarehouseYtd(int id, int newYtd) throws SQLException {
+        setWarehouseYtdStatement.setInt(1, newYtd);
+        setWarehouseYtdStatement.setInt(2, id);
+        setWarehouseYtdStatement.executeUpdate();
+    }
+
+    public void setDistrictYtd(int districtId, int warehouseId, int newYtd) throws SQLException {
+        setDistrictYtdStatement.setInt(1, newYtd);
+        setDistrictYtdStatement.setInt(2, warehouseId);
+        setDistrictYtdStatement.setInt(3, districtId);
+        setDistrictYtdStatement.executeUpdate();
+    }
+
+    public void paymentUpdateCustomer(int id, int districtId, int warehouseId, BigDecimal balance, BigDecimal ytdPayment, int paymentCount, String data) throws SQLException {
+        int index = 0;
+        paymentUpdateCustomerStatement.setBigDecimal(++index, balance);
+        paymentUpdateCustomerStatement.setBigDecimal(++index, ytdPayment);
+        paymentUpdateCustomerStatement.setInt(++index, paymentCount);
+        paymentUpdateCustomerStatement.setString(++index, data);
+        paymentUpdateCustomerStatement.setInt(++index, warehouseId);
+        paymentUpdateCustomerStatement.setInt(++index, districtId);
+        paymentUpdateCustomerStatement.setInt(++index, id);
+        paymentUpdateCustomerStatement.executeUpdate();
     }
 
     ///// Inserts /////
@@ -173,6 +227,26 @@ public class MySQLConnection implements AutoCloseable {
         insertOrderLineStatement.setBigDecimal(9, amount);
         insertOrderLineStatement.setString(10, distInfo);
         insertOrderLineStatement.executeUpdate();
+    }
+
+    public void insertNewOrder(int orderId, int districtId, int warehouseId) throws SQLException {
+        int index = 0;
+        insertNewOrderStatement.setInt(++index, orderId);
+        insertNewOrderStatement.setInt(++index, districtId);
+        insertNewOrderStatement.setInt(++index, warehouseId);
+        insertNewOrderStatement.executeUpdate();
+    }
+
+    public void insertHistory(int customerDistrictId, int customerWarehouseId, int districtId, int warehouseId, long date, BigDecimal amount, String data) throws SQLException {
+        int index = 0;
+        insertHistoryStatement.setInt(++index, customerDistrictId);
+        insertHistoryStatement.setInt(++index, customerWarehouseId);
+        insertHistoryStatement.setInt(++index, districtId);
+        insertHistoryStatement.setInt(++index, warehouseId);
+        insertHistoryStatement.setLong(++index, date);
+        insertHistoryStatement.setBigDecimal(++index, amount);
+        insertHistoryStatement.setString(++index, data);
+        insertHistoryStatement.executeUpdate();
     }
 
     public void insertWarehouse(WarehouseShared warehouse, BigDecimal ytd) throws SQLException {
@@ -220,6 +294,40 @@ public class MySQLConnection implements AutoCloseable {
         insertCustomerStatement.executeUpdate();
     }
 
+    public void insertItem(Item item) throws SQLException {
+        int index = 0;
+        insertItemStatement.setInt(++index, item.id);
+        insertItemStatement.setInt(++index, item.imageId);
+        insertItemStatement.setString(++index, item.name);
+        insertItemStatement.setBigDecimal(++index, item.price);
+        insertItemStatement.setString(++index, item.data);
+
+        insertItemStatement.executeUpdate();
+    }
+
+    public void insertStock(Stock stock, int ytd, int orderCnt, int remoteCnt) throws SQLException {
+        int index = 0;
+        insertStockStatement.setInt(++index, stock.stockShared.warehouseId);
+        insertStockStatement.setInt(++index, stock.stockShared.itemId);
+        insertStockStatement.setInt(++index, stock.stockQuantity);
+        insertStockStatement.setString(++index, stock.stockShared.dist01);
+        insertStockStatement.setString(++index, stock.stockShared.dist02);
+        insertStockStatement.setString(++index, stock.stockShared.dist03);
+        insertStockStatement.setString(++index, stock.stockShared.dist04);
+        insertStockStatement.setString(++index, stock.stockShared.dist05);
+        insertStockStatement.setString(++index, stock.stockShared.dist06);
+        insertStockStatement.setString(++index, stock.stockShared.dist07);
+        insertStockStatement.setString(++index, stock.stockShared.dist08);
+        insertStockStatement.setString(++index, stock.stockShared.dist09);
+        insertStockStatement.setString(++index, stock.stockShared.dist10);
+        insertStockStatement.setInt(++index, ytd);
+        insertStockStatement.setInt(++index, orderCnt);
+        insertStockStatement.setInt(++index, remoteCnt);
+        insertStockStatement.setString(++index, stock.stockShared.data);
+
+        insertStockStatement.executeUpdate();
+    }
+
     private int bindAddress(PreparedStatement statement, Address address, int offset) throws SQLException {
         statement.setString(++offset, address.street1);
         statement.setString(++offset, address.street2);
@@ -227,6 +335,16 @@ public class MySQLConnection implements AutoCloseable {
         statement.setString(++offset, address.state);
         statement.setString(++offset, address.zip);
         return offset;
+    }
+
+    public Address getAddress(ResultSet results) throws SQLException {
+        return new Address(
+            results.getString("STREET_1"),
+            results.getString("STREET_2"),
+            results.getString("CITY"),
+            results.getString("STATE"),
+            results.getString("ZIP")
+        );
     }
 
     public void createTables() throws SQLException {

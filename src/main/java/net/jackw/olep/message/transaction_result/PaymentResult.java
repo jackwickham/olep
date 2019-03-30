@@ -85,7 +85,7 @@ public class PaymentResult extends TransactionResultMessage {
     public final BigDecimal customerBalance;
     @Nullable public final String customerData;
 
-    private PaymentResult(
+    public PaymentResult(
         int districtId,
         Address districtAddress,
         int warehouseId,
