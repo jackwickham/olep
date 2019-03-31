@@ -1,22 +1,21 @@
 package net.jackw.olep.common;
 
 import com.google.errorprone.annotations.MustBeClosed;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Supplier;
 
 public class CloseablePool<T extends AutoCloseable> implements AutoCloseable {
     private Set<T> allResources;
-    private Set<T> availableResources;
+    private Deque<T> availableResources;
     private boolean closed = false;
 
     public CloseablePool(Supplier<T> resourceCreator, int poolSize) {
         allResources = new HashSet<>(poolSize);
-        availableResources = new HashSet<>(poolSize);
+        availableResources = new ArrayDeque<>(poolSize);
 
         for (int i = 0; i < poolSize; i++) {
             T resource = resourceCreator.get();
@@ -28,15 +27,12 @@ public class CloseablePool<T extends AutoCloseable> implements AutoCloseable {
     @MustBeClosed
     public synchronized Resource acquire() throws InterruptedException {
         while (!closed && availableResources.isEmpty()) {
-            log.warn("Waiting for pool");
             wait();
         }
         if (closed) {
             throw new PoolClosedException();
         }
-        Iterator<T> it = availableResources.iterator();
-        T result = it.next();
-        it.remove();
+        T result = availableResources.removeLast();
         return new Resource(result);
     }
 
@@ -49,15 +45,20 @@ public class CloseablePool<T extends AutoCloseable> implements AutoCloseable {
     public synchronized void close() throws Exception {
         Exception exception = null;
 
-        closed = false;
+        closed = true;
+
+        // Make all waiting threads throw closed exception
+        notifyAll();
 
         while (!allResources.isEmpty()) {
             while (availableResources.isEmpty()) {
                 wait();
             }
 
-            for (T resource : availableResources) {
+            T resource;
+            while ((resource = availableResources.pollLast()) != null) {
                 try {
+                    allResources.remove(resource);
                     resource.close();
                 } catch (Exception e) {
                     if (exception == null) {
@@ -99,6 +100,4 @@ public class CloseablePool<T extends AutoCloseable> implements AutoCloseable {
             }
         }
     }
-
-    private static Logger log = LogManager.getLogger();
 }
