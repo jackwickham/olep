@@ -6,7 +6,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.ForOverride;
 import com.google.errorprone.annotations.MustBeClosed;
-import net.jackw.olep.common.Arguments;
+import net.jackw.olep.common.CloseablePool;
 import net.jackw.olep.common.DatabaseConfig;
 import net.jackw.olep.common.records.Credit;
 import net.jackw.olep.common.records.CustomerNameKey;
@@ -20,11 +20,9 @@ import net.jackw.olep.message.transaction_result.NewOrderResult;
 import net.jackw.olep.message.transaction_result.OrderLineResult;
 import net.jackw.olep.message.transaction_result.PaymentResult;
 import net.jackw.olep.message.transaction_result.TransactionResultMessage;
-import net.jackw.olep.utils.populate.PopulateStores;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,17 +31,17 @@ import java.util.Date;
 import java.util.List;
 
 public class MySQLDatabase implements Database {
-    // TODO: This needs to be cleanly closed
-    private final ThreadLocal<MySQLConnection> connection;
+    private final CloseablePool<MySQLConnection> connectionPool;
 
     public MySQLDatabase(DatabaseConfig config) {
-        this.connection = ThreadLocal.withInitial(() -> {
+        int poolSize = config.getWarehousesPerDatabaseConnection() * config.getDistrictsPerWarehouse() * config.getTerminalsPerDistrict() / 70;
+        this.connectionPool = new CloseablePool<>(() -> {
             try {
                 return new MySQLConnection(config);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-        });
+        }, poolSize);
     }
 
     @Override
@@ -74,6 +72,13 @@ public class MySQLDatabase implements Database {
             return toTransactionStatus(new DeliveryResult(warehouseId, carrierId, processedOrders.build()));
         } catch (TransactionRejectedException e) {
             throw new AssertionError("Delivery transaction should never be rejected", e);
+        } catch (InterruptedException e) {
+            return new TransactionStatus<>(
+                0,
+                Futures.immediateFailedFuture(e),
+                SettableFuture.create(),
+                SettableFuture.create()
+            );
         }
     }
 
@@ -83,6 +88,8 @@ public class MySQLDatabase implements Database {
             return new StockLevelTransaction(districtId, warehouseId, stockThreshold).run();
         } catch (TransactionRejectedException e) {
             throw new AssertionError("Stock level should never be rejected", e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -92,6 +99,8 @@ public class MySQLDatabase implements Database {
             return new OrderStatusTransaction(customerId, districtId, warehouseId).run();
         } catch (TransactionRejectedException e) {
             throw new AssertionError("Order Status should never be rejected", e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -101,14 +110,16 @@ public class MySQLDatabase implements Database {
             return new OrderStatusTransaction(customerLastName, districtId, warehouseId).run();
         } catch (TransactionRejectedException e) {
             throw new AssertionError("Order Status should never be rejected", e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public void close() {
         try {
-            connection.get().close();
-        } catch (SQLException e) {
+            connectionPool.close();
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -132,13 +143,20 @@ public class MySQLDatabase implements Database {
                 Futures.immediateFailedFuture(e),
                 SettableFuture.create()
             );
+        } catch (InterruptedException e) {
+            return new TransactionStatus<>(
+                0,
+                Futures.immediateFailedFuture(e),
+                SettableFuture.create(),
+                SettableFuture.create()
+            );
         }
     }
 
     @MustBeClosed
     @SuppressWarnings("MustBeClosedChecker")
-    private ResultSet loadCustomerByName(String lastName, int districtId, int warehouseId) throws SQLException {
-        ResultSet resultSet = connection.get().loadCustomersByName(new CustomerNameKey(lastName, districtId, warehouseId));
+    private ResultSet loadCustomerByName(MySQLConnection connection, String lastName, int districtId, int warehouseId) throws SQLException {
+        ResultSet resultSet = connection.loadCustomersByName(new CustomerNameKey(lastName, districtId, warehouseId));
         try {
             resultSet.last();
             int numResults = resultSet.getRow();
@@ -150,70 +168,39 @@ public class MySQLDatabase implements Database {
         return resultSet;
     }
 
-    public static void main(String[] args) throws IOException, SQLException, InterruptedException {
-        Arguments arguments = new Arguments(args);
-        MySQLDatabase db = new MySQLDatabase(arguments.getConfig());
-        db.connection.get().createTables();
-        db.connection.get().commit();
-
-        try (PopulateStores populator = new PopulateStores(arguments.getConfig(), true, true)) {
-            populator.populate();
-        }
-
-        for (int i = 0; i < 20; i++) {
-            new Thread(() -> {
-                try (MySQLDatabase db2 = new MySQLDatabase(arguments.getConfig())) {
-                    db2.newOrder(1, 1, 1, ImmutableList.of(new NewOrderRequest.OrderLine(1, 1, 2)));
-                }
-            }).start();
-        }
-
-        Thread.sleep(1000);
-
-        db.payment(1, 1, 1, 1, 1, new BigDecimal("10.12"));
-        db.payment("BARBARBAR", 1, 1, 1, 1, new BigDecimal("10.12"));
-
-        db.delivery(1, 5);
-
-        db.stockLevel(1, 1, 100);
-
-        db.orderStatus(1, 1, 1);
-        db.orderStatus("BARBARBAR", 1, 1);
-
-        db.close();
-    }
-
     private abstract class Transaction<T> {
         @ForOverride
-        protected abstract T exec() throws SQLException, TransactionRejectedException;
+        protected abstract T exec(MySQLConnection connection) throws SQLException, TransactionRejectedException;
 
-        public T run() throws TransactionRejectedException {
+        public T run() throws TransactionRejectedException, InterruptedException {
             do {
-                try {
-                    T result = exec();
-                    connection.get().commit();
-                    return result;
-                } catch (SQLTransientException e) {
-                    // This will occur if there's an error during commit
-                    // retry
-                } catch (SQLException e) {
-                    log.error(e);
-                    RuntimeException re = new RuntimeException(e);
+                try (CloseablePool<MySQLConnection>.Resource connectionResource = connectionPool.acquire()) {
                     try {
-                        connection.get().rollback();
-                    } catch (SQLException e2) {
-                        re.addSuppressed(e2);
-                    }
-                    throw re;
-                } catch (TransactionRejectedException e) {
-                    try {
-                        connection.get().rollback();
-                    } catch (SQLException se) {
-                        RuntimeException re = new RuntimeException(se);
-                        re.addSuppressed(e);
+                        T result = exec(connectionResource.get());
+                        connectionResource.get().commit();
+                        return result;
+                    } catch (SQLTransientException e) {
+                        // This will occur if there's an error during commit
+                        // retry
+                    } catch (SQLException e) {
+                        log.error(e);
+                        RuntimeException re = new RuntimeException(e);
+                        try {
+                            connectionResource.get().rollback();
+                        } catch (SQLException e2) {
+                            re.addSuppressed(e2);
+                        }
                         throw re;
+                    } catch (TransactionRejectedException e) {
+                        try {
+                            connectionResource.get().rollback();
+                        } catch (SQLException se) {
+                            RuntimeException re = new RuntimeException(se);
+                            re.addSuppressed(e);
+                            throw re;
+                        }
+                        throw e;
                     }
-                    throw e;
                 }
             } while (true);
         }
@@ -233,23 +220,23 @@ public class MySQLDatabase implements Database {
         }
 
         @Override
-        protected NewOrderResult exec() throws SQLException, TransactionRejectedException {
+        protected NewOrderResult exec(MySQLConnection connection) throws SQLException, TransactionRejectedException {
             try (
-                ResultSet wh = connection.get().loadWarehouse(warehouseId);
-                ResultSet dist = connection.get().loadDistrict(new WarehouseSpecificKey(districtId, warehouseId));
-                ResultSet cust = connection.get().loadCustomer(new DistrictSpecificKey(customerId, districtId, warehouseId));
+                ResultSet wh = connection.loadWarehouse(warehouseId);
+                ResultSet dist = connection.loadDistrict(new WarehouseSpecificKey(districtId, warehouseId));
+                ResultSet cust = connection.loadCustomer(new DistrictSpecificKey(customerId, districtId, warehouseId));
             ) {
                 int orderId = dist.getInt("D_NEXT_O_ID");
 
-                connection.get().setDistrictNextOrderId(new WarehouseSpecificKey(districtId, warehouseId), orderId + 1);
+                connection.setDistrictNextOrderId(new WarehouseSpecificKey(districtId, warehouseId), orderId + 1);
 
                 boolean allLocal = lines.stream().allMatch(line -> line.supplyingWarehouseId == warehouseId);
                 long entryDate = new Date().getTime();
 
-                connection.get().insertOrder(
+                connection.insertOrder(
                     orderId, districtId, warehouseId, customerId, entryDate, null, lines.size(), allLocal
                 );
-                connection.get().insertNewOrder(orderId, districtId, warehouseId);
+                connection.insertNewOrder(orderId, districtId, warehouseId);
 
                 ImmutableList.Builder<OrderLineResult> lineResultBuilder = ImmutableList.builderWithExpectedSize(lines.size());
 
@@ -257,8 +244,8 @@ public class MySQLDatabase implements Database {
                 for (NewOrderRequest.OrderLine line : lines) {
                     WarehouseSpecificKey stockKey = new WarehouseSpecificKey(line.itemId, line.supplyingWarehouseId);
                     try (
-                        ResultSet item = connection.get().loadItem(line.itemId);
-                        ResultSet stock = connection.get().loadStock(stockKey)
+                        ResultSet item = connection.loadItem(line.itemId);
+                        ResultSet stock = connection.loadStock(stockKey)
                     ) {
                         if (!item.isFirst()) {
                             throw new TransactionRejectedException();
@@ -275,14 +262,14 @@ public class MySQLDatabase implements Database {
                         if (line.supplyingWarehouseId != warehouseId) {
                             newStockRemoteCount++;
                         }
-                        connection.get().updateStock(
+                        connection.updateStock(
                             stockKey, newStockQuantity, stock.getInt("S_YTD") + line.quantity,
                             stock.getInt("S_ORDER_CNT") + 1, newStockRemoteCount
                         );
 
                         BigDecimal lineAmount = item.getBigDecimal("I_PRICE").multiply(new BigDecimal(line.quantity));
 
-                        connection.get().insertOrderLine(
+                        connection.insertOrderLine(
                             orderId, districtId, warehouseId, ++lineNumber, line.itemId, line.supplyingWarehouseId, null,
                             line.quantity, lineAmount, stock.getString(String.format("S_DIST_%02d", districtId))
                         );
@@ -339,19 +326,19 @@ public class MySQLDatabase implements Database {
         }
 
         @Override
-        protected PaymentResult exec() throws SQLException {
+        protected PaymentResult exec(MySQLConnection connection) throws SQLException {
             if (customerName == null) {
-                try (ResultSet cust = connection.get().loadCustomer(new DistrictSpecificKey(customerId, customerDistrictId, customerWarehouseId))) {
-                    return performPayment(cust);
+                try (ResultSet cust = connection.loadCustomer(new DistrictSpecificKey(customerId, customerDistrictId, customerWarehouseId))) {
+                    return performPayment(connection, cust);
                 }
             } else {
-                try (ResultSet cust = loadCustomerByName(customerName, customerDistrictId, customerWarehouseId)) {
-                    return performPayment(cust);
+                try (ResultSet cust = loadCustomerByName(connection, customerName, customerDistrictId, customerWarehouseId)) {
+                    return performPayment(connection, cust);
                 }
             }
         }
 
-        protected PaymentResult performPayment(ResultSet customer) throws SQLException {
+        protected PaymentResult performPayment(MySQLConnection connection, ResultSet customer) throws SQLException {
             BigDecimal customerBalance = customer.getBigDecimal("C_BALANCE").subtract(amount);
             BigDecimal customerYtdPayment = customer.getBigDecimal("C_YTD_PAYMENT").add(amount);
             int customerPaymentCount = customer.getInt("C_PAYMENT_CNT") + 1;
@@ -372,28 +359,28 @@ public class MySQLDatabase implements Database {
                 customerData = builder.toString();
             }
 
-            connection.get().paymentUpdateCustomer(
+            connection.paymentUpdateCustomer(
                 customerId, customerDistrictId, customerWarehouseId, customerBalance, customerYtdPayment,
                 customerPaymentCount, customerData
             );
 
             try (
-                ResultSet wh = connection.get().loadWarehouse(warehouseId);
-                ResultSet dist = connection.get().loadDistrict(new WarehouseSpecificKey(districtId, warehouseId));
+                ResultSet wh = connection.loadWarehouse(warehouseId);
+                ResultSet dist = connection.loadDistrict(new WarehouseSpecificKey(districtId, warehouseId));
             ) {
-                connection.get().setWarehouseYtd(warehouseId, wh.getInt("W_YTD") + 1);
-                connection.get().setDistrictYtd(districtId, warehouseId, dist.getInt("D_YTD") + 1);
+                connection.setWarehouseYtd(warehouseId, wh.getInt("W_YTD") + 1);
+                connection.setDistrictYtd(districtId, warehouseId, dist.getInt("D_YTD") + 1);
 
                 String historyData = wh.getString("W_NAME") + "    " + dist.getString("D_NAME");
-                connection.get().insertHistory(
+                connection.insertHistory(
                     customerDistrictId, customerWarehouseId, districtId, warehouseId, new Date().getTime(), amount, historyData
                 );
 
                 return new PaymentResult(
-                    districtId, connection.get().getAddress(dist, "D"), warehouseId, connection.get().getAddress(wh, "W"),
+                    districtId, connection.getAddress(dist, "D"), warehouseId, connection.getAddress(wh, "W"),
                     customerId, customerDistrictId, customerWarehouseId, customer.getString("C_FIRST"),
                     customer.getString("C_MIDDLE"), customer.getString("C_LAST"),
-                    connection.get().getAddress(customer, "C"), customer.getString("C_PHONE"),
+                    connection.getAddress(customer, "C"), customer.getString("C_PHONE"),
                     customer.getLong("C_SINCE"), customerCredit, customer.getBigDecimal("C_CREDIT_LIM"),
                     customer.getBigDecimal("C_DISCOUNT"), customerBalance, customerData
                 );
@@ -413,15 +400,15 @@ public class MySQLDatabase implements Database {
         }
 
         @Override
-        protected Integer exec() throws SQLException {
-            try (ResultSet results = connection.get().loadLatestNewOrder(districtId, warehouseId)) {
+        protected Integer exec(MySQLConnection connection) throws SQLException {
+            try (ResultSet results = connection.loadLatestNewOrder(districtId, warehouseId)) {
                 if (results.next()) {
                     int orderId = results.getInt("NO_O_ID");
-                    connection.get().deleteNewOrder(orderId, districtId, warehouseId);
-                    connection.get().setOrderCarrierId(orderId, districtId, warehouseId, carrierId);
-                    connection.get().setOrderLineDeliveryDate(orderId, districtId, warehouseId, new Date().getTime());
-                    BigDecimal amount = connection.get().getOrderLineAmountTotal(orderId, districtId, warehouseId);
-                    connection.get().deliveryUpdateCustomer(results.getInt("O_C_ID"), districtId, warehouseId, amount);
+                    connection.deleteNewOrder(orderId, districtId, warehouseId);
+                    connection.setOrderCarrierId(orderId, districtId, warehouseId, carrierId);
+                    connection.setOrderLineDeliveryDate(orderId, districtId, warehouseId, new Date().getTime());
+                    BigDecimal amount = connection.getOrderLineAmountTotal(orderId, districtId, warehouseId);
+                    connection.deliveryUpdateCustomer(results.getInt("O_C_ID"), districtId, warehouseId, amount);
 
                     return orderId;
                 } else {
@@ -443,8 +430,8 @@ public class MySQLDatabase implements Database {
         }
 
         @Override
-        protected Integer exec() throws SQLException, TransactionRejectedException {
-            return connection.get().getStockLevel(districtId, warehouseId, stockThreshold);
+        protected Integer exec(MySQLConnection connection) throws SQLException {
+            return connection.getStockLevel(districtId, warehouseId, stockThreshold);
         }
     }
 
@@ -470,19 +457,19 @@ public class MySQLDatabase implements Database {
         }
 
         @MustBeClosed
-        private ResultSet getCustomer() throws SQLException {
+        private ResultSet getCustomer(MySQLConnection connection) throws SQLException {
             if (customerLastName != null) {
-                return loadCustomerByName(customerLastName, districtId, warehouseId);
+                return loadCustomerByName(connection, customerLastName, districtId, warehouseId);
             } else {
-                return connection.get().loadCustomer(new DistrictSpecificKey(customerId, districtId, warehouseId));
+                return connection.loadCustomer(new DistrictSpecificKey(customerId, districtId, warehouseId));
             }
         }
 
         @Override
-        protected OrderStatusResult exec() throws SQLException, TransactionRejectedException {
-            try (ResultSet customer = getCustomer()) {
+        protected OrderStatusResult exec(MySQLConnection connection) throws SQLException {
+            try (ResultSet customer = getCustomer(connection)) {
                 int customerId = customer.getInt("C_ID");
-                try (ResultSet orderLines = connection.get().getLatestOrder(customerId, districtId, warehouseId)) {
+                try (ResultSet orderLines = connection.getLatestOrder(customerId, districtId, warehouseId)) {
                     orderLines.next();
 
                     int orderId = orderLines.getInt("O_ID");
