@@ -60,12 +60,12 @@ def run(set_options):
         new_config_file.write(f"\nrunId: {run_id}\n")
         new_config_file.flush()
 
-        print(f"Running with options {set_options}")
+        print(f"Running with options {set_options}", flush=True)
 
         # Run reset synchronously
         subprocess.run(["./gradlew", "reset", f'--args=--all {new_config_file.name}'], check=True, env=env)
 
-        print("Reset complete")
+        print("Reset complete", flush=True)
 
         # Choose a file to use for IPC, so the database can report when it's ready
         characters = "abcdefghijklmnopqrstuvwxyz0123456789_"
@@ -82,10 +82,10 @@ def run(set_options):
 
             # Hopefully, it didn't terminate
             if database_process.returncode is not None:
-                print("Database population failed")
+                print("Database population failed", flush=True)
                 exit(1)
 
-            print("Database populated successfully")
+            print("Database populated successfully", flush=True)
 
         # Now start the application
         app_process = subprocess.Popen(["./gradlew", "runApp", f'--args={new_config_file.name}'], env=env)
@@ -93,7 +93,7 @@ def run(set_options):
         # Wait 20s then make sure it's still running
         time.sleep(20)
         if app_process.poll() is not None:
-            print("App shut down unexpectedly")
+            print("App shut down unexpectedly", flush=True)
             # kill the database
             if database_process is not None:
                 database_process.send_signal(signal.SIGINT)
@@ -105,7 +105,7 @@ def run(set_options):
 
         # Make sure the processes are still running
         if app_process.poll() is not None:
-            print("App shut down unexpectedly")
+            print("App shut down unexpectedly", flush=True)
             if database_process is not None:
                 database_process.send_signal(signal.SIGINT)
                 database_process.wait()
@@ -117,7 +117,7 @@ def run(set_options):
                 app_process.wait()
                 exit(1)
 
-        print("Shutting down")
+        print("Shutting down", flush=True)
 
         # Send the shutdown signals, shutting down the app before the database
         app_process.send_signal(signal.SIGINT)
