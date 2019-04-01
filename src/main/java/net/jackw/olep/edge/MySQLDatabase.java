@@ -29,9 +29,13 @@ import java.sql.SQLException;
 import java.sql.SQLTransientException;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MySQLDatabase implements Database {
     private final CloseablePool<MySQLConnection> connectionPool;
+    private final ExecutorService executorService;
 
     public MySQLDatabase(DatabaseConfig config) {
         int poolSize = config.getWarehousesPerDatabaseConnection() * config.getDistrictsPerWarehouse() * config.getTerminalsPerDistrict() / 70;
@@ -42,6 +46,7 @@ public class MySQLDatabase implements Database {
                 throw new RuntimeException(e);
             }
         }, poolSize);
+        this.executorService = Executors.newCachedThreadPool();
     }
 
     @Override
@@ -61,25 +66,30 @@ public class MySQLDatabase implements Database {
 
     @Override
     public TransactionStatus<DeliveryResult> delivery(int warehouseId, int carrierId) {
-        ImmutableMap.Builder<Integer, Integer> processedOrders = ImmutableMap.builderWithExpectedSize(10);
-        try {
-            for (int districtId = 1; districtId <= 10; districtId++) {
-                Integer orderId = new DeliveryTransaction(warehouseId, districtId, carrierId).run();
-                if (orderId != null) {
-                    processedOrders.put(districtId, orderId);
+        final SettableFuture<Void> writtenToLogFuture = SettableFuture.create();
+        final SettableFuture<Void> acceptedFuture = SettableFuture.create();
+        final SettableFuture<DeliveryResult> completeFuture = SettableFuture.create();
+
+        executorService.execute(() -> {
+            ImmutableMap.Builder<Integer, Integer> processedOrders = ImmutableMap.builderWithExpectedSize(10);
+            try {
+                for (int districtId = 1; districtId <= 10; districtId++) {
+                    Integer orderId = new DeliveryTransaction(warehouseId, districtId, carrierId).run();
+                    if (orderId != null) {
+                        processedOrders.put(districtId, orderId);
+                    }
                 }
+                writtenToLogFuture.set(null);
+                acceptedFuture.set(null);
+                completeFuture.set(new DeliveryResult(warehouseId, carrierId, processedOrders.build()));
+            } catch (TransactionRejectedException e) {
+                throw new AssertionError("Delivery transaction should never be rejected", e);
+            } catch (InterruptedException e) {
+                writtenToLogFuture.setException(e);
             }
-            return toTransactionStatus(new DeliveryResult(warehouseId, carrierId, processedOrders.build()));
-        } catch (TransactionRejectedException e) {
-            throw new AssertionError("Delivery transaction should never be rejected", e);
-        } catch (InterruptedException e) {
-            return new TransactionStatus<>(
-                0,
-                Futures.immediateFailedFuture(e),
-                SettableFuture.create(),
-                SettableFuture.create()
-            );
-        }
+        });
+
+        return new TransactionStatus<>(0, writtenToLogFuture, acceptedFuture, completeFuture);
     }
 
     @Override
@@ -117,40 +127,42 @@ public class MySQLDatabase implements Database {
 
     @Override
     public void close() {
+        executorService.shutdown();
+        boolean interrupted = false;
+        try {
+            executorService.awaitTermination(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            interrupted = true;
+        }
         try {
             connectionPool.close();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private <T extends TransactionResultMessage> TransactionStatus<T> toTransactionStatus(T value) {
-        return new TransactionStatus<>(
-            0,
-            Futures.immediateFuture(null),
-            Futures.immediateFuture(null),
-            Futures.immediateFuture(value)
-        );
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private <T extends TransactionResultMessage> TransactionStatus<T> execute(Transaction<T> transaction) {
-        try {
-            return toTransactionStatus(transaction.run());
-        } catch (TransactionRejectedException e) {
-            return new TransactionStatus<>(
-                0,
-                Futures.immediateFuture(null),
-                Futures.immediateFailedFuture(e),
-                SettableFuture.create()
-            );
-        } catch (InterruptedException e) {
-            return new TransactionStatus<>(
-                0,
-                Futures.immediateFailedFuture(e),
-                SettableFuture.create(),
-                SettableFuture.create()
-            );
-        }
+        final SettableFuture<Void> writtenToLogFuture = SettableFuture.create();
+        final SettableFuture<Void> acceptedFuture = SettableFuture.create();
+        final SettableFuture<T> completeFuture = SettableFuture.create();
+        executorService.execute(() -> {
+            try {
+                T result = transaction.run();
+                writtenToLogFuture.set(null);
+                acceptedFuture.set(null);
+                completeFuture.set(result);
+            } catch (TransactionRejectedException e) {
+                writtenToLogFuture.set(null);
+                acceptedFuture.setException(e);
+            } catch (InterruptedException e) {
+                writtenToLogFuture.setException(e);
+            }
+        });
+
+        return new TransactionStatus<>(0, writtenToLogFuture, acceptedFuture, completeFuture);
     }
 
     @MustBeClosed
