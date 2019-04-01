@@ -23,6 +23,7 @@ parser.add_argument("-c", "--config", nargs="+", action="append",
     + "options can be specified, and the lattice of them will be tested",
     required=True, metavar=("SETTING", "VALUE"))
 parser.add_argument("-t", "--time", default=610, help="Number of seconds to run the benchmark for", type=int)
+parser.add_argument("--no-db", help="Don't launch the database app, so that it can be used with MySQL instead", action='store_true')
 args = parser.parse_args()
 
 if not args.overwrite_results_dir and os.path.isdir(args.results_dir) and os.listdir(args.results_dir) != []:
@@ -71,18 +72,20 @@ def run(set_options):
         ready_file = tempfile.gettempdir() + "/ready-" + "".join(random.choices(characters, k=8))
 
         # Start the runDatabase task asynchronously
-        database_process = subprocess.Popen(["./gradlew", "runDatabase", f'--args=--ready-file {ready_file} {new_config_file.name}'], env=env)
+        database_process = None
+        if not args.no_db:
+            database_process = subprocess.Popen(["./gradlew", "runDatabase", f'--args=--ready-file {ready_file} {new_config_file.name}'], env=env)
 
-        # Wait for it to either terminate or write to ready_file
-        while database_process.poll() is None and not os.path.isfile(ready_file):
-            time.sleep(1)
+            # Wait for it to either terminate or write to ready_file
+            while database_process.poll() is None and not os.path.isfile(ready_file):
+                time.sleep(1)
 
-        # Hopefully, it didn't terminate
-        if database_process.returncode is not None:
-            print("Database population failed")
-            exit(1)
+            # Hopefully, it didn't terminate
+            if database_process.returncode is not None:
+                print("Database population failed")
+                exit(1)
 
-        print("Database populated successfully")
+            print("Database populated successfully")
 
         # Now start the application
         app_process = subprocess.Popen(["./gradlew", "runApp", f'--args={new_config_file.name}'], env=env)
@@ -92,8 +95,9 @@ def run(set_options):
         if app_process.poll() is not None:
             print("App shut down unexpectedly")
             # kill the database
-            database_process.send_signal(signal.SIGINT)
-            database_process.wait()
+            if database_process is not None:
+                database_process.send_signal(signal.SIGINT)
+                database_process.wait()
             exit(1)
 
         # Now wait the remaining time
@@ -102,22 +106,25 @@ def run(set_options):
         # Make sure the processes are still running
         if app_process.poll() is not None:
             print("App shut down unexpectedly")
-            database_process.send_signal(signal.SIGINT)
-            database_process.wait()
+            if database_process is not None:
+                database_process.send_signal(signal.SIGINT)
+                database_process.wait()
             exit(1)
-        if database_process.poll() is not None:
-            print("Database shut down unexpectedly")
-            app_process.send_signal(signal.SIGINT)
-            app_process.wait()
-            exit(1)
+        if database_process is not None:
+            if database_process.poll() is not None:
+                print("Database shut down unexpectedly")
+                app_process.send_signal(signal.SIGINT)
+                app_process.wait()
+                exit(1)
 
         print("Shutting down")
 
         # Send the shutdown signals, shutting down the app before the database
         app_process.send_signal(signal.SIGINT)
         app_process.wait()
-        database_process.send_signal(signal.SIGINT)
-        database_process.wait()
+        if database_process is not None:
+            database_process.send_signal(signal.SIGINT)
+            database_process.wait()
 
         # And we are done!
 
