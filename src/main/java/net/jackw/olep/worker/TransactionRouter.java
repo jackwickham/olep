@@ -31,6 +31,7 @@ public class TransactionRouter implements Processor<TransactionWarehouseKey, Tra
             // Already processed this transaction for this warehouse
             return;
         }
+        log.debug("Worker processing transaction {}: {}", key, value);
         if (value instanceof NewOrderRequest) {
             context.forward(key, value, To.child("new-order-processor"));
         } else if (value instanceof PaymentRequest) {

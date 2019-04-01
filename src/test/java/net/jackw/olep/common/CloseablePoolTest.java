@@ -158,6 +158,7 @@ public class CloseablePoolTest {
         pool.acquire();
     }
 
+    @SuppressWarnings("MustBeClosedChecker")
     @Test(expected = IllegalStateException.class)
     public void testIllegalStateExceptionThrownIfGettingResultOfReleasedResource() throws InterruptedException {
         CloseablePool<ProtectedResource> pool = new CloseablePool<>(ProtectedResource::new, 1);
@@ -200,7 +201,7 @@ public class CloseablePoolTest {
         }
     }
 
-    private class ProtectedResource implements AutoCloseable {
+    private static class ProtectedResource implements AutoCloseable {
         @Override
         public void close() throws Exception { }
     }

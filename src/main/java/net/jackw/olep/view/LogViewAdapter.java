@@ -62,6 +62,8 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
     @GuardedBy("recentlyAssignedPartitions")
     private final List<TopicPartition> recentlyAssignedPartitions;
+    @GuardedBy("recentlyAssignedPartitions")
+    private final List<TopicPartition> recentlyRevokedPartitions;
 
     private static final AtomicInteger threadId = new AtomicInteger(0);
 
@@ -81,6 +83,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
 
         this.executorService = Executors.newCachedThreadPool();
         this.recentlyAssignedPartitions = new ArrayList<>(4);
+        this.recentlyRevokedPartitions = new ArrayList<>(4);
 
         logConsumer.subscribe(List.of(KafkaConfig.MODIFICATION_LOG), this);
     }
@@ -139,7 +142,7 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
                 return;
             }
             Timer timer = metrics.startTimer();
-            log.debug("Processing {} for transaction {}", message.getClass(), key);
+            log.debug("Processing {} for transaction {}: {}", message.getClass(), key, message);
             if (message instanceof NewOrderModification) {
                 viewAdapter.newOrder((NewOrderModification) message);
                 metrics.recordDuration(DurationType.VIEW_NEW_ORDER, timer);
@@ -163,21 +166,27 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
     }
 
     private void checkNewPartitions() {
-        List<TopicPartition> partitions;
+        List<TopicPartition> assignedPartitions;
+        List<TopicPartition> revokedPartitions;
         synchronized (recentlyAssignedPartitions) {
-            if (recentlyAssignedPartitions.isEmpty()) {
-                // Nothing to do
-                return;
-            }
-            partitions = new ArrayList<>(recentlyAssignedPartitions);
+            assignedPartitions = new ArrayList<>(recentlyAssignedPartitions);
             recentlyAssignedPartitions.clear();
+
+            revokedPartitions = new ArrayList<>(recentlyRevokedPartitions);
+            recentlyRevokedPartitions.clear();
+
             recentlyAssignedPartitions.notifyAll();
         }
+        if (assignedPartitions.isEmpty() && revokedPartitions.isEmpty()) {
+            // Nothing to do
+            return;
+        }
         // Load the new offsets
-        Map<TopicPartition, Long> latestEndOffsets = logConsumer.endOffsets(partitions);
-        List<TopicPartition> newlyAssigned = new ArrayList<>(partitions.size());
+        Map<TopicPartition, Long> latestEndOffsets = logConsumer.endOffsets(assignedPartitions);
+        List<TopicPartition> newlyAssigned = new ArrayList<>(assignedPartitions.size());
+        int actuallyRemovedPartitions = 0;
         synchronized (endOffsets) {
-            for (TopicPartition topicPartition : partitions) {
+            for (TopicPartition topicPartition : assignedPartitions) {
                 if (endOffsets.put(
                     topicPartition.partition(),
                     latestEndOffsets.getOrDefault(topicPartition, 0L)
@@ -190,11 +199,22 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
                     markReady(topicPartition.partition());
                 }
             }
+
+            for (TopicPartition topicPartition : revokedPartitions) {
+                readyPartitions.remove(topicPartition.partition());
+                if (endOffsets.remove(topicPartition.partition()) != null) {
+                    ++actuallyRemovedPartitions;
+                }
+                // Unregister in a separate thread because it involves network communication
+                executorService.execute(() -> {
+                    viewAdapter.unregister(topicPartition.partition());
+                });
+            }
         }
         // Seek all the new partitions back to the start, because we wiped out any state when it was revoked
         logConsumer.seekToBeginning(newlyAssigned);
         // Correct the count for topics that we were already subscribed to
-        assignedPartitionCount.addAndGet(newlyAssigned.size() - partitions.size());
+        assignedPartitionCount.addAndGet(newlyAssigned.size() - assignedPartitions.size() - actuallyRemovedPartitions);
         // Now see whether we're actually ready
         checkReadiness();
     }
@@ -247,34 +267,20 @@ public class LogViewAdapter extends Thread implements AutoCloseable, ConsumerReb
     @Override
     public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
         log.info("Partitions {} revoked", partitions);
-        if (partitions.isEmpty()) {
-            // Initially, an empty set of partitions are revoked, and there's no point doing anything with that
-            return;
+        synchronized (recentlyAssignedPartitions) {
+            recentlyAssignedPartitions.removeAll(partitions);
+            recentlyRevokedPartitions.addAll(partitions);
         }
-        synchronized (endOffsets) {
-            int actuallyRemovedPartitions = 0;
-            for (TopicPartition topicPartition : partitions) {
-                readyPartitions.remove(topicPartition.partition());
-                if (endOffsets.remove(topicPartition.partition()) != null) {
-                    ++actuallyRemovedPartitions;
-                }
-                viewAdapter.unregister(topicPartition.partition());
-            }
-            assignedPartitionCount.addAndGet(-actuallyRemovedPartitions);
-        }
-        checkReadiness();
     }
 
     @Override
     public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
         log.info("Partitions {} assigned", partitions);
-        if (partitions.isEmpty()) {
-            // Nothing to do except avoid deadlock
-            return;
-        }
+
         assignedPartitionCount.addAndGet(partitions.size());
         synchronized (recentlyAssignedPartitions) {
             recentlyAssignedPartitions.addAll(partitions);
+            recentlyRevokedPartitions.removeAll(partitions);
             if (Thread.currentThread() == this) {
                 // We can safely use Kafka, and can't wait because that would cause a deadlock waiting for itself
                 checkNewPartitions();

@@ -2,6 +2,7 @@ package net.jackw.olep.message.modification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Immutable;
 import net.jackw.olep.common.records.OrderLine;
@@ -36,5 +37,17 @@ public class NewOrderModification implements ModificationMessage {
     @JsonIgnore
     public int getViewWarehouse() {
         return warehouseId;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("customerId", customerId)
+            .add("districtId", districtId)
+            .add("warehouseId", warehouseId)
+            .add("lines", lines)
+            .add("date", date)
+            .add("orderId", orderId)
+            .toString();
     }
 }

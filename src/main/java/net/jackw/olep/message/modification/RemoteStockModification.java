@@ -2,6 +2,7 @@ package net.jackw.olep.message.modification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 
 @Immutable
@@ -24,5 +25,14 @@ public class RemoteStockModification implements ModificationMessage {
     @JsonIgnore
     public int getViewWarehouse() {
         return warehouseId;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("itemId", itemId)
+            .add("warehouseId", warehouseId)
+            .add("stockLevel", stockLevel)
+            .toString();
     }
 }

@@ -219,7 +219,7 @@ public class LogViewAdapterTest {
         lva.onPartitionsRevoked(List.of());
         lva.onPartitionsAssigned(List.of(topicPartition));
 
-        Thread.sleep(20);
+        Thread.sleep(50);
 
         verify(viewAdapter).register(0);
     }
@@ -232,10 +232,12 @@ public class LogViewAdapterTest {
         lva.onPartitionsRevoked(List.of());
         lva.onPartitionsAssigned(List.of(topicPartition));
 
+        Thread.sleep(50);
+
         lva.onPartitionsRevoked(List.of(topicPartition));
         lva.onPartitionsAssigned(List.of());
 
-        Thread.sleep(20);
+        Thread.sleep(50);
 
         verify(viewAdapter, never()).register(anyInt());
         verify(viewAdapter).unregister(anyInt());
@@ -251,10 +253,12 @@ public class LogViewAdapterTest {
         lva.onPartitionsRevoked(List.of());
         lva.onPartitionsAssigned(List.of(topicPartition));
 
+        Thread.sleep(50);
+
         lva.onPartitionsRevoked(List.of(topicPartition));
         lva.onPartitionsAssigned(List.of());
 
-        Thread.sleep(20);
+        Thread.sleep(50);
 
         verify(viewAdapter).register(0);
         verify(viewAdapter).unregister(0);
