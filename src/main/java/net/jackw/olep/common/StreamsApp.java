@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.MustBeClosed;
 import com.google.errorprone.annotations.OverridingMethodsMustInvokeSuper;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -94,6 +95,7 @@ public abstract class StreamsApp implements AutoCloseable {
         props.put(StreamsConfig.STATE_DIR_CONFIG, config.getStreamsStateDir());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, getThreadCount());
+        props.put(StreamsConfig.consumerPrefix(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG), 60000);
         return props;
     }
 
