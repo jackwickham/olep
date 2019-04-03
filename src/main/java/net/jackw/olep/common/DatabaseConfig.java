@@ -286,6 +286,7 @@ public class DatabaseConfig {
     /**
      * Get the user that should be used for the MySQL connection
      */
+    @JsonIgnore
     public String getMysqlUser() {
         if (mysqlUser != null) {
             return mysqlUser;
@@ -302,6 +303,7 @@ public class DatabaseConfig {
      * Get the password that should be used for the MySQL connection
      */
     @Nullable
+    @JsonIgnore
     public String getMysqlPassword() {
         String password = System.getenv("MYSQL_PASS");
         if (password == null || password.isEmpty()) {
