@@ -24,6 +24,7 @@ parser.add_argument("-c", "--config", nargs="+", action="append",
     required=True, metavar=("SETTING", "VALUE"))
 parser.add_argument("-t", "--time", default=610, help="Number of seconds to run the benchmark for", type=int)
 parser.add_argument("--no-db", help="Don't launch the database app, so that it can be used with MySQL instead", action='store_true')
+parser.add_argument("--no-reset", help="Don't reset the database between runs", action='store_true')
 args = parser.parse_args()
 
 if not args.overwrite_results_dir and os.path.isdir(args.results_dir) and os.listdir(args.results_dir) != []:
@@ -62,10 +63,11 @@ def run(set_options):
 
         print(f"Running with options {set_options}", flush=True)
 
-        # Run reset synchronously
-        subprocess.run(["./gradlew", "reset", f'--args=--all {new_config_file.name}'], check=True, env=env)
+        if not args.no_reset:
+            # Run reset synchronously
+            subprocess.run(["./gradlew", "reset", f'--args=--all {new_config_file.name}'], check=True, env=env)
 
-        print("Reset complete", flush=True)
+            print("Reset complete", flush=True)
 
         # Choose a file to use for IPC, so the database can report when it's ready
         characters = "abcdefghijklmnopqrstuvwxyz0123456789_"
