@@ -1,0 +1,12 @@
+itemCount: 1400
+warehouseCount: 42
+districtsPerWarehouse: 10
+customersPerDistrict: 10
+customerNameRange: 20
+verifierInstances: 1
+workerInstances: 1
+applicationInstances: 1
+baseResultsDir: ~
+bootstrapServers:
+  - 127.8.9.10
+  - 10.1.1.1

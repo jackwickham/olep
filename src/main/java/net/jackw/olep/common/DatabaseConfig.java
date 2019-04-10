@@ -2,6 +2,7 @@ package net.jackw.olep.common;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import net.jackw.olep.metrics.Metrics;
@@ -79,7 +80,7 @@ public class DatabaseConfig {
     private boolean predictableData = false;
 
     @JsonProperty
-    private String bootstrapServers = "127.0.0.1:9092";
+    private String[] bootstrapServers = new String[]{"127.0.0.1:9092"};
 
     @JsonProperty
     private String viewRegistryHost = "127.0.0.1";
@@ -266,7 +267,7 @@ public class DatabaseConfig {
      * Get the Kafka bootstrap servers
      */
     public String getBootstrapServers() {
-        return bootstrapServers;
+        return String.join(",", bootstrapServers);
     }
 
     /**
@@ -417,7 +418,9 @@ public class DatabaseConfig {
      * @throws IOException If an error occurs while reading the file
      */
     private static DatabaseConfig load(InputStream configFileStream, String mainClass) throws IOException {
-        DatabaseConfig config = new ObjectMapper(new YAMLFactory()).readValue(configFileStream, DatabaseConfig.class);
+        DatabaseConfig config = new ObjectMapper(new YAMLFactory())
+            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+            .readValue(configFileStream, DatabaseConfig.class);
         config.mainClass = mainClass;
         return config;
     }
