@@ -15,7 +15,7 @@ The aim of this project is to demonstrate that event-oriented databases are viab
 
 ## System Overview
 <figure>
-<a href="https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png><img src="https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png" alt="System Diagram"></a>
+<a href="https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png"><img src="https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png" alt="System Diagram"></a>
 <figcaption style="text-align: center; font-size: 0.7em;">Figure 1: System Diagram</figcaption>
 </figure>
 
