@@ -14,10 +14,7 @@ The event logs use [Apache Kafka](https://kafka.apache.org/).
 The aim of this project is to demonstrate that event-oriented databases are viable, and create a working implementation.
 
 ## System Overview
-<figure>
-<a href="https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png"><img src="https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png" alt="System Diagram"></a>
-<figcaption style="text-align: center; font-size: 0.7em;">Figure 1: System Diagram</figcaption>
-</figure>
+[![System Diagram](https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png)](https://raw.githubusercontent.com/jackwickham/olep/master/images/system-diagram.png)
 
 Applications write events to the _transaction requests_ topic.
  
